@@ -31,3 +31,6 @@ next-env.d.ts
 # supabase
 supabase/.branches
 supabase/.temp
+
+# Cursor MCP config (contains PAT)
+.cursor/mcp.json
