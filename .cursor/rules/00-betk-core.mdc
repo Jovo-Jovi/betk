@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+# BETK — core (always on)
+BETK = Arabic-first, RTL marketplace (Egypt). Next.js 15 + Supabase + Tailwind/shadcn + TS strict + Zod. Scope is FROZEN (docs/01-product/BETK_MVP_SCOPE.md §6, OD-1..OD-6) — never invent pages/tables/features; if something seems missing, STOP and flag.
+- Ground truth per page: docs/00-design/BETK_UI_SPEC.md. Data contract: docs/03-database/BETK_ERD.md. Start each session from docs/10-ai-development/BETK_MASTER_EXECUTION_PROMPT.md + SESSION_CONTEXT.md; update SESSION_CONTEXT + docs/12-changelog/DEVELOPMENT_JOURNAL.md after each task.
+- The role auto-attaches from the files you touch (database / actions+api / ui / tests rules below). For reviews, request the security or UI review rule.
+- Always: RSC by default, mutations = Server Actions, Zod-validate every action/route before any DB call, RLS is the authz boundary (handle {data,error}; denial → not-found), RTL + logical Tailwind utilities, shadcn extend-not-override. The design system (components/ui + components/shared) is owned by Claude Design — compose + wire data, never restyle.
+- MODEL (the human picks; this is the only manual choice): Opus for migrations/DB, security, architecture, and all review gates; Sonnet for UI/actions/tests/wiring. If the selected model does not match the current task, say so in one line before proceeding.

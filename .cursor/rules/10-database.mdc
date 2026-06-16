@@ -1,0 +1,10 @@
+---
+description: BETK database work — Supabase queries, migrations, RLS policies, TypeScript type generation. Auto-attaches for migration, supabase lib, and query files.
+globs: ["supabase/migrations/**","src/lib/supabase/**","src/features/**/queries/**"]
+alwaysApply: false
+---
+# BETK — database / Supabase (auto)
+Follow docs/10-ai-development/BETK_AI_SKILLS/skill-database-engineer.md + skill-supabase-engineer.md. Recommended model: Opus (migrations/RLS).
+- Clients: server.ts / client.ts; service.ts is server-only, bypasses RLS → re-check ownership in code; no client imports service.ts. Handle {data,error}; RLS denial → not-found.
+- Migrations follow C3 §7 order INCLUDING the freeze deltas: enum auth_provider; users.phone_number nullable+UNIQUE; users.auth_provider/deleted_at/anonymized_at; verified-phone transaction gate via RLS WITH CHECK on orders/seller_profiles/payouts. Capture every change as a committed migration file (no ad-hoc SQL).
+- Regenerate src/lib/supabase/types.ts after every migration (CI drift gate). Money computed server-side; JSONB via hand-written interfaces. Soft-delete = listings only; append-only = order_status_history, moderation_logs. 43 tables (BETK_ERD §1.1).

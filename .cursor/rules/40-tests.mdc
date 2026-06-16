@@ -1,0 +1,10 @@
+---
+description: BETK testing — unit, integration, and E2E mapped to FR/AC ids. Auto-attaches for test/spec files.
+globs: ["src/tests/**","**/*.test.ts","**/*.test.tsx","**/*.spec.ts"]
+alwaysApply: false
+---
+# BETK — testing (auto)
+Follow skill-test-engineer.md. Recommended model: Sonnet (write) / Opus (review). Map each test to an FR/AC id (PRD §5/§9).
+- Unit: utilities, Zod schemas, money/level logic. Integration: every action/route (authz, Zod-reject, success, RLS-denial→not-found) + high-risk AC: checkout creates 2 payments atomically; confirm decrements stock; dispute resolve notifies both; OTP ≤5 attempts; phone-gate rejects a no-phone user.
+- E2E: phone-OTP + Google OAuth, onboarding→approval, inquiry→checkout, order lifecycle, review, dispute, boost.
+- Deterministic seed honoring RLS; test Supabase project only, never prod.

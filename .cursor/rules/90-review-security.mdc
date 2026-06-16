@@ -1,0 +1,9 @@
+---
+description: Use when reviewing a PR or diff for security — auth, RLS coverage, Zod validation coverage, secrets, the verified-phone transaction gate, and the 5 pre-launch conditions. Invoke on any review/merge gate.
+alwaysApply: false
+---
+# BETK — security review (agent-requested)
+Follow skill-security-reviewer.md. Use Opus. Block merge on any failure.
+- Auth: phone-OTP + Google OAuth; OTP hashed/60s/≤5 attempts; sessions hashed; suspended/banned/deactivated (deleted_at) blocked. Verified-phone gate on checkout/become-seller/payout (Server Action + RLS WITH CHECK).
+- RLS: every touched table has policies; default-deny holds; service-role paths re-check ownership; no client imports service.ts. Zod on every action/route.
+- Storage: seller_documents private + signed URLs ≤15m. The 5 pre-launch risks (C3 §8.2: template-change logging, admin_settings numeric CHECKs, flagged_content content_id trigger, service_role bypass tested, private docs bucket). Audit-log admin actions.

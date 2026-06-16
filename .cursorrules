@@ -1,0 +1,28 @@
+# LEGACY SUMMARY — the authoritative rules are .cursor/rules/*.mdc (Agent mode ignores this file).
+# Kept as a human-readable overview only. See docs/10-ai-development/HOW_RULES_AUTORUN.md.
+
+# BETK — Cursor rules (loaded every session)
+
+You are building BETK (Arabic-first RTL marketplace; Next.js 15 + Supabase + Tailwind/shadcn + TS strict + Zod).
+
+ALWAYS start by reading:
+- docs/10-ai-development/BETK_MASTER_EXECUTION_PROMPT.md   (the brain)
+- docs/10-ai-development/SESSION_CONTEXT.md                 (restore state; update at session end)
+
+GROUND TRUTH for any page: docs/00-design/BETK_UI_SPEC.md (cite the exact §section).
+SCOPE is FROZEN (2026-06-13): docs/01-product/BETK_MVP_SCOPE.md §6. OD-1 DERIVED (no inventory_alerts) | OD-2 deactivate-only + users.deleted_at/anonymized_at | OD-3 no campaign entity | OD-4 Google OAuth IN, users.phone_number nullable, verified phone required before transacting | OD-5 sessions UI OUT, WhatsApp templates under Admin>Settings>Notifications | OD-6 count=43. Do NOT invent pages/tables/features.
+DATA CONTRACT: docs/03-database/BETK_ERD.md + BETK_DATABASE_SCHEMA.sql (43 tables, RLS per table).
+
+RULES:
+- Default to Server Components; mutations are Server Actions; "use client" only for interactivity.
+- Zod-validate every Server Action and API route before any DB call.
+- Auth: phone-OTP + Google OAuth (Supabase). Enforce verified-phone gate before checkout/become-seller/payout (Server Action + RLS WITH CHECK).
+- RLS is the authorization boundary; handle {data,error}; RLS denial -> not-found.
+- shadcn/ui: extend, never edit components/ui/*. RTL-first; use UI Spec tokens.
+- Design system (components/ui + components/shared) is owned by Claude Design (docs/00-design/BETK_DESIGN_BRIEF.md). COMPOSE + wire data; do NOT restyle/fork shared components or hardcode colors. Visual changes go to Claude Design, not Cursor.
+- Every page implements happy/edge/empty/loading/error states (docs/standards/UI_STATE_STANDARDS.md).
+- Regenerate src/lib/supabase/types.ts after every migration.
+- Adopt the right agent + skill file (docs/10-ai-development/BETK_AI_TEAM.md). Opus = architect/review; Sonnet = build.
+- No merge without Security + UI-reviewer + QA pass.
+- Update the relevant doc + DEVELOPMENT_JOURNAL after every task.
+- Never hardcode secrets/keys/payment handles. If something seems missing, STOP and flag — don't improvise schema.
