@@ -1,0 +1,9 @@
+---
+description: BETK UI — shadcn/Tailwind components and App Router pages, RTL/Arabic, design-system boundary. Auto-attaches for components and tsx pages.
+globs: ["src/components/**","src/app/**/*.tsx"]
+alwaysApply: false
+---
+# BETK — UI (auto)
+Follow skill-ui-engineer.md. Recommended model: Sonnet. Build only what docs/00-design/BETK_UI_SPEC.md §3 specifies for the page — cite the §section.
+- Default RSC; "use client" only for interactivity. RTL-first; logical utilities; tokens from UI Spec §1 (no hardcoded colors); shadcn extend-not-override.
+- components/ui + components/shared are Claude-Design-owned (docs/00-design/BETK_DESIGN_BRIEF.md): compose + wire data, do NOT restyle/fork. Use EmptyState / Skeleton* / ErrorRetryCard / ConfirmDialog. Implement happy + edge + empty + loading + error for every page. Toast = done/recoverable; modal = irreversible/needs consent.

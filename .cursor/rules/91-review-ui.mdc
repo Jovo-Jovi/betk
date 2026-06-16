@@ -1,0 +1,8 @@
+---
+description: Use when reviewing UI against the wireframe spec — route, auth gate, components present, all four states, tokens/RTL, shadcn-extend, and frozen-scope respect. Invoke on UI PRs and the Claude Design hand-off.
+alwaysApply: false
+---
+# BETK — UI review (agent-requested)
+Follow skill-ui-reviewer.md. Use Opus. Ground truth = docs/00-design/BETK_UI_SPEC.md.
+- Per page: route + auth gate match; every listed component present, none invented; data hits only the spec's tables; happy/edge/empty/loading/error all implemented; RTL correct; tokens used (no hardcoded colors); shadcn extended not overridden.
+- Respect frozen gaps: OD-1 low-stock derived, OD-2 deactivate-only, OD-3 no campaign entity, OD-5 sessions UI out / WhatsApp templates under Admin→Settings→Notifications. Reject with the specific failing spec line.

@@ -1,0 +1,11 @@
+---
+description: BETK Server Actions, API route handlers, and Zod validation. Auto-attaches for feature actions, api routes, and validation schemas.
+globs: ["src/features/**/actions/**","src/app/api/**","src/validations/**"]
+alwaysApply: false
+---
+# BETK — actions / api / validation (auto)
+Follow skill-api-architect.md + skill-zod-validator.md. Recommended model: Sonnet (build); Opus for security-sensitive paths.
+- Order: authenticate → authorize (role/ownership) → Zod-validate → act → revalidate → typed result {ok,data} | {ok:false,error:{code,message,fields}}. RLS denial → NOT_FOUND (don't leak existence).
+- Every action/route parses a Zod schema from src/validations BEFORE any DB call. Mirror DB constraints (phone E.164, rating 1-5, payout ≥ 100, ≤5 images/≤3 review photos/≤5 evidence/≤5 tags, service listings omit stock).
+- Enforce the verified-phone transaction gate (OD-4) on checkout / become-seller / payout: require users.phone_number IS NOT NULL (Server Action AND RLS WITH CHECK); send Google-only users through phone+OTP at that point.
+- No secrets in code/logs/URLs. Webhooks: signature-verified + idempotent.
