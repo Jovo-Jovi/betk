@@ -1,0 +1,9 @@
+/**
+ * Feature: store-management
+ * FR IDs:  FR-SEL-4 (store profile), FR-SEL-5 (delivery settings), FR-SEL-6 (return policy), FR-SEL-7 (payment methods)
+ * UI Spec: §5.4–5.7 Store management — store/delivery/returns/payments
+ * Tables:  betk.stores, betk.seller_profiles
+ * JSONB:   stores.delivery_options (StoreDeliveryOptions), stores.payment_methods (StorePaymentMethods)
+ */
+
+export {};
