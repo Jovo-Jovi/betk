@@ -28,13 +28,13 @@
 - Skills auto-attach via `.cursor/rules/*.mdc` (core always-on + glob-scoped DB/actions/ui/tests + agent-requested security/UI reviews). You pick the model only; the core rule flags a model mismatch. Ref: HOW_RULES_AUTORUN.md.
 
 ## Last completed
-- Generated full Dev OS doc set; applied MVP Freeze (OD-1…OD-6) across all docs.
+- **Phase 01 / T01 (2026-06-16):** Repo & tooling init complete. Next.js 15.5.19 + React 19 + TypeScript strict + pnpm 9 bootstrapped. All deps installed (Tailwind 3.4, CVA, clsx, tailwind-merge, lucide-react, @supabase/supabase-js, @supabase/ssr, zod, resend, posthog-js, posthog-node, @sentry/nextjs; dev: supabase CLI, vitest, testing-library, jsdom, playwright, eslint, prettier). tsconfig strict + noUncheckedIndexedAccess + `@/*` paths. All scripts present. `pnpm typecheck` clean; `pnpm dev` boots RTL blank app.
 
 ## Open issues / blockers
 - One assumption to confirm with product: OD-4 resolution = OAuth additive + phone nullable + phone-gated-to-transactions (vs forcing phone OTP during OAuth signup). Default applied as above.
 
 ## Next task
-- Phase 01 (Foundation): execute `phase-packs/PHASE_01_FOUNDATION.md` tasks T01→T14 in order (Opus owns T05/T08/T10-review/T14; Sonnet the rest). Start at T01.
+- Phase 01 / T02: Directory skeleton (`src/` tree per BETK_CODEBASE_ARCHITECTURE.md §1).
 
 ## Update template (append per session)
 ```
