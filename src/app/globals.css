@@ -1,3 +1,133 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ────────────────────────────────────────────────────────────────
+   BETK Design Tokens — UI Spec §1
+   HSL values are stored WITHOUT the hsl() wrapper so Tailwind can
+   compose them: hsl(var(--token) / <alpha>).
+   Dark theme "mirrors with inverted L" per the spec.
+   ────────────────────────────────────────────────────────────────*/
+@layer base {
+  :root {
+    /* Canvas & text */
+    --background:            40 33% 98%;
+    --foreground:            222 22% 14%;
+
+    /* Brand green — CTAs, active nav, verified accents */
+    --primary:               158 64% 32%;
+    --primary-foreground:    0 0% 100%;
+
+    /* Boost / featured highlights, promotional badges */
+    --accent:                28 92% 54%;
+    --accent-foreground:     0 0% 100%;
+
+    /* Destructive — delete, cancel, ban, dispute-lost */
+    --destructive:           0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Secondary / muted — skeletons, disabled, secondary surfaces */
+    --secondary:             40 14% 93%;
+    --secondary-foreground:  222 22% 14%;
+    --muted:                 40 14% 93%;
+    --muted-foreground:      222 10% 42%;
+
+    /* Semantic status */
+    --success:               142 70% 38%;
+    --success-foreground:    0 0% 100%;
+    --warning:               38 92% 50%;
+    --warning-foreground:    222 22% 14%;
+
+    /* Surfaces (shadcn card / popover) — match canvas */
+    --card:                  40 33% 98%;
+    --card-foreground:       222 22% 14%;
+    --popover:               0 0% 100%;
+    --popover-foreground:    222 22% 14%;
+
+    /* Structural */
+    --border:                40 12% 86%;
+    --input:                 40 12% 86%;
+    --ring:                  158 64% 32%;
+
+    /* Border radius base — 0.625 rem (10 px) per spec */
+    --radius: 0.625rem;
+
+    /* Typography — loaded in layout.tsx via next/font */
+    --font-display: var(--font-cairo), "IBM Plex Sans Arabic", system-ui, sans-serif;
+    --font-body:    var(--font-ibm-plex-sans-arabic), "Noto Sans Arabic", system-ui, sans-serif;
+    --font-mono:    var(--font-ibm-plex-mono), ui-monospace, monospace;
+  }
+
+  .dark {
+    /* Inverted-L dark palette — same H/S, mirrored lightness */
+    --background:            40 33% 6%;
+    --foreground:            222 22% 90%;
+
+    --primary:               158 64% 68%;
+    --primary-foreground:    0 0% 4%;
+
+    --accent:                28 92% 54%;
+    --accent-foreground:     0 0% 4%;
+
+    --destructive:           0 72% 52%;
+    --destructive-foreground: 0 0% 4%;
+
+    --secondary:             40 14% 15%;
+    --secondary-foreground:  222 22% 90%;
+    --muted:                 40 14% 15%;
+    --muted-foreground:      222 10% 65%;
+
+    --success:               142 70% 62%;
+    --success-foreground:    0 0% 4%;
+    --warning:               38 92% 50%;
+    --warning-foreground:    222 22% 14%;
+
+    --card:                  40 33% 8%;
+    --card-foreground:       222 22% 90%;
+    --popover:               40 14% 10%;
+    --popover-foreground:    222 22% 90%;
+
+    --border:                40 12% 22%;
+    --input:                 40 12% 22%;
+    --ring:                  158 64% 68%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* RTL global direction — set on <html> in layout.tsx;
+       listed here as belt-and-suspenders for CSS context.  */
+    direction: rtl;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Arabic legibility: loosen line-height one step vs Latin defaults */
+    @apply leading-relaxed;
+    font-family: var(--font-body);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   RTL logical-property convention (Tailwind 3.3+ built-in)
+   ────────────────────────────────────────────────────────────────
+   Use ONLY logical utilities in shared components — NEVER raw
+   left/right utilities. Quick reference:
+
+     ps-*  → padding-inline-start  (Right in RTL, Left in LTR)
+     pe-*  → padding-inline-end
+     ms-*  → margin-inline-start
+     me-*  → margin-inline-end
+     start-* / end-* → inset-inline-start / end
+     rounded-s-* / rounded-e-* → border-radius start/end side
+
+   LTR islands (Latin refs, BETK order IDs, tracking numbers):
+     <span dir="ltr">BETK-20260616-0001</span>
+
+   No tailwindcss-rtl plugin needed — Tailwind 3.3+ covers all
+   logical-property utilities natively.
+   ────────────────────────────────────────────────────────────────*/
