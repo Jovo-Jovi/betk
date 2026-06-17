@@ -30,12 +30,13 @@
 ## Last completed
 - **Phase 01 / T01 (2026-06-16):** Repo & tooling init complete. Next.js 15.5.19 + React 19 + TypeScript strict + pnpm 9 bootstrapped. All deps installed (Tailwind 3.4, CVA, clsx, tailwind-merge, lucide-react, @supabase/supabase-js, @supabase/ssr, zod, resend, posthog-js, posthog-node, @sentry/nextjs; dev: supabase CLI, vitest, testing-library, jsdom, playwright, eslint, prettier). tsconfig strict + noUncheckedIndexedAccess + `@/*` paths. All scripts present. `pnpm typecheck` clean; `pnpm dev` boots RTL blank app.
 - **Phase 01 / T02 (2026-06-16):** Directory skeleton complete. Full `src/` tree per BETK_CODEBASE_ARCHITECTURE.md §1: `app/(public|auth|buyer|seller/seller|admin/admin|api)`; 15 feature folders (`auth discovery buyer-account messaging checkout orders reviews disputes notifications seller-onboarding store-management listings boosts seller-analytics admin`) each with `components/ hooks/ actions/ queries/ types/ index.ts` (with FR/UI-Spec/table traceability headers); `components/ui` + `components/shared`; `lib/supabase` + `lib/utils.ts`; `services hooks types validations constants configs`; `tests/{unit,integration,e2e}`. READMEs added to all top-level folders. `pnpm typecheck` clean.
+- **Phase 01 / T03 (2026-06-17):** Design tokens, RTL shell, shadcn wired. `globals.css` — full BETK HSL token set (background/foreground/primary/accent/destructive/muted/secondary/success/warning/card/popover/border/input/ring + `--radius: 0.625rem`) light + dark via `.dark`. `tailwind.config.ts` — all tokens mapped `hsl(var(--token))`, borderRadius lg/md/sm/full, BETK type scale (display/h1/h2/h3), semantic shadow aliases (card/card-hover/dialog), font-family entries. `app/layout.tsx` — Cairo + IBM Plex Sans Arabic + IBM Plex Mono via `next/font/google`; CSS vars `--font-cairo/ibm-plex-sans-arabic/ibm-plex-mono` injected on `<html>`. `components.json` — shadcn config (style=default, rtl=true, baseColor=neutral, cssVariables=true, aliases wired). `constants/statusColors.ts` — full StatusBadge color map (8 domains × all enum values → bg+fg class pairs). Note: tailwindcss-rtl plugin NOT needed — Tailwind 3.3+ has built-in logical utilities (ps-*/pe-*/ms-*/me-*/start-*/end-*). `pnpm typecheck` clean.
 
 ## Open issues / blockers
 - One assumption to confirm with product: OD-4 resolution = OAuth additive + phone nullable + phone-gated-to-transactions (vs forcing phone OTP during OAuth signup). Default applied as above.
 
 ## Next task
-- Phase 01 / T03: Design tokens, RTL shell, shadcn init (UI Spec §1).
+- Phase 01 / T04: Supabase clients + local dev (env.ts, client/server/service, supabase init).
 
 ## Update template (append per session)
 ```
