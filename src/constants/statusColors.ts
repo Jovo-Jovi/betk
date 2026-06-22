@@ -16,13 +16,24 @@
  * Do NOT add component logic here — values only.
  */
 
+import type {
+  OrderStatus,
+  SellerStatus,
+  DisputeStatus,
+  PaymentStatus,
+  BoostStatus,
+  ListingStatus,
+  FlagStatus,
+  PayoutStatus,
+} from "@/constants/enums";
+
 export type StatusColorPair = {
   bg: string;
   fg: string;
 };
 
 /* ── order_status ─────────────────────────────────────────── */
-export const orderStatusColors: Record<string, StatusColorPair> = {
+export const orderStatusColors: Record<OrderStatus, StatusColorPair> = {
   pending:     { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   confirmed:   { bg: "bg-primary/15",     fg: "text-primary" },
   preparing:   { bg: "bg-primary/15",     fg: "text-primary" },
@@ -33,7 +44,7 @@ export const orderStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── seller_status ────────────────────────────────────────── */
-export const sellerStatusColors: Record<string, StatusColorPair> = {
+export const sellerStatusColors: Record<SellerStatus, StatusColorPair> = {
   pending:    { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   active:     { bg: "bg-success/15",     fg: "text-success" },
   suspended:  { bg: "bg-destructive/15", fg: "text-destructive" },
@@ -41,7 +52,7 @@ export const sellerStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── dispute_status ───────────────────────────────────────── */
-export const disputeStatusColors: Record<string, StatusColorPair> = {
+export const disputeStatusColors: Record<DisputeStatus, StatusColorPair> = {
   submitted:       { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   under_review:    { bg: "bg-primary/15",     fg: "text-primary" },
   awaiting_seller: { bg: "bg-accent/15",      fg: "text-accent" },
@@ -50,7 +61,7 @@ export const disputeStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── payment_status ───────────────────────────────────────── */
-export const paymentStatusColors: Record<string, StatusColorPair> = {
+export const paymentStatusColors: Record<PaymentStatus, StatusColorPair> = {
   pending:   { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   confirmed: { bg: "bg-success/15",     fg: "text-success" },
   failed:    { bg: "bg-destructive/15", fg: "text-destructive" },
@@ -58,7 +69,7 @@ export const paymentStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── boost_status ─────────────────────────────────────────── */
-export const boostStatusColors: Record<string, StatusColorPair> = {
+export const boostStatusColors: Record<BoostStatus, StatusColorPair> = {
   pending_payment: { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   active:          { bg: "bg-accent/15",      fg: "text-accent" },
   expired:         { bg: "bg-muted",          fg: "text-muted-foreground" },
@@ -66,7 +77,7 @@ export const boostStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── listing_status ───────────────────────────────────────── */
-export const listingStatusColors: Record<string, StatusColorPair> = {
+export const listingStatusColors: Record<ListingStatus, StatusColorPair> = {
   draft:     { bg: "bg-muted",          fg: "text-muted-foreground" },
   active:    { bg: "bg-success/15",     fg: "text-success" },
   sold_out:  { bg: "bg-warning/15",     fg: "text-warning-foreground" },
@@ -75,7 +86,7 @@ export const listingStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── flag_status ──────────────────────────────────────────── */
-export const flagStatusColors: Record<string, StatusColorPair> = {
+export const flagStatusColors: Record<FlagStatus, StatusColorPair> = {
   pending:   { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   reviewed:  { bg: "bg-primary/15",     fg: "text-primary" },
   actioned:  { bg: "bg-destructive/15", fg: "text-destructive" },
@@ -83,7 +94,7 @@ export const flagStatusColors: Record<string, StatusColorPair> = {
 };
 
 /* ── payout_status ────────────────────────────────────────── */
-export const payoutStatusColors: Record<string, StatusColorPair> = {
+export const payoutStatusColors: Record<PayoutStatus, StatusColorPair> = {
   pending:    { bg: "bg-warning/15",     fg: "text-warning-foreground" },
   processing: { bg: "bg-primary/15",     fg: "text-primary" },
   processed:  { bg: "bg-success/15",     fg: "text-success" },
