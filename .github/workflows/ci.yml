@@ -8,8 +8,8 @@
 # Integration tests (tests/integration/rls.smoke.test.ts) hit live staging and
 # create/teardown auth users — they MUST NOT run in the default CI job silently.
 # They are gated behind the separate `rls-smoke` job, which only runs when
-# SUPABASE_RLS_SMOKE=true is passed (workflow_dispatch) or on develop merges
-# with the required secrets present. Without secrets it fails loudly.
+# triggered on develop push or workflow_dispatch, and fails loudly when secrets
+# are absent.
 
 name: CI
 
@@ -24,7 +24,9 @@ concurrency:
   cancel-in-progress: true
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Main pipeline — install → lint → typecheck → vitest → guards → types-drift → build
+# Shared setup — run once, cache node_modules for all downstream jobs.
+# Every job that needs node_modules must list `install` in its direct `needs`
+# so that `needs.install.outputs.cache-key` is accessible.
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
   install:
@@ -51,15 +53,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Cache node_modules for downstream jobs (same commit = same lockfile hash)
       - uses: actions/cache/save@v4
         with:
           path: node_modules
           key: ${{ steps.cache-key.outputs.key }}
 
+  # ─── Stage 2: lint ────────────────────────────────────────────────────────
   lint:
     name: Lint
-    needs: install
+    needs: [install]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,9 +79,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+  # ─── Stage 3: typecheck ───────────────────────────────────────────────────
   typecheck:
     name: Typecheck
-    needs: install
+    needs: [install]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,13 +100,26 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+  # ─── Stage 4: vitest (unit only) ──────────────────────────────────────────
+  # Integration tests (tests/integration/) hit live staging and are gated
+  # behind the separate `rls-smoke` job.  The unit suite may be empty until
+  # Phase 02+ adds the first unit tests — --passWithNoTests handles that case.
+  #
+  # The three REQUIRED vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  # SUPABASE_SERVICE_KEY) are provided as obvious dummies so configs/env.ts doesn't
+  # throw at import time when unit tests transitively import app modules.
+  # tests/setup/env.ts also backfills these as placeholders (lower priority —
+  # real values from .env.local or these job-level vars take precedence).
   vitest:
     name: Vitest (unit)
-    needs: [lint, typecheck]
+    needs: [install, lint, typecheck]
     runs-on: ubuntu-latest
-    # Unit tests only — integration tests (rls.smoke) hit live staging and are
-    # gated behind the separate `rls-smoke` job below. Running them here without
-    # intentional secret wiring would create/delete staging auth users silently.
+    env:
+      # Required trio — dummy values keep the strict Zod loader happy.
+      # No real Supabase project is contacted during unit tests.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-ci-unit
+      SUPABASE_SERVICE_KEY: dummy-service-key-ci-unit
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -120,23 +136,16 @@ jobs:
       - name: Unit tests (integration excluded)
         run: pnpm test:unit
 
+  # ─── Stage 4 (parallel): guards ───────────────────────────────────────────
+  # Guard scripts are pure Node.js (built-in modules only — no npm packages,
+  # no configs/env.ts import).  They only need a checkout + Node.js, which is
+  # always present on ubuntu-latest.  No pnpm/node_modules setup needed.
   guards:
     name: Guards
     needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: ${{ needs.install.outputs.cache-key }}
 
       # Guard A: no client/RSC-reachable code may import the service-role client
       - name: Guard — service-role import isolation
@@ -146,13 +155,13 @@ jobs:
       - name: Guard — Zod coverage in actions + API routes
         run: node scripts/check-zod-coverage.mjs
 
+  # ─── Stage 5: types-drift ─────────────────────────────────────────────────
+  # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
+  # Fails LOUDLY if either is absent — a silent skip would allow stale types to merge.
   types-drift:
     name: Types drift
-    needs: [vitest, guards]
+    needs: [install, vitest, guards]
     runs-on: ubuntu-latest
-    # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
-    # If either is absent this step FAILS LOUDLY — a silent skip would defeat
-    # the guard (stale types would merge undetected).
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -202,9 +211,10 @@ jobs:
           fi
           echo "Types are in sync with the live schema."
 
+  # ─── Stage 6: build ───────────────────────────────────────────────────────
   build:
     name: Build
-    needs: types-drift
+    needs: [install, types-drift]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -246,11 +256,11 @@ jobs:
 # INTENT: explicit, not silent. Must be triggered deliberately.
 #
 # Trigger options:
-#   1. workflow_dispatch with input `run_rls_smoke: true`
+#   1. workflow_dispatch
 #   2. Push to develop (auto, but only when secrets are configured)
 #
 # Requires secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-#                   SUPABASE_SERVICE_KEY (+ env placeholders for the Zod loader)
+#                   SUPABASE_SERVICE_KEY (+ Zod-loader placeholders for env.ts)
 # ─────────────────────────────────────────────────────────────────────────────
   rls-smoke:
     name: RLS smoke (opt-in, staging)
@@ -259,7 +269,7 @@ jobs:
     if: >
       (github.event_name == 'workflow_dispatch') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/develop')
-    needs: [vitest, guards]
+    needs: [install, vitest, guards]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -282,9 +292,9 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           missing=()
-          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]    && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]      && missing+=("NEXT_PUBLIC_SUPABASE_URL")
           [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-          [ -z "$SUPABASE_SERVICE_KEY" ]         && missing+=("SUPABASE_SERVICE_KEY")
+          [ -z "$SUPABASE_SERVICE_KEY" ]           && missing+=("SUPABASE_SERVICE_KEY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::RLS smoke test requires secrets: ${missing[*]}"
             echo "::error::Add them under Settings → Secrets and variables → Actions."
