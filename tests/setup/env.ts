@@ -37,7 +37,21 @@ try {
 }
 
 // --- 2. placeholders for vars the harness does not use ---
+//
+// The three REQUIRED vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+// SUPABASE_SERVICE_KEY) must be provided here too so the strict Zod loader in
+// configs/env.ts doesn't throw when unit tests (which have no .env.local and no
+// real secrets) import any module that transitively pulls in configs/env.ts.
+//
+// Real values come from .env.local (loaded above) or from CI job-level env:
+// variables — both take priority because the assignment below checks
+// `process.env[key] === undefined` before writing.
 const placeholders: Record<string, string> = {
+  // Required trio — dummy values, no real Supabase project is contacted
+  NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy-anon-key-for-unit-tests",
+  SUPABASE_SERVICE_KEY: "dummy-service-key-for-unit-tests",
+  // Optional vars (already here from T08)
   NEXT_PUBLIC_POSTHOG_KEY: "phc_test_placeholder",
   NEXT_PUBLIC_POSTHOG_HOST: "https://posthog.invalid",
   NEXT_PUBLIC_SENTRY_DSN: "https://test@test.ingest.sentry.io/1",

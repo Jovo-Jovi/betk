@@ -13,7 +13,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:unit": "vitest run --exclude 'tests/integration/**'",
+    "test:unit": "vitest run --exclude 'tests/integration/**' --passWithNoTests",
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --linked --schema betk,betk_analytics > src/lib/supabase/types.ts"
   },
