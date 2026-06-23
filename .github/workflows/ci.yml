@@ -1,0 +1,313 @@
+# BETK CI — .github/workflows/ci.yml
+# Runs on every PR to develop/main and on direct pushes to those branches.
+# Stages are sequential and block on failure (each job `needs` the prior).
+#
+# Stage order per CICD_PIPELINE.md:
+#   install → lint → typecheck → vitest (unit) → guards → types-drift → build
+#
+# Integration tests (tests/integration/rls.smoke.test.ts) hit live staging and
+# create/teardown auth users — they MUST NOT run in the default CI job silently.
+# They are gated behind the separate `rls-smoke` job, which only runs when
+# SUPABASE_RLS_SMOKE=true is passed (workflow_dispatch) or on develop merges
+# with the required secrets present. Without secrets it fails loudly.
+
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main pipeline — install → lint → typecheck → vitest → guards → types-drift → build
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  install:
+    name: Install
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=node-modules-${{ hashFiles('pnpm-lock.yaml') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Cache node_modules for downstream jobs (same commit = same lockfile hash)
+      - uses: actions/cache/save@v4
+        with:
+          path: node_modules
+          key: ${{ steps.cache-key.outputs.key }}
+
+  lint:
+    name: Lint
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+      - name: Lint
+        run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+      - name: Typecheck
+        run: pnpm typecheck
+
+  vitest:
+    name: Vitest (unit)
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    # Unit tests only — integration tests (rls.smoke) hit live staging and are
+    # gated behind the separate `rls-smoke` job below. Running them here without
+    # intentional secret wiring would create/delete staging auth users silently.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+      - name: Unit tests (integration excluded)
+        run: pnpm test:unit
+
+  guards:
+    name: Guards
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      # Guard A: no client/RSC-reachable code may import the service-role client
+      - name: Guard — service-role import isolation
+        run: node scripts/check-service-import.mjs
+
+      # Guard B: every action/API file that queries Supabase must import a Zod schema
+      - name: Guard — Zod coverage in actions + API routes
+        run: node scripts/check-zod-coverage.mjs
+
+  types-drift:
+    name: Types drift
+    needs: [vitest, guards]
+    runs-on: ubuntu-latest
+    # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
+    # If either is absent this step FAILS LOUDLY — a silent skip would defeat
+    # the guard (stale types would merge undetected).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      - name: Verify Supabase secrets are present
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          missing=()
+          [ -z "$SUPABASE_PROJECT_REF" ]   && missing+=("SUPABASE_PROJECT_REF")
+          [ -z "$SUPABASE_ACCESS_TOKEN" ]  && missing+=("SUPABASE_ACCESS_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Types-drift check requires GitHub secrets: ${missing[*]}"
+            echo "::error::Add them under Settings → Secrets and variables → Actions."
+            echo "::error::A silent skip would allow stale types to merge — failing explicitly."
+            exit 1
+          fi
+          echo "Secrets present — proceeding with types-drift check."
+
+      - name: Regenerate types from live schema
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          pnpm exec supabase gen types typescript \
+            --project-id "$SUPABASE_PROJECT_REF" \
+            --schema betk,betk_analytics \
+            > src/lib/supabase/types.ts
+
+      - name: Fail if committed types differ from live schema
+        run: |
+          if ! git diff --exit-code src/lib/supabase/types.ts; then
+            echo "::error::src/lib/supabase/types.ts is stale."
+            echo "::error::Run \`pnpm db:types\` locally, review the diff, and commit the updated file."
+            exit 1
+          fi
+          echo "Types are in sync with the live schema."
+
+  build:
+    name: Build
+    needs: types-drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+      - name: Build
+        env:
+          # Build needs env vars — use CI placeholders. Real values live in
+          # Vercel and are injected at deploy time.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY || 'phc_ci_placeholder' }}
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ secrets.NEXT_PUBLIC_POSTHOG_HOST || 'https://posthog.invalid' }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 're_ci_placeholder' }}
+          RESEND_FROM_ADDRESS: ${{ secrets.RESEND_FROM_ADDRESS || 'noreply@betk.invalid' }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci-client-id' }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci-client-secret' }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN || 'ci-whatsapp-token' }}
+          WHATSAPP_PHONE_ID: ${{ secrets.WHATSAPP_PHONE_ID || 'ci-phone-id' }}
+          SMS_PROVIDER_KEY: ${{ secrets.SMS_PROVIDER_KEY || 'ci-sms-key' }}
+          SUPABASE_DOCS_BUCKET: ${{ secrets.SUPABASE_DOCS_BUCKET || 'seller-documents' }}
+          SUPABASE_MEDIA_BUCKET: ${{ secrets.SUPABASE_MEDIA_BUCKET || 'listing-media' }}
+        run: pnpm build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Opt-in: RLS smoke test — runs integration tests against staging.
+# INTENT: explicit, not silent. Must be triggered deliberately.
+#
+# Trigger options:
+#   1. workflow_dispatch with input `run_rls_smoke: true`
+#   2. Push to develop (auto, but only when secrets are configured)
+#
+# Requires secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#                   SUPABASE_SERVICE_KEY (+ env placeholders for the Zod loader)
+# ─────────────────────────────────────────────────────────────────────────────
+  rls-smoke:
+    name: RLS smoke (opt-in, staging)
+    # Only runs on workflow_dispatch or develop push — never on PRs from forks
+    # (secrets are unavailable to forks; failing silently is unacceptable).
+    if: >
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    needs: [vitest, guards]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      - name: Verify staging secrets are present
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          missing=()
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]    && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          [ -z "$SUPABASE_SERVICE_KEY" ]         && missing+=("SUPABASE_SERVICE_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::RLS smoke test requires secrets: ${missing[*]}"
+            echo "::error::Add them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: RLS smoke tests (staging)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Zod-loader placeholders (not used in RLS test, but env.ts validates them)
+          NEXT_PUBLIC_POSTHOG_KEY: phc_ci_placeholder
+          NEXT_PUBLIC_POSTHOG_HOST: https://posthog.invalid
+          NEXT_PUBLIC_SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          GOOGLE_CLIENT_ID: ci-client-id
+          GOOGLE_CLIENT_SECRET: ci-client-secret
+          RESEND_API_KEY: re_ci_placeholder
+          RESEND_FROM_ADDRESS: noreply@betk.invalid
+          SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          SUPABASE_DOCS_BUCKET: seller-documents
+          SUPABASE_MEDIA_BUCKET: listing-media
+          WHATSAPP_API_TOKEN: ci-whatsapp-token
+          WHATSAPP_PHONE_ID: ci-phone-id
+          SMS_PROVIDER_KEY: ci-sms-key
+        run: pnpm exec vitest run tests/integration/rls.smoke.test.ts --reporter=verbose
