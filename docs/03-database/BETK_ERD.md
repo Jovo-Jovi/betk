@@ -102,4 +102,4 @@ GIN on `listings.search_vector` — full-text 1–2 keyword search (unaccent). B
 
 ## 9. Executable schema
 
-The full PostgreSQL 17 / Supabase DDL — extensions, 30 enum types, 43 `CREATE TABLE`s, constraints, 34 indexes, 5 triggers, 22 RLS policies, 2 helper functions, 6 pg_cron jobs — is the contract in `BETK_DATABASE_SCHEMA.sql`. Migrations run in the exact 057-step dependency order from C3 §7 (note the circular `inquiries.converted_to_order_id` ↔ `orders` resolved by ALTER after both exist; seed boost_packages at 039 and admin_settings at 048).
+The full PostgreSQL 17 / Supabase DDL — extensions, **34 enum types** (verified via `pg_type` query, T12 2026-06-23), 43 `CREATE TABLE`s, constraints, 34 indexes, 5 triggers, 22 RLS policies, 2 helper functions, 6 pg_cron jobs — is the contract in `BETK_DATABASE_SCHEMA.sql`. Migrations run in the exact 057-step dependency order from C3 §7 (note the circular `inquiries.converted_to_order_id` ↔ `orders` resolved by ALTER after both exist; seed boost_packages at 039 and admin_settings at 048).
