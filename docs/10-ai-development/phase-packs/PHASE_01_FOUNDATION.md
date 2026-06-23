@@ -1,7 +1,7 @@
 # PHASE 01 — FOUNDATION · Task Pack
 > Execution pack for `BETK_PHASES.md` Phase 01. Drives Opus/Sonnet in Cursor. Every prompt assumes `.cursorrules` + `BETK_MASTER_EXECUTION_PROMPT.md` + `SESSION_CONTEXT.md` are already loaded (they are, via .cursorrules). Build in task order — later tasks depend on earlier. No app features yet; this phase makes the skeleton, the database, and the wiring correct.
 
-> **AS-BUILT ANNOTATIONS (added 2026-06-23).** Each task below keeps its **canonical prompt** unchanged as the spec of record. Where the prompt was expanded for execution to fit concrete repo-state facts, an **▸ EXPANDED FOR EXECUTION** block holds the prompt actually run, and an **▸ AS-BUILT** line records what shipped + any carry-forward. Rule applied throughout: *an expanded prompt supersedes the canonical default only when it addresses a concrete repo-state fact (e.g. a file already built, an auth mechanism the default omits); otherwise the canonical prompt is run verbatim.* Phase 01 status: **T01–T13 COMPLETE; T14 (Opus exit review) pending.**
+> **AS-BUILT ANNOTATIONS (added 2026-06-23).** Each task below keeps its **canonical prompt** unchanged as the spec of record. Where the prompt was expanded for execution to fit concrete repo-state facts, an **▸ EXPANDED FOR EXECUTION** block holds the prompt actually run, and an **▸ AS-BUILT** line records what shipped + any carry-forward. Rule applied throughout: *an expanded prompt supersedes the canonical default only when it addresses a concrete repo-state fact (e.g. a file already built, an auth mechanism the default omits); otherwise the canonical prompt is run verbatim.* Phase 01 status: **COMPLETE — T01–T14 all done; signed off 2026-06-23. CI fully green (7 jobs + rls-smoke opt-in). Next: Phase 02 Auth.**
 
 ## Objectives
 Repo + tooling · design tokens/RTL shell · Supabase clients · **full migration incl. MVP-freeze deltas** · type generation · services scaffolding · auth middleware skeleton · CI gates. Exit when: app boots RTL; all 43 tables + RLS + indexes + triggers + pg_cron live in a staging Supabase; `types.ts` generated; CI green.
@@ -9,15 +9,16 @@ Repo + tooling · design tokens/RTL shell · Supabase clients · **full migratio
 ## Stack versions (pin these)
 Next.js 15 (App Router, React 19) · TypeScript strict · Tailwind v3.4 + logical RTL utilities · shadcn/ui · `@supabase/supabase-js` + `@supabase/ssr` · Zod · Resend · PostHog (`posthog-js`/`posthog-node`) · `@sentry/nextjs` · Vitest + Testing Library · Playwright · Supabase CLI (dev dep). NO ORM, NO microservices (ADR-001).
 
-## Definition of done (Phase 01 exit checklist)
-- [ ] `pnpm dev` boots a blank app with `<html dir="rtl" lang="ar">`, fonts + tokens applied.
-- [ ] Supabase staging project provisioned; all migrations applied in order; **freeze deltas present** (`auth_provider` enum; `users.phone_number` nullable; `users.auth_provider/deleted_at/anonymized_at`).
-- [ ] 43 tables across `betk` + `betk_analytics`; 34 indexes; 5 triggers; 22 RLS policies + 2 helper functions; 6 pg_cron jobs; seeds (boost_packages, admin_settings, categories).
-- [ ] `src/lib/supabase/types.ts` generated from the live schema and committed.
-- [ ] `middleware.ts` gates routes by group + role and blocks suspended/deactivated users.
-- [ ] Services (`resend/posthog/sentry/whatsapp/sms/courier`) scaffolded as typed wrappers (no real sends yet).
-- [ ] CI runs lint → typecheck → test → types-drift → build and blocks on failure.
-- [ ] RLS default-deny smoke test passes (anon cannot read a draft listing; can read an active one).
+## Definition of done (Phase 01 exit checklist) — ✅ ALL MET (verified T14, 2026-06-23)
+> Estimate figures below kept as originally written; **as-built corrections in bold** from the T14 live-schema verification.
+- [x] `pnpm dev` boots a blank app with `<html dir="rtl" lang="ar">`, fonts + tokens applied.
+- [x] Supabase staging project provisioned; all migrations applied in order; **freeze deltas present** (`auth_provider` enum; `users.phone_number` nullable; `users.auth_provider/deleted_at/anonymized_at`).
+- [x] 43 tables across `betk` + `betk_analytics` (**= betk 41 + betk_analytics 2**); ~~34 indexes~~ → **41 non-constraint indexes (over-provisioned, none missing)**; ~~5 triggers~~ → **4 live (decrement_stock_on_confirm owed to source, see T05)**; ~~22 RLS policies~~ → **34 total = betk 32 (29 permissive + 3 RESTRICTIVE phone-gate) + betk_analytics 2** + 2 helper functions; 6 pg_cron jobs; seeds (boost_packages, admin_settings, **39** categories).
+- [x] `src/lib/supabase/types.ts` generated from the live schema and committed (**CI types-drift green = matches live schema**).
+- [x] `middleware.ts` gates routes by group + role and blocks suspended/deactivated users.
+- [x] Services (`resend/posthog/sentry/whatsapp/sms/courier`) scaffolded as typed wrappers (no real sends yet) (**+ posthog.server.ts split, see T11/T13**).
+- [x] CI runs lint → typecheck → test → types-drift → build and blocks on failure (**7 jobs green; rls-smoke opt-in**).
+- [x] RLS default-deny smoke test passes (anon cannot read a draft listing; can read an active one) (**T08, 5/6 PASS, default-deny holds**).
 
 ---
 
@@ -227,6 +228,7 @@ Add .github/workflows/ci.yml per docs/08-deployment/CICD_PIPELINE.md: install ->
 - **Done when:** CI green on the skeleton; guards run.
 - **▸ EXPANDED FOR EXECUTION** — canonical run with two added decisions: (a) the T08 RLS harness hits live staging, so it must NOT run in default CI; (b) types-drift must fail loud (not silent-skip) when Supabase secrets are absent. vitest.config.ts already exists from T08 — don't overwrite. Prompt run captured those constraints.
 - **▸ AS-BUILT (Sonnet):** `.github/workflows/ci.yml` — 7 sequential jobs: install → lint/typecheck → vitest (**unit-only**, `test:unit` excludes tests/integration) + guards → types-drift → build, plus an **opt-in `rls-smoke`** job (develop push + workflow_dispatch only) that fails loud if staging secrets absent. types-drift has explicit `[ -z "$SECRET" ]` guard naming missing secrets (no silent skip). `scripts/check-service-import.mjs` (no app/feature/component file imports lib/supabase/service — passes) + `scripts/check-zod-coverage.mjs` (features/*/actions + app/api importing Supabase must import a Zod schema — near-no-op now, passes). playwright.config.ts (chromium + mobile-chrome, Arabic locale, trace-on-retry; no tests yet). vitest.config.ts untouched from T08. `package.json` +`test:unit`.
+  - **▸ CI-HARDENING (post-T13, during first green-CI push, 2026-06-23):** first real CI run surfaced four issues, all fixed without weakening any gate. (1) **Vitest** exited 1 on empty match set (only test was the excluded rls.smoke) → added `--passWithNoTests`. (2) **Guards** died before running: job used `needs.install.outputs.cache-key` but `install` wasn't in its direct `needs` (transitive outputs aren't exposed) → added `install` to direct needs of vitest/types-drift/build/rls-smoke; guards job stripped to checkout + two `node` commands (scripts use only Node built-ins). (3) **Types-drift** failed loud on absent secrets (correct) → added GitHub repo secrets `SUPABASE_PROJECT_REF` + `SUPABASE_ACCESS_TOKEN` (user PAT); stage uses `--project-id` (read-only Management API, no DB password), kept on every push/PR to main+develop (read-only, safe). (4) **Build** failed at `next build` (webpack) — `posthog-node` pulled into the client bundle via PostHogProvider → @/services/posthog → `require('posthog-node')`; webpack resolves require() statically, so the runtime `typeof window` guard couldn't exclude it (dev/Turbopack masked it). **Fix:** split into `posthog.ts` (client-safe POSTHOG_CONFIG only) + `posthog.server.ts` (server-only + posthog-node). **RULE for Phase 02+:** Server Actions import captureServerEvent/identifyUser from `@/services/posthog.server`, never `@/services/posthog`. Remaining build warnings (Sentry/OTel require-in-the-middle; @supabase/ssr process.version on Edge) are benign, exit 0. **Deploy-phase TODO:** bump GH Actions @v4 (checkout/setup-node/cache/pnpm) for Node 20 deprecation; "Cache save failed" on install is non-fatal.
 
 ## T14 — Phase exit verification
 - **Model:** **Opus** (review) · **Skill:** skill-security-reviewer, skill-ui-reviewer
@@ -235,12 +237,13 @@ Add .github/workflows/ci.yml per docs/08-deployment/CICD_PIPELINE.md: install ->
 Verify Phase 01 against the Definition of Done in this pack and BETK_PHASES Phase 01 Acceptance. Confirm: RTL boot; 43 tables + freeze deltas (\d betk.users shows nullable phone_number + auth_provider/deleted_at/anonymized_at); 34 indexes; 5 triggers; 22 RLS policies + 2 helpers; 6 cron jobs; seeds; types.ts current; middleware gates + deactivated block; services scaffolded; CI gates incl. types-drift + service-import + zod-coverage. Produce a short pass/fail report and update SESSION_CONTEXT.md (Last completed -> Phase 01; Next -> Phase 02 Auth) and append DEVELOPMENT_JOURNAL.md.
 ```
 - **Done when:** all DoD boxes checked; SESSION_CONTEXT + journal updated; sign-off to start Phase 02.
-- **▸ EXPANDED FOR EXECUTION (PENDING — run next)** — the canonical DoD numbers are pre-build estimates; reconcile against as-built reality (4 triggers, not 5; 34 RLS policies incl. 3 RESTRICTIVE gates, not 22; CLI via direct binary), and re-surface every logged carry-forward as the Phase-02 entry checklist. Suggested prompt:
+- **▸ EXPANDED FOR EXECUTION (DONE 2026-06-23, Opus 4.8)** — the canonical DoD numbers are pre-build estimates; reconcile against as-built reality (4 triggers, not 5; 34 RLS policies incl. 3 RESTRICTIVE gates, not 22; CLI via direct binary), and re-surface every logged carry-forward as the Phase-02 entry checklist. Prompt run:
 ```
 Verify Phase 01 against this pack's DoD + BETK_PHASES Phase 01 Acceptance. Use the direct supabase binary (npx wrapper hangs). Confirm on staging: RTL boot; 43 tables; users freeze deltas (nullable phone_number + auth_provider/deleted_at/anonymized_at); 34 indexes; **4 triggers (NOT 5 — decrement_stock_on_confirm is a known source gap, see T05 finding; confirm it's still tracked, do not invent it)**; **34 RLS policies incl. the 3 OD-4 RESTRICTIVE phone-gates**; 2 helpers; 6 cron jobs; seeds (3 boost_packages, 11 admin_settings, 39 categories); types.ts current (CI drift green); middleware gates + /blocked; services scaffolded; CI gates (unit + service-import + zod-coverage + types-drift, rls-smoke opt-in).
 Produce a pass/fail report. Then write the Phase-02 ENTRY CHECKLIST from Phase-01 carry-forwards: (1) add PERMISSIVE ownership INSERT policy to orders (Phase 07) + seller_profiles (Phase 04) — payouts is the model, else checkout/onboarding silently default-deny; (2) re-tighten GOOGLE_CLIENT_ID/SECRET to required; (3) validate middleware returnUrl is local (open-redirect guard); (4) decrement_stock_on_confirm trigger still owed to source; (5) StoreDeliveryOptions.modes enum alignment check before consume. Update SESSION_CONTEXT (Last completed → Phase 01; Next → Phase 02 Auth) + append DEVELOPMENT_JOURNAL.
 ```
 - **▸ Reconciled DoD deltas vs the checklist at top of this pack:** triggers **4** live (not 5 — `decrement_stock_on_confirm` absent from source, tracked); RLS policies **34** (not 22 — count grew with the 3 RESTRICTIVE gates + per-table policies); seeds include **39 categories**; CLI = direct binary. The "22 policies / 5 triggers" figures in the DoD checklist are pre-build estimates — trust the as-built numbers here.
+- **▸ AS-BUILT (2026-06-23, Opus 4.8) — PHASE 01 SIGNED OFF.** All 13 DoD lines PASS (no hard failures: no missing table, freeze deltas intact, default-deny holds). Three mismatches were doc/ops corrections, not blockers: (a) **43 tables = betk 41 + betk_analytics 2**; (b) **RLS 34 total = betk 32 (29 permissive + 3 restrictive) + betk_analytics 2** — prior "31+3 all in betk" attribution was wrong, total still 34; (c) **indexes 41 actual vs 34 estimate** (over-provisioned, none missing). New finding: **pg_cron TZ** — 6 jobs authored Cairo-local in comments but stored as bare cron exprs on a UTC cluster → set `cron.timezone`/`CRON_TZ`=Africa/Cairo (or convert to UTC) **before launch** (ops, non-blocking). Phase-02 entry checklist (5 items) written to SESSION_CONTEXT open-issues; SESSION_CONTEXT (Last completed→Phase 01 COMPLETE; Next→Phase 02 Auth) + DEVELOPMENT_JOURNAL updated.
 
 ---
 
@@ -273,6 +276,34 @@ CREATE POLICY orders_insert_phonegate ON betk.orders FOR INSERT
 -- seller_profiles INSERT (become seller) and payouts INSERT: same phone-present requirement.
 -- Server Actions re-assert this and trigger phone+OTP capture when missing (Phase 04/07/13).
 ```
+
+## Phase 01 → Phase 02+ carry-forward ledger (consolidated 2026-06-23)
+> Single index of everything Phase 01 left open. Authoritative live copy is SESSION_CONTEXT open-issues; this is the pack-local mirror.
+
+**Due in Phase 02 (Auth):**
+- Re-tighten `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` to required in `configs/env.ts` when OAuth Server Actions land (T11).
+- Add `returnUrl` open-redirect guard (must start with `/`, not `//` or a full URL) when the login page consuming it is built (T10).
+- Enforce the OD-4 verified-phone-before-transacting gate in Server Actions (app-layer half of the RLS gate).
+- **Import rule:** server-side PostHog (`captureServerEvent`/`identifyUser`) comes from `@/services/posthog.server`, NEVER `@/services/posthog` (T13 CI-hardening — webpack pulls posthog-node into the client bundle otherwise).
+
+**Due in Phase 04 (Become-seller):**
+- Add PERMISSIVE ownership INSERT policy to `seller_profiles` (currently RESTRICTIVE-only → all inserts default-denied). `payouts` is the working model. (T08)
+
+**Due in Phase 07 (Checkout/Orders):**
+- Add PERMISSIVE ownership INSERT policy to `orders` (same gap/model as above). (T08)
+
+**Owed to source / DB owner:**
+- `decrement_stock_on_confirm` trigger (R-L05/06) — defined in DoD/ERD §7 but absent from `BETK_DATABASE_SCHEMA.sql`; add to source + a migration. NOT invented. (T05/T14)
+- Verify `StoreDeliveryOptions.modes` mirrors the store-side enum (self_deliver/bosta/pickup/remote), distinct from buyer-side delivery_method, before Phase 04/07 consume it. (T07)
+
+**Pre-launch ops:**
+- pg_cron timezone: 6 jobs fire on UTC cluster vs Cairo-local intent → set `cron.timezone`/`CRON_TZ`=Africa/Cairo or convert schedules to UTC. (T14)
+- Security gate hardening: ~21 RLS-enabled-no-policy tables (default-deny by design, policies arrive per-phase); `function_search_path_mutable` on 6 functions; `extension_in_public` (pg_trgm/unaccent). (T05)
+- `withSentryConfig` on next.config for source-map upload/tunneling (needs SENTRY_AUTH_TOKEN). (T09)
+- Bump GH Actions `@v4` → current (Node 20 deprecation); investigate "Cache save failed" if it persists. (T13)
+
+**Doc corrections applied (for the record):**
+- Enum count 30→34 (BETK_ERD §9); RLS attribution corrected to betk 32 + analytics 2 = 34; index count estimate 34 → actual 41; triggers 5 → 4 live.
 
 ## Notes for the operator
 - Run T05 on a **staging** Supabase project first; production apply is a reviewed manual step (DISASTER_RECOVERY).
