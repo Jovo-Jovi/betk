@@ -4,6 +4,16 @@
  * UI Spec: §3 Auth flows (login, verify, register, blocked)
  * Tables:  betk.users, betk.otp_tokens, betk.sessions
  * OD-4:    phone_number nullable; Google OAuth additive; verified phone required before transacting.
+ * Model:   ADR-010 (GoTrue-canonical / Model A).
  */
 
-export {};
+// T01 find-or-create primitive — shared by phone (T02) and Google OAuth (T03).
+export {
+  findOrCreateUser,
+  AuthUserError,
+  UserDeactivatedError,
+  UserNotActiveError,
+  PhoneNumberTakenError,
+} from "./queries/findOrCreateUser";
+export { authIdentitySchema, authProviderSchema } from "@/validations/auth";
+export type { AuthIdentity, AuthProviderInput } from "@/validations/auth";

@@ -160,7 +160,10 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# BETK auth callback (OAuth code exchange) is implemented at /auth/callback (Phase 02 / T03).
+# NOTE: this allow-list governs LOCAL dev only; on the hosted staging project the same URLs
+# (https://<staging-domain>/auth/callback) must be added under Authentication → URL Configuration.
+additional_redirect_urls = ["http://127.0.0.1:3000/auth/callback", "http://localhost:3000/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -255,14 +258,22 @@ otp_expiry = 3600
 # content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
+# BETK phone-OTP sign-in (OD-4 / FR-AUTH-1). Phone is a primary sign-in method, so new
+# users may be created via SMS OTP.
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
 template = "Your code is {{ `{{ .Code }}` }}"
-# Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+# R-A02: "one active OTP per phone / 60s". This is the minimum interval between OTP sends to
+# the same number (resend window). Raised from the 5s default to 60s.
+max_frequency = "60s"
+# SMS OTP length (6) and expiry (R-A02 = 60s) are NOT first-class keys in this CLI's
+# config.toml schema; GoTrue defaults are SMS_OTP_LENGTH=6 and SMS_OTP_EXP=60 (both already
+# match BETK). On the HOSTED staging project pin them explicitly under
+# Authentication → Providers → Phone → "OTP Length" = 6, "OTP Expiry" = 60.
+# A live SMS provider (Twilio) secret is dashboard/secret-managed (see [auth.sms.twilio]); not in repo.
 
 # Use pre-defined map of phone number to OTP for testing.
 # [auth.sms.test_otp]
@@ -319,6 +330,21 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# BETK Google OAuth sign-in (OD-4 / FR-AUTH-1). Callback handled at /auth/callback (T03).
+# client_id / secret are read from env (same names the app's configs/env.ts validates and that
+# T03 re-tightens to required). LOCAL dev values live in .env.local; the HOSTED staging project
+# stores its own Client ID/Secret under Authentication → Providers → Google (dashboard-managed,
+# NOT pushed from this file). Google Cloud Console authorized redirect URI must be the GoTrue
+# callback: https://sojmjvohiziapiwkzsjg.supabase.co/auth/v1/callback (staging) and
+# http://127.0.0.1:54321/auth/v1/callback (local).
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+redirect_uri = ""
+# Required for local sign-in with Google (Supabase docs). Leave at the hosted default (false) on staging/prod.
+skip_nonce_check = true
+
 [auth.external.apple]
 enabled = false
 client_id = ""

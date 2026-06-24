@@ -37,9 +37,11 @@ const clientSchema = z.object({
 const serverSchema = z.object({
   // Core infrastructure — always required
   SUPABASE_SERVICE_KEY: z.string().min(1),
-  // OAuth — required from Phase 02; optional in Phase 01 local dev
-  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
-  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  // OAuth (OD-4) — REQUIRED from Phase 02 (Google provider enabled on staging,
+  // keys present in .env.local). Server-only secrets: never NEXT_PUBLIC_, never
+  // reach the client bundle. The loader fails fast at startup if either is absent.
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
   // Transactional email (Resend) — optional; services fail-safe without it
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_ADDRESS: z.string().email().optional(),
