@@ -26,7 +26,13 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./tests/setup/env.ts"],
-    include: ["tests/**/*.{test,spec}.ts", "src/**/*.{test,spec}.ts"],
+    include: [
+      "tests/**/*.{test,spec}.ts",
+      "src/**/*.{test,spec}.ts",
+      // Deno Edge Function unit tests (e.g. send-sms-hook) live colocated under
+      // supabase/functions; their pure logic (lib.ts) is Node-importable.
+      "supabase/functions/**/*.{test,spec}.ts",
+    ],
     // Network-bound integration tests must not run concurrently against the
     // same shared staging project, and need generous timeouts.
     fileParallelism: false,
