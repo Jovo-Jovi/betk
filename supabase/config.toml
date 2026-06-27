@@ -296,6 +296,22 @@ max_frequency = "60s"
 # enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
+# BETK production OTP delivery (Phase 02 / T01a). GoTrue calls this Edge Function on
+# every phone-OTP send; the function verifies the Standard Webhooks signature
+# (SEND_SMS_HOOK_SECRET) then delivers via TorvoSMS. This block is the
+# VERSION-CONTROLLED SOURCE OF TRUTH for local dev + future hosted replication.
+# `uri` uses host.docker.internal so the local Auth container can reach the local
+# edge runtime. On the HOSTED staging/prod project, enabling the Send SMS Hook is
+# a MANUAL DASHBOARD ACTION (Authentication → Hooks → Send SMS) pointing at the
+# deployed function URL https://<project-ref>.supabase.co/functions/v1/send-sms-hook
+# with the dashboard-generated secret — config.toml does NOT push hosted hook config.
+# Secret is read from env (Edge Function secret `SEND_SMS_HOOK_SECRET`, form
+# `v1,whsec_<base64>`); never hard-coded here.
+[auth.hook.send_sms]
+enabled = true
+uri = "http://host.docker.internal:54321/functions/v1/send-sms-hook"
+secrets = "env(SEND_SMS_HOOK_SECRET)"
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false

@@ -24,5 +24,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "comment:exclude": "supabase/functions is Deno-runtime code (Deno globals + npm:/import-map specifiers); it is typechecked by Deno, not the Next.js tsc.",
+  "exclude": ["node_modules", "supabase/functions"]
 }
