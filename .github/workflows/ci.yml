@@ -232,13 +232,17 @@ jobs:
       - name: Build
         env:
           # Build needs env vars — use CI placeholders. Real values live in
-          # Vercel and are injected at deploy time.
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Vercel and are injected at deploy time. `next build` only compiles;
+          # it never contacts Supabase, so placeholders satisfy the strict Zod
+          # loader (configs/env.ts) without depending on repo secrets being set.
+          # Every var below falls back to a dummy so the build is hermetic; the
+          # required trio MUST keep a fallback or the loader throws and Build fails.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-anon-key-ci-build' }}
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY || 'phc_ci_placeholder' }}
           NEXT_PUBLIC_POSTHOG_HOST: ${{ secrets.NEXT_PUBLIC_POSTHOG_HOST || 'https://posthog.invalid' }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY || 'dummy-service-key-ci-build' }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 're_ci_placeholder' }}
           RESEND_FROM_ADDRESS: ${{ secrets.RESEND_FROM_ADDRESS || 'noreply@betk.invalid' }}
