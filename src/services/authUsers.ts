@@ -63,6 +63,77 @@ export async function getUserRowById(id: string): Promise<UserRow | null> {
 }
 
 /**
+ * Set `betk.users.last_login_at = now()` for the given verified user id.
+ *
+ * `betk.users` has no permissive UPDATE policy (ADR-010 finding / T02 carry-forward).
+ * This must run via the service-role client. The id MUST be a verified GoTrue uid
+ * (never trust a client-supplied value — callers pass the id from a live session).
+ *
+ * FINDING (surfaced per ADR-010): a scoped permissive self-UPDATE policy would allow
+ * the authenticated cookie client to set last_login_at without the service key.
+ * Not added silently — flag for review at the T06 (deactivate) gate.
+ */
+export async function updateLastLoginAt(id: string): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .schema("betk")
+    .from("users")
+    .update({ last_login_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`[authUsers] updateLastLoginAt failed: ${error.message}`);
+  }
+}
+
+/**
+ * Resolve the post-auth redirect destination for a given user.
+ *
+ * - admin/superadmin → /admin
+ * - seller: seller_profiles.status non-active (R-S04) → /seller/status; active → /seller
+ * - buyer: no buyer_profiles row (first sign-in) → /auth/register; else → returnUrl|'/'
+ *
+ * Uses the service-role client because the authenticated cookie client may not
+ * yet have the session cookie set when this is called inside verifyOtp.
+ */
+export async function resolvePostAuthRedirect(
+  userId: string,
+  role: string,
+  returnUrl: string,
+): Promise<string> {
+  const supabase = createServiceClient();
+
+  if (role === "admin" || role === "superadmin") {
+    return "/admin";
+  }
+
+  if (role === "seller") {
+    const { data: sp } = await supabase
+      .schema("betk")
+      .from("seller_profiles")
+      .select("status")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!sp || sp.status !== "active") return "/seller/status";
+    return "/seller";
+  }
+
+  // buyer — check for buyer_profile (T04: missing → registration required).
+  const { data: bp } = await supabase
+    .schema("betk")
+    .from("buyer_profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!bp) return "/auth/register";
+
+  // Safe returnUrl already validated by the caller.
+  return returnUrl || "/";
+}
+
+/**
  * Insert a new `betk.users` row mirroring a GoTrue identity. `role`, `status`,
  * `created_at`, `updated_at` use DB defaults ('buyer' / 'active' / now()).
  */
