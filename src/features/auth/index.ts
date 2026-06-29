@@ -17,3 +17,9 @@ export {
 } from "./queries/findOrCreateUser";
 export { authIdentitySchema, authProviderSchema } from "@/validations/auth";
 export type { AuthIdentity, AuthProviderInput } from "@/validations/auth";
+
+// T02 Server Actions — phone OTP login + verify.
+export { sendOtp } from "./actions/sendOtp";
+export type { SendOtpResult } from "./actions/sendOtp";
+export { verifyOtp } from "./actions/verifyOtp";
+export type { VerifyOtpResult } from "./actions/verifyOtp";

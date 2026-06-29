@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { sanitizeReturnUrl } from "@/validations/returnUrl";
 
 /**
  * BETK auth middleware — route-group gates + session refresh.
@@ -115,7 +116,11 @@ export async function middleware(request: NextRequest) {
     url.pathname = LOGIN_ROUTE;
     url.search = "";
     // Preserve the original destination so Phase 02 login can bounce the user back.
-    url.searchParams.set("returnUrl", `${pathname}${request.nextUrl.search}`);
+    // sanitizeReturnUrl guards against open-redirect: only local paths (single '/' prefix,
+    // not protocol-relative or absolute) are forwarded; anything else falls back to '/'.
+    const raw = `${pathname}${request.nextUrl.search}`;
+    const safeReturn = sanitizeReturnUrl(raw);
+    url.searchParams.set("returnUrl", safeReturn);
     return copyCookies(response, NextResponse.redirect(url));
   }
 
@@ -134,7 +139,8 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = LOGIN_ROUTE;
     url.search = "";
-    url.searchParams.set("returnUrl", `${pathname}${request.nextUrl.search}`);
+    const raw2 = `${pathname}${request.nextUrl.search}`;
+    url.searchParams.set("returnUrl", sanitizeReturnUrl(raw2));
     return copyCookies(response, NextResponse.redirect(url));
   }
 

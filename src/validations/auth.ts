@@ -5,11 +5,17 @@
  * find-or-create primitive mirrors from a GoTrue `auth.users` session into
  * `betk.users`. T02 (phone login/verify) and T03 (OAuth callback) reuse this.
  *
+ * Phase 02 / T02: `phoneInputSchema` validates + normalises Egyptian phone
+ * numbers; `otpVerifySchema` validates the 6-digit code + phone forwarded from
+ * the login page.
+ *
  * Per ADR-010 (Model A): Supabase Auth (GoTrue) is canonical for OTP/OAuth and
  * sessions; `betk.users` is the find-or-create mirror keyed to `auth.users.id`.
  */
 
 import { z } from "zod";
+
+// ── Identity (T01 primitive) ────────────────────────────────────────────────
 
 /** Mirrors betk.auth_provider ('phone' | 'google'). */
 export const authProviderSchema = z.enum(["phone", "google"]);
@@ -35,3 +41,65 @@ export const authIdentitySchema = z.object({
 
 export type AuthProviderInput = z.infer<typeof authProviderSchema>;
 export type AuthIdentity = z.infer<typeof authIdentitySchema>;
+
+// ── Phone-OTP login (T02) ───────────────────────────────────────────────────
+
+/**
+ * Accepts Egyptian phone numbers in two formats and normalises to E.164 (+20…):
+ *
+ *   Local format   : 01XXXXXXXXX  (11 digits, starts with 01)
+ *   E.164 format   : +201XXXXXXXXX (13 chars, country code +20)
+ *
+ * Egyptian mobile operators (OD-4): Vodafone 010/011, Etisalat 011,
+ * Orange 012, We 015. All start with 01X ⇒ local = exactly 11 digits `01[0-9]{9}`.
+ *
+ * Transformation: strip leading '0' from local, prepend '+20' → E.164 "+20XXXXXXXXXX".
+ * GoTrue requires E.164 for signInWithOtp.
+ */
+const EGYPTIAN_LOCAL_RE = /^01[0-9]{9}$/;
+const EGYPTIAN_E164_RE = /^\+201[0-9]{9}$/;
+
+export const phoneInputSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(1, { message: "رقم الهاتف مطلوب" })
+    .transform((raw) => {
+      // Strip spaces, dashes, parentheses that users commonly add.
+      const cleaned = raw.replace(/[\s\-().]/g, "");
+
+      if (EGYPTIAN_LOCAL_RE.test(cleaned)) {
+        // Local: 01XXXXXXXXX → +201XXXXXXXXX (drop leading 0, prepend +20)
+        return `+20${cleaned.slice(1)}`;
+      }
+      if (EGYPTIAN_E164_RE.test(cleaned)) {
+        return cleaned;
+      }
+
+      // Return as-is so refinement below can produce the correct error.
+      return cleaned;
+    })
+    .refine((normalized) => EGYPTIAN_E164_RE.test(normalized), {
+      message: "رقم هاتف مصري غير صحيح. استخدم صيغة 01XXXXXXXXX أو +201XXXXXXXXX",
+    }),
+});
+
+export type PhoneInput = z.infer<typeof phoneInputSchema>;
+
+/**
+ * OTP verification input: the normalised E.164 phone forwarded from the login
+ * page, plus the 6-digit code the user entered.
+ *
+ * NEVER include the raw token in logs, errors, or DB writes.
+ */
+export const otpVerifySchema = z.object({
+  phone: z.string().regex(EGYPTIAN_E164_RE, {
+    message: "رقم الهاتف غير صحيح",
+  }),
+  token: z
+    .string()
+    .length(6, { message: "الكود يجب أن يكون 6 أرقام" })
+    .regex(/^\d{6}$/, { message: "الكود يجب أن يحتوي على أرقام فقط" }),
+});
+
+export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
