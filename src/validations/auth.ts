@@ -103,3 +103,31 @@ export const otpVerifySchema = z.object({
 });
 
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
+
+// ── Google OAuth callback (T03) ─────────────────────────────────────────────
+
+/**
+ * Query params on the OAuth redirect back to `/auth/callback`.
+ *
+ * - `code`              — the PKCE authorization code, exchanged server-side for
+ *                         a session. `null` when the provider returned an error
+ *                         (consent denied) or the route was hit without a flow.
+ * - `error`             — provider error slug (e.g. `access_denied`); present on
+ *                         user-cancelled / failed consent.
+ * - `error_description` — human-readable provider text. NEVER echoed back to the
+ *                         client (info-leak / reflected-injection surface).
+ * - `returnUrl`         — optional post-auth destination; sanitised separately by
+ *                         `sanitizeReturnUrl` (open-redirect guard).
+ *
+ * SECURITY: this schema only structurally validates the redirect inputs. State /
+ * PKCE verification is owned by Supabase Auth (`exchangeCodeForSession`); we do
+ * NOT hand-roll it.
+ */
+export const oauthCallbackSchema = z.object({
+  code: z.string().min(1).nullable(),
+  error: z.string().min(1).nullable().optional(),
+  error_description: z.string().nullable().optional(),
+  returnUrl: z.string().nullable().optional(),
+});
+
+export type OAuthCallbackInput = z.infer<typeof oauthCallbackSchema>;

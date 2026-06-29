@@ -31,6 +31,7 @@ export const SENTRY_INIT_OPTIONS = {
 /** Feature areas mapped to Sentry tag values for cross-cutting observability. */
 export type SentryFeature =
   | "auth"
+  | "auth-oauth"
   | "checkout"
   | "discovery"
   | "listing"
