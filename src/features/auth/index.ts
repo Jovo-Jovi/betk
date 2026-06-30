@@ -18,6 +18,22 @@ export {
 export { authIdentitySchema, authProviderSchema } from "@/validations/auth";
 export type { AuthIdentity, AuthProviderInput } from "@/validations/auth";
 
+// T07 verified-phone transaction gate — canonical gate consumed by
+// checkout (Phase 07), become-seller (Phase 04), payout (Phase 13).
+export {
+  requireVerifiedPhone,
+  requireVerifiedPhoneForUser,
+  NotAuthenticatedError,
+  PhoneRequiredError,
+} from "./queries/requireVerifiedPhone";
+export type { VerifiedPhoneUser } from "./queries/requireVerifiedPhone";
+
+// T07 phone-capture flow — Server Actions for an authenticated phone-NULL user.
+export { sendPhoneOtp } from "./actions/sendPhoneOtp";
+export type { SendPhoneOtpResult } from "./actions/sendPhoneOtp";
+export { verifyPhoneOtp } from "./actions/verifyPhoneOtp";
+export type { VerifyPhoneOtpResult } from "./actions/verifyPhoneOtp";
+
 // T02 Server Actions — phone OTP login + verify.
 export { sendOtp } from "./actions/sendOtp";
 export type { SendOtpResult } from "./actions/sendOtp";
