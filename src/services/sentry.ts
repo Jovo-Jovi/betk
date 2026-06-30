@@ -32,6 +32,8 @@ export const SENTRY_INIT_OPTIONS = {
 export type SentryFeature =
   | "auth"
   | "auth-oauth"
+  | "auth-phone-gate"
+  | "buyer-account"
   | "checkout"
   | "discovery"
   | "listing"

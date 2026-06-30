@@ -5,4 +5,8 @@
  * Tables:  betk.users, betk.buyer_profiles, betk.addresses, betk.wishlists, betk.store_follows
  */
 
-export {};
+// T05: profile query + edit action.
+export { getProfile } from "./queries/getProfile";
+export type { ProfileData } from "./queries/getProfile";
+export { updateProfile } from "./actions/updateProfile";
+export type { UpdateProfileResult } from "./actions/updateProfile";
