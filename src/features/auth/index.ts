@@ -23,3 +23,7 @@ export { sendOtp } from "./actions/sendOtp";
 export type { SendOtpResult } from "./actions/sendOtp";
 export { verifyOtp } from "./actions/verifyOtp";
 export type { VerifyOtpResult } from "./actions/verifyOtp";
+
+// T04 Server Action — buyer profile completion.
+export { completeProfile } from "./actions/completeProfile";
+export type { CompleteProfileResult } from "./actions/completeProfile";

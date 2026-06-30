@@ -134,6 +134,31 @@ export async function resolvePostAuthRedirect(
 }
 
 /**
+ * Check whether a `betk.buyer_profiles` row exists for the given user id.
+ *
+ * Uses the service-role client so it can be called immediately after session
+ * creation (the GoTrue cookie may not yet be available in the RSC render
+ * context for a freshly-established session). This is a read-only check used
+ * by the /auth/register page to decide whether to show or skip the form.
+ *
+ * Returns true when the row exists, false otherwise.
+ */
+export async function hasBuyerProfile(userId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .schema("betk")
+    .from("buyer_profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`[authUsers] hasBuyerProfile failed: ${error.message}`);
+  }
+  return data !== null;
+}
+
+/**
  * Insert a new `betk.users` row mirroring a GoTrue identity. `role`, `status`,
  * `created_at`, `updated_at` use DB defaults ('buyer' / 'active' / now()).
  */
