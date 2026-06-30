@@ -87,6 +87,42 @@ export async function updateLastLoginAt(id: string): Promise<void> {
 }
 
 /**
+ * Deactivate a user account (OD-2, DEACTIVATE-only) — set `deleted_at = now()`.
+ *
+ * SCOPE (security-critical, Phase 02 / T06): this update sets EXACTLY ONE column,
+ * `deleted_at`. It NEVER touches `anonymized_at` (reserved, post-MVP — no MVP
+ * behaviour), NEVER `role` / `status` / `phone_number` / any other column, and
+ * NEVER another user's row — the caller passes `id` read from the live GoTrue
+ * session (`auth.uid()`), never a client-supplied value.
+ *
+ * WHY service-role (DECISION — Option A, T06): `betk.users` has only a
+ * `users_self` SELECT policy and no permissive UPDATE policy, while the
+ * table-level GRANT to `authenticated` already covers UPDATE on ALL columns.
+ * A scoped permissive UPDATE policy (Option B) would therefore combine with that
+ * all-column grant to permit `role`/`status`/`phone_number` self-rewrites
+ * (privilege escalation) unless the grant were first revoked and re-issued as
+ * `GRANT UPDATE(deleted_at, anonymized_at)` — a whole-table grant change that
+ * also prematurely opens `anonymized_at`. The service-role path keeps the write
+ * column-scoped in code with zero schema/grant change and leaves RLS as the
+ * authz boundary. This consistency mirrors `updateLastLoginAt`.
+ *
+ * Idempotent: re-deactivating simply re-stamps `deleted_at`.
+ */
+export async function deactivateAccount(id: string): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .schema("betk")
+    .from("users")
+    // Only `deleted_at`. Do NOT add any other column here.
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`[authUsers] deactivateAccount failed: ${error.message}`);
+  }
+}
+
+/**
  * Resolve the post-auth redirect destination for a given user.
  *
  * - admin/superadmin → /admin
