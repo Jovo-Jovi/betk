@@ -131,3 +131,40 @@ export const oauthCallbackSchema = z.object({
 });
 
 export type OAuthCallbackInput = z.infer<typeof oauthCallbackSchema>;
+
+// ── Buyer profile completion (T04) ──────────────────────────────────────────
+
+import { GOVERNORATE_VALUES } from "@/constants/governorates";
+
+/**
+ * Zod schema for the buyer profile completion form (/auth/register).
+ *
+ * Required: full_name, governorate (from the 27-governorate Egypt list).
+ * Optional: city (per buyer_profiles schema).
+ * returnUrl: sanitised separately by sanitizeReturnUrl before use.
+ *
+ * Column constraints (from BETK_DATABASE_SCHEMA.sql):
+ *   full_name   VARCHAR(100) NOT NULL
+ *   governorate VARCHAR(50)  NOT NULL
+ *   city        VARCHAR(100) nullable
+ */
+export const completeProfileSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, { message: "الاسم الكامل مطلوب (حرفان على الأقل)" })
+    .max(100, { message: "الاسم الكامل لا يتجاوز 100 حرف" }),
+  governorate: z.enum(GOVERNORATE_VALUES as [string, ...string[]], {
+    required_error: "المحافظة مطلوبة",
+    invalid_type_error: "اختر محافظة صحيحة",
+  }),
+  city: z
+    .string()
+    .trim()
+    .max(100, { message: "اسم المدينة لا يتجاوز 100 حرف" })
+    .optional()
+    .or(z.literal("")),
+  returnUrl: z.string().optional(),
+});
+
+export type CompleteProfileInput = z.infer<typeof completeProfileSchema>;
