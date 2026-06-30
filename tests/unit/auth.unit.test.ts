@@ -8,10 +8,16 @@
  *   1. returnUrl open-redirect guard (sanitizeReturnUrl)
  *   2. phoneInputSchema — Egyptian E.164 normalisation + rejection
  *   3. otpVerifySchema — 6-digit code validation
- *   4. otp_tokens token_hash format — SHA-256 is hex, not an OTP digit string
+ *   4. otp_tokens token_hash format — opaque random nonce (hex), never the OTP
+ *
+ * NOTE (T08-FIX / open-issue #12): the limiter is now lifecycle-anchored — the
+ * counter row is opened at SEND time and `token_hash` is an opaque random server
+ * nonce (`randomBytes(32).toString("hex")`), NOT a wall-clock-window-derived
+ * SHA-256 and NOT used for lookup. The straddle regression for the ≤5 control
+ * lives in tests/unit/otpLimiter.straddle.test.ts.
  */
 
-import { createHash } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { phoneInputSchema, otpVerifySchema } from "@/validations/auth";
@@ -137,38 +143,25 @@ describe("otpVerifySchema — 6-digit OTP validation", () => {
   });
 });
 
-// ── 4. otp_tokens token_hash format ──────────────────────────────────────────
+// ── 4. otp_tokens token_hash format (opaque random nonce — T08-FIX) ──────────
 
-describe("otp_tokens token_hash — SHA-256 is hex, never an OTP digit string", () => {
-  it("deriving a challenge hash produces a 64-char hex string", () => {
-    const phone = "+201012345678";
-    const windowStartMs = Math.floor(Date.now() / 60_000) * 60_000;
+describe("otp_tokens token_hash — opaque random nonce, never an OTP digit string", () => {
+  /** Mirrors otpLimiter.newTokenHash(): randomBytes(32).toString("hex"). */
+  function newTokenHash(): string {
+    return randomBytes(32).toString("hex");
+  }
 
-    const hash = createHash("sha256")
-      .update(`betk-otp-challenge:${phone}:${windowStartMs}`)
-      .digest("hex");
-
-    // SHA-256 hex = exactly 64 lowercase hex characters.
-    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+  it("produces a 64-char lowercase hex string", () => {
+    expect(newTokenHash()).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("the hash cannot be confused with a 6-digit OTP", () => {
-    const phone = "+201012345678";
-    const windowStartMs = Math.floor(Date.now() / 60_000) * 60_000;
-
-    const hash = createHash("sha256")
-      .update(`betk-otp-challenge:${phone}:${windowStartMs}`)
-      .digest("hex");
-
-    // A 6-digit OTP is at most 6 characters; the hash is 64 — structurally different.
+  it("cannot be confused with a 6-digit OTP", () => {
+    const hash = newTokenHash();
     expect(hash.length).toBeGreaterThan(6);
     expect(hash).not.toMatch(/^\d{6}$/);
   });
 
-  it("different phones produce different hashes (no collisions)", () => {
-    const window = Math.floor(Date.now() / 60_000) * 60_000;
-    const h1 = createHash("sha256").update(`betk-otp-challenge:+201012345678:${window}`).digest("hex");
-    const h2 = createHash("sha256").update(`betk-otp-challenge:+201012345679:${window}`).digest("hex");
-    expect(h1).not.toBe(h2);
+  it("is unpredictable — successive nonces differ (not derived from inputs)", () => {
+    expect(newTokenHash()).not.toBe(newTokenHash());
   });
 });

@@ -30,7 +30,12 @@ import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/service";
-import { recordOtpAttempt, MAX_OTP_ATTEMPTS } from "@/services/otpLimiter";
+import {
+  createOtpChallenge,
+  recordOtpAttempt,
+  markOtpUsed,
+  MAX_OTP_ATTEMPTS,
+} from "@/services/otpLimiter";
 import { updateLastLoginAt } from "@/services/authUsers";
 
 // ---------------------------------------------------------------------------
@@ -148,7 +153,11 @@ describeOrSkip("T02 — Phone OTP auth (DB-touching)", () => {
       .like("phone_number", `%${RUN_ID.slice(0, 7)}%`);
   });
 
-  // ── otp_tokens limiter — DB-backed ────────────────────────────────────────
+  // ── otp_tokens limiter — DB-backed (lifecycle-anchored, T08-FIX) ──────────
+  // Contract (open-issue #12 fix): SEND opens ONE challenge row
+  // (`createOtpChallenge`); VERIFY increments that active row
+  // (`recordOtpAttempt`); SUCCESS closes it (`markOtpUsed`). The counter is
+  // bound to the OTP lifetime, not a wall-clock window.
   describe("otp_tokens limiter — AC-AUTH-2 clause 4 (DB)", () => {
     const testPhone = STAGING_TEST_PHONE;
 
@@ -160,16 +169,17 @@ describeOrSkip("T02 — Phone OTP auth (DB-touching)", () => {
         .eq("phone_number", testPhone);
     });
 
-    it("allows the first 5 attempts and increments attempt_count in DB", async () => {
+    it("allows the first 5 attempts against ONE issued challenge and increments attempt_count in DB", async () => {
+      await createOtpChallenge(testPhone); // SEND-time row (one per OTP).
       for (let i = 1; i <= MAX_OTP_ATTEMPTS; i++) {
         const result = await recordOtpAttempt(testPhone);
         expect(result.allowed, `attempt ${i} should be allowed`).toBe(true);
         expect(result.attemptsUsed).toBe(i);
-        if (i === MAX_OTP_ATTEMPTS) break;
       }
     });
 
-    it("blocks the 6th attempt", async () => {
+    it("blocks the 6th attempt on the same issued challenge", async () => {
+      await createOtpChallenge(testPhone);
       for (let i = 0; i < MAX_OTP_ATTEMPTS; i++) {
         await recordOtpAttempt(testPhone);
       }
@@ -177,13 +187,46 @@ describeOrSkip("T02 — Phone OTP auth (DB-touching)", () => {
       expect(blocked.allowed).toBe(false);
     });
 
-    it("stores a 64-char hex token_hash (not an OTP digit string) in otp_tokens", async () => {
+    it("rejects a verify attempt when no challenge was issued (no active row)", async () => {
+      const result = await recordOtpAttempt(testPhone);
+      expect(result.allowed).toBe(false);
+      expect(result.attemptsUsed).toBe(0);
+    });
+
+    it("a new send supersedes the prior challenge (only one active row counted)", async () => {
+      await createOtpChallenge(testPhone);
+      await recordOtpAttempt(testPhone); // burn 1 attempt on the first challenge
+      await createOtpChallenge(testPhone); // resend → supersede, fresh counter
+
+      const fresh = await recordOtpAttempt(testPhone);
+      expect(fresh.allowed).toBe(true);
+      expect(fresh.attemptsUsed).toBe(1); // counter reset on the new challenge
+
+      const { count } = await serviceClient
+        .schema("betk")
+        .from("otp_tokens")
+        .select("id", { count: "exact", head: true })
+        .eq("phone_number", testPhone)
+        .eq("is_used", false);
+      expect(count).toBe(1); // exactly one active (non-superseded) row
+    });
+
+    it("markOtpUsed closes the challenge so a later attempt is rejected", async () => {
+      await createOtpChallenge(testPhone);
       await recordOtpAttempt(testPhone);
+      await markOtpUsed(testPhone);
+
+      const afterUsed = await recordOtpAttempt(testPhone);
+      expect(afterUsed.allowed).toBe(false); // no active row remains
+    });
+
+    it("stores a 64-char hex token_hash (opaque nonce, never the OTP) in otp_tokens", async () => {
+      await createOtpChallenge(testPhone);
 
       const { data } = await serviceClient
         .schema("betk")
         .from("otp_tokens")
-        .select("token_hash, phone_number")
+        .select("token_hash, phone_number, attempt_count, is_used")
         .eq("phone_number", testPhone)
         .maybeSingle();
 
@@ -191,6 +234,8 @@ describeOrSkip("T02 — Phone OTP auth (DB-touching)", () => {
       expect(data!.token_hash).toMatch(/^[0-9a-f]{64}$/);
       expect(data!.phone_number).toBe(testPhone);
       expect(data!.token_hash).not.toMatch(/^\d{6}$/);
+      expect(data!.attempt_count).toBe(0); // opened at 0, incremented at verify
+      expect(data!.is_used).toBe(false);
     });
   });
 
