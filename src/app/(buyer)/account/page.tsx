@@ -19,6 +19,7 @@ import { notFound } from "next/navigation";
 import type { Route } from "next";
 import { getProfile } from "@/features/buyer-account/queries/getProfile";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
+import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
 import Link from "next/link";
 
 /**
@@ -90,6 +91,11 @@ export default async function AccountPage() {
           initialGovernorate={buyerProfile.governorate}
           initialCity={buyerProfile.city ?? ""}
         />
+      </section>
+
+      {/* ── Account deactivation (OD-2 — sets users.deleted_at; no hard delete) ─ */}
+      <section data-slot="account-deactivate" aria-label="تعطيل الحساب">
+        <DeactivateAccountForm />
       </section>
     </main>
   );

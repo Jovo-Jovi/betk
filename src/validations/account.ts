@@ -39,3 +39,21 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/**
+ * Account deactivation confirmation (OD-2, DEACTIVATE-only).
+ *
+ * Phase 02 / T06. The deactivate Server Action carries NO user data — it only
+ * sets `betk.users.deleted_at = now()` for the live `auth.uid()`. The single
+ * input is an explicit confirmation token so a deactivation can never fire
+ * without the user deliberately confirming (defence-in-depth: enforced
+ * server-side here, not only by the two-step UI). The literal value is sent by
+ * the checked confirmation control in DeactivateAccountForm.
+ */
+export const deactivateAccountSchema = z.object({
+  confirm: z.literal("DEACTIVATE", {
+    errorMap: () => ({ message: "يجب تأكيد تعطيل الحساب قبل المتابعة." }),
+  }),
+});
+
+export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;
