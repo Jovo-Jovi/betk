@@ -12,12 +12,12 @@
  *   3. suspended store → getStoreBySlug returns null
  *   4. category tree assembles parent/child
  *
- * Plus an evidence suite for the RLS finding recorded in
- * `src/features/discovery/queries/_shared.ts`: `listing_images`,
+ * Plus the catalog public-read suite for open-issue #14 (T01-FIX migration
+ * 20260701021800_catalog_public_read_rls.sql): `listing_images`,
  * `listing_tags`, `rating_aggregates`, `review_photos`, and
- * `collection_listings` have RLS enabled with ZERO policies on staging, so
- * these assertions are expected to come back empty for anon — recorded as
- * FINDING (not FAIL), mirroring the Phase 01 T08 harness convention.
+ * `collection_listings` now carry parent-scoped public-SELECT policies, so the
+ * positive reads surface for anon AND the negatives hold — a draft/soft-deleted
+ * listing's images/tags and a hidden review's photos stay hidden.
  */
 
 import { randomUUID } from "node:crypto";
@@ -86,6 +86,8 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
   let draftListingId = "";
   let deletedListingId = "";
   let collectionListingId = ""; // active listing attached to a live collection
+  let visibleReviewId = ""; // is_visible=true → its photos are public
+  let hiddenReviewId = ""; // is_visible=false → its photos must stay hidden
 
   beforeAll(async () => {
     // ---- STAGING_GUARD ----
@@ -262,6 +264,12 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       .insert([{ listing_id: activeListingId, tag: "اختبار" }]);
     if (tagErr) throw new Error(`[discovery.test] listing_tags seed: ${tagErr.message}`);
 
+    // ---- NEGATIVE fixture: an image on the DRAFT listing (must stay hidden from anon) ----
+    const { error: draftImgErr } = await svc()
+      .from("listing_images")
+      .insert([{ listing_id: draftListingId, url: "https://cdn.betk.test/draft-hero.jpg", sort_order: 0 }]);
+    if (draftImgErr) throw new Error(`[discovery.test] draft listing_images seed: ${draftImgErr.message}`);
+
     // ---- collection + collection_listings (RLS-gap evidence) ----
     const { data: collection, error: colErr } = await svc()
       .from("collections")
@@ -344,11 +352,55 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       .select("id")
       .single();
     if (reviewErr || !review) throw new Error(`[discovery.test] review seed: ${reviewErr?.message}`);
+    visibleReviewId = review.id;
 
     const { error: photoErr } = await svc()
       .from("review_photos")
       .insert([{ review_id: review.id, url: "https://cdn.betk.test/review.jpg", sort_order: 0 }]);
     if (photoErr) throw new Error(`[discovery.test] review_photos seed: ${photoErr.message}`);
+
+    // ---- NEGATIVE fixture: a HIDDEN review (is_visible=false) + its photo ----
+    // reviews.uq_review_per_order is UNIQUE(order_id) → needs its own order.
+    const { data: hiddenOrder, error: hiddenOrderErr } = await svc()
+      .from("orders")
+      .insert({
+        betk_ref: `T01H-${RUN}`,
+        buyer_id: buyerId,
+        store_id: storeId,
+        delivery_method: "delivery",
+        subtotal: 150,
+        delivery_fee: 0,
+        total_amount: 150,
+        status: "delivered",
+      })
+      .select("id")
+      .single();
+    if (hiddenOrderErr || !hiddenOrder) {
+      throw new Error(`[discovery.test] hidden-review order seed: ${hiddenOrderErr?.message}`);
+    }
+
+    const { data: hiddenReview, error: hiddenReviewErr } = await svc()
+      .from("reviews")
+      .insert({
+        order_id: hiddenOrder.id,
+        buyer_id: buyerId,
+        store_id: storeId,
+        rating: 1,
+        body: `مراجعة مخفية ${RUN}`,
+        is_visible: false,
+        edit_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      })
+      .select("id")
+      .single();
+    if (hiddenReviewErr || !hiddenReview) {
+      throw new Error(`[discovery.test] hidden review seed: ${hiddenReviewErr?.message}`);
+    }
+    hiddenReviewId = hiddenReview.id;
+
+    const { error: hiddenPhotoErr } = await svc()
+      .from("review_photos")
+      .insert([{ review_id: hiddenReviewId, url: "https://cdn.betk.test/hidden-review.jpg", sort_order: 0 }]);
+    if (hiddenPhotoErr) throw new Error(`[discovery.test] hidden review_photos seed: ${hiddenPhotoErr.message}`);
   });
 
   afterAll(async () => {
@@ -464,43 +516,35 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
   });
 
   // -------------------------------------------------------------------------
-  // RLS-gap evidence (FINDING, not FAIL) — see queries/_shared.ts header.
+  // open-issue #14 RESOLVED — catalog public-read RLS (T01-FIX migration
+  // 20260701021800_catalog_public_read_rls.sql). These were FINDING tests
+  // proving the RLS gap; they now assert the public reads SURFACE data AND
+  // that the parent-scoping holds (drafts / hidden reviews stay hidden).
   // -------------------------------------------------------------------------
-  it("FINDING: listing_images / rating_aggregates / listing_tags resolve empty for anon despite being seeded", async () => {
-    const { getActiveListings } = await import("@/features/discovery");
-    const { getListingById } = await import("@/features/discovery");
+  it("listing_images + listing_tags + rating_aggregates surface for anon on the active listing", async () => {
+    const { getActiveListings, getListingById } = await import("@/features/discovery");
 
     const page = await getActiveListings({ category: topCategoryId }, anon);
     const cardRow = page.items.find((i) => i.id === activeListingId);
     const detail = await getListingById(activeListingId, anon);
 
-    const heroMissing = !cardRow?.heroImageUrl;
-    const ratingMissing = !cardRow?.store?.rating;
-    const tagsMissing = (detail?.tags.length ?? 0) === 0;
-    const imagesMissingOnDetail = (detail?.images.length ?? 0) === 0;
+    const hasHero = !!cardRow?.heroImageUrl;
+    const hasRating = !!cardRow?.store?.rating;
+    const hasTags = (detail?.tags.length ?? 0) > 0;
+    const hasImagesOnDetail = (detail?.images.length ?? 0) > 0;
 
-    if (heroMissing && ratingMissing && tagsMissing && imagesMissingOnDetail) {
-      record(
-        "FINDING",
-        "listing_images/listing_tags/rating_aggregates",
-        "RLS-enabled-no-policy confirmed live: a hero image, a tag, and a rating " +
-          "aggregate were seeded for this listing/store, but the anon client's " +
-          "embedded read came back empty for all three — matches pg_policies " +
-          "(zero rows for listing_images/listing_tags/rating_aggregates).",
-      );
-    } else {
-      record(
-        "PASS",
-        "listing_images/listing_tags/rating_aggregates",
-        "anon read returned seeded data — the RLS gap has been closed since this " +
-          "test was written; update the _shared.ts header finding.",
-      );
-    }
-    // Not asserted as a hard expectation either way — this test exists to
-    // PROVE/DISPROVE the finding, not to gate the build on it.
+    record(
+      hasHero && hasRating && hasTags && hasImagesOnDetail ? "PASS" : "FAIL",
+      "listing_images/listing_tags/rating_aggregates",
+      `hero:${hasHero} rating:${hasRating} tags:${hasTags} galleryImages:${hasImagesOnDetail}`,
+    );
+    expect(hasHero).toBe(true);
+    expect(hasRating).toBe(true);
+    expect(hasTags).toBe(true);
+    expect(hasImagesOnDetail).toBe(true);
   });
 
-  it("FINDING: collection_listings / review_photos resolve empty for anon despite being seeded", async () => {
+  it("collection_listings + review_photos surface for anon (homepage strip + storefront)", async () => {
     const { getHomepageData, getStoreBySlug } = await import("@/features/discovery");
 
     const homepage = await getHomepageData(anon);
@@ -509,29 +553,88 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
     );
 
     const store = await getStoreBySlug(activeStoreSlug, anon);
-    const reviewWithPhotos = store?.reviews.find((r) => r.body?.includes(RUN));
+    const visibleReview = store?.reviews.find((r) => r.id === visibleReviewId);
 
-    const collectionGapConfirmed = homepage.collections.status === "ok" && !seededCollection;
-    const reviewPhotosGapConfirmed = !!reviewWithPhotos && reviewWithPhotos.photos.length === 0;
+    const collectionSurfaces = homepage.collections.status === "ok" && !!seededCollection;
+    const reviewPhotosSurface = !!visibleReview && visibleReview.photos.length > 0;
 
     record(
-      collectionGapConfirmed ? "FINDING" : "PASS",
+      collectionSurfaces ? "PASS" : "FAIL",
       "collection_listings",
-      collectionGapConfirmed
-        ? "the seeded live collection's listing did not surface via getHomepageData " +
-          "(collection_listings has zero anon-readable rows) — collections strip " +
-          "resolves to status:'ok' with the affected collection/listing absent, not an error."
-        : "seeded collection listing surfaced — RLS gap closed since this test was written.",
+      `seeded live-collection listing surfaced via getHomepageData: ${collectionSurfaces}`,
     );
     record(
-      reviewPhotosGapConfirmed ? "FINDING" : "PASS",
+      reviewPhotosSurface ? "PASS" : "FAIL",
       "review_photos",
-      reviewPhotosGapConfirmed
-        ? "the seeded review photo did not surface via getStoreBySlug (review_photos " +
-          "has zero anon-readable rows)."
-        : "seeded review photo surfaced — RLS gap closed since this test was written.",
+      `seeded visible-review photo surfaced via getStoreBySlug: ${reviewPhotosSurface}`,
     );
 
-    expect(homepage.collections.status).toBe("ok"); // never an error — degrades to empty
+    expect(homepage.collections.status).toBe("ok");
+    expect(collectionSurfaces).toBe(true);
+    expect(reviewPhotosSurface).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // NEGATIVES — the public policies are parent-scoped, NOT blanket. Read the
+  // child tables DIRECTLY through the anon client to isolate each policy's
+  // predicate (independent of the query layer's own listing/review filters).
+  // -------------------------------------------------------------------------
+  it("NEGATIVE: a draft listing's images/tags are NOT anon-readable; the active listing's ARE", async () => {
+    const betk = anon.schema("betk");
+
+    const { data: activeImgs } = await betk
+      .from("listing_images")
+      .select("id")
+      .eq("listing_id", activeListingId);
+    const { data: draftImgs } = await betk
+      .from("listing_images")
+      .select("id")
+      .eq("listing_id", draftListingId);
+    const { data: deletedImgs } = await betk
+      .from("listing_images")
+      .select("id")
+      .eq("listing_id", deletedListingId);
+    const { data: activeTags } = await betk
+      .from("listing_tags")
+      .select("id")
+      .eq("listing_id", activeListingId);
+
+    const ok =
+      (activeImgs?.length ?? 0) > 0 &&
+      (draftImgs?.length ?? 0) === 0 &&
+      (deletedImgs?.length ?? 0) === 0 &&
+      (activeTags?.length ?? 0) > 0;
+
+    record(
+      ok ? "PASS" : "FAIL",
+      "listing_images/listing_tags scope",
+      `active img:${activeImgs?.length ?? 0} tag:${activeTags?.length ?? 0}; ` +
+        `draft img:${draftImgs?.length ?? 0}; soft-deleted img:${deletedImgs?.length ?? 0} (drafts/deleted must be 0)`,
+    );
+    expect((activeImgs?.length ?? 0) > 0).toBe(true);
+    expect(draftImgs ?? []).toHaveLength(0);
+    expect(deletedImgs ?? []).toHaveLength(0);
+    expect((activeTags?.length ?? 0) > 0).toBe(true);
+  });
+
+  it("NEGATIVE: a hidden review's photos are NOT anon-readable; the visible review's ARE", async () => {
+    const betk = anon.schema("betk");
+
+    const { data: visiblePhotos } = await betk
+      .from("review_photos")
+      .select("id")
+      .eq("review_id", visibleReviewId);
+    const { data: hiddenPhotos } = await betk
+      .from("review_photos")
+      .select("id")
+      .eq("review_id", hiddenReviewId);
+
+    record(
+      (visiblePhotos?.length ?? 0) > 0 && (hiddenPhotos?.length ?? 0) === 0 ? "PASS" : "FAIL",
+      "review_photos scope",
+      `visible-review photos:${visiblePhotos?.length ?? 0}; hidden-review photos:${hiddenPhotos?.length ?? 0} (hidden must be 0)`,
+    );
+    expect((visiblePhotos?.length ?? 0) > 0).toBe(true);
+    expect(hiddenPhotos ?? []).toHaveLength(0);
   });
 });

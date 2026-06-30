@@ -5,21 +5,17 @@
  * NOT SERVER-ONLY: imported by query files that run under both the cookie
  * client (RSC) and a plain anon client (integration tests).
  *
- * ── RLS FINDING (do not "fix" by adding a policy here) ──────────────────────
+ * ── Catalog public-read RLS (open-issue #14 — RESOLVED 2026-07-01) ──────────
  * `listing_images`, `listing_tags`, `rating_aggregates`, `review_photos`, and
- * `collection_listings` have RLS ENABLED with ZERO policies on staging
- * (confirmed via `pg_policies`, 2026-07-01). With no permissive policy, ANY
- * role without BYPASSRLS — including the anon/authenticated roles this
- * feature must use — gets ZERO rows from these tables, even embedded via a
- * parent select. PostgREST does not error on this; the embedded relation
- * resolves to an empty array/null, so these queries run successfully but
- * `heroImageUrl`/`rating`/`tags`/review photos/collection strips will be
- * empty until those policies are added (Phase 01 T08 already flagged this as
- * the general "~21 RLS-enabled-no-policy" finding F1; this file pins down the
- * exact 5 tables that block FR-PUB-1/4/5). T01 does NOT add policies (scope:
- * Sonnet query layer, not a DB/security task) — STOP-and-flagged in the T01
- * close-out / SESSION_CONTEXT carry-forward instead. The mapping helpers
- * below degrade gracefully (null/[] ) rather than throwing when this happens.
+ * `collection_listings` were RLS-ENABLED with ZERO policies (the Phase-01 SQL
+ * contract enabled RLS but omitted the CREATE POLICY statements the ERD §3
+ * matrix specced). T01-FIX migration `20260701021800_catalog_public_read_rls.sql`
+ * added five PERMISSIVE FOR SELECT policies, each parent-scoped to publicly-
+ * visible rows only: images/tags via an active+not-deleted listing, review
+ * photos via a visible review, collection_listings via a live collection, and
+ * rating_aggregates public (pre-aggregated, no PII). The embedded reads below
+ * now surface for the anon/authenticated roles; the mapping helpers still
+ * degrade gracefully (null/[]) for rows whose parent is not publicly visible.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -208,10 +204,11 @@ export function mapSellerProfile(raw: RawSellerProfile | null | undefined): List
 }
 
 /* ── Visible reviews (listing detail / storefront) ────────────────────────
- * `reviews` has a proper public policy (`reviews_public: is_visible = true OR
+ * `reviews` has a public policy (`reviews_public: is_visible = true OR
  * buyer_id = auth.uid() OR is_admin()`), so this query works for anon. The
- * nested `review_photos` embed is part of the 5-table RLS gap (no policy) and
- * will resolve to an empty array per row until that's addressed.
+ * nested `review_photos` embed now has `review_photos_public` (visible via a
+ * visible review), so photos surface for visible reviews and stay hidden for
+ * hidden ones.
  */
 
 export interface RawReviewPhoto {
