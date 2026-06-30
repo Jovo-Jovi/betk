@@ -23,8 +23,10 @@ import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
 import Link from "next/link";
 
 /**
- * Phone-capture entry point path — implemented in T07.
- * Cast to Route because the page doesn't exist yet in the router manifest.
+ * Phone-capture entry point path (T07 — /auth/phone is now live; the page
+ * consumes requireVerifiedPhone() to gate + drive the capture flow). Cast to
+ * Route because the standalone `tsc` typecheck doesn't regenerate Next's
+ * build-time typed-routes union (repo convention for route literals).
  */
 const PHONE_CAPTURE_PATH = "/auth/phone" as Route;
 

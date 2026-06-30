@@ -123,6 +123,89 @@ export async function deactivateAccount(id: string): Promise<void> {
 }
 
 /**
+ * Result of a phone-capture write (Phase 02 / T07).
+ *
+ * - `ok`          — phone_number written for the verified user.
+ * - `phone_taken` — the `uq_users_phone` UNIQUE constraint rejected the write
+ *                   because the number already belongs to a DIFFERENT account.
+ *                   Returned (not thrown) so the action can surface a clean
+ *                   "number already in use" message. We NEVER merge accounts.
+ */
+export type SetUserPhoneNumberResult = { ok: true } | { conflict: "phone_taken" };
+
+/**
+ * Write `betk.users.phone_number` for a Google-only user who has verified a new
+ * phone via OTP (Phase 02 / T07 phone-capture).
+ *
+ * SCOPE (security-critical): sets EXACTLY ONE column, `phone_number`. It NEVER
+ * touches `auth_provider` — that stays 'google' (it records origin, not current
+ * capability) — and NEVER `role`/`status`/`deleted_at`/any other column, and
+ * NEVER another user's row (the caller passes `id` read from the live GoTrue
+ * session, never a client-supplied value).
+ *
+ * WHY service-role (T06 settled precedent, mirrors `deactivateAccount` /
+ * `updateLastLoginAt`): `betk.users` has only a `users_self` SELECT policy and
+ * NO permissive UPDATE policy, while the table-level GRANT to `authenticated`
+ * covers UPDATE on ALL columns — so a scoped self-UPDATE policy would be a
+ * privilege-escalation vector until that grant is revoked + re-scoped. The
+ * service-role path keeps the write column-scoped in code with zero schema
+ * change and leaves RLS as the authz boundary.
+ *
+ * COLLISION HANDLING (mandatory, NOT a pre-check): `uq_users_phone` is the real
+ * guard against two accounts claiming one number. We catch the Postgres
+ * unique-violation (23505) at WRITE time and return `{ conflict: "phone_taken" }`
+ * rather than relying on a pre-check SELECT (which carries a TOCTOU race). A
+ * pre-check is fine as UX, but this 23505 catch is the authoritative guard.
+ *
+ * The `id` MUST be a verified GoTrue uid.
+ */
+export async function setUserPhoneNumber(
+  id: string,
+  phoneNumber: string,
+): Promise<SetUserPhoneNumberResult> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .schema("betk")
+    .from("users")
+    // Only `phone_number`. Do NOT add any other column here — auth_provider
+    // stays 'google'; role/status/deleted_at are never touched.
+    .update({ phone_number: phoneNumber })
+    .eq("id", id);
+
+  if (error) {
+    if (error.code === PG_UNIQUE_VIOLATION) {
+      // uq_users_phone rejected: the number belongs to another account.
+      return { conflict: "phone_taken" };
+    }
+    throw new Error(`[authUsers] setUserPhoneNumber failed: ${error.message}`);
+  }
+  return { ok: true };
+}
+
+/**
+ * UX pre-check: is `phoneNumber` already taken by ANY `betk.users` row?
+ *
+ * This is a best-effort convenience so the phone-capture flow can avoid sending
+ * an OTP to a number that is already in use. It is NOT the authoritative guard
+ * (a TOCTOU race exists between this SELECT and the later write) — the real
+ * guard is the `uq_users_phone` 23505 catch in `setUserPhoneNumber`.
+ */
+export async function isPhoneNumberTaken(phoneNumber: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .schema("betk")
+    .from("users")
+    .select("id")
+    .eq("phone_number", phoneNumber)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`[authUsers] isPhoneNumberTaken failed: ${error.message}`);
+  }
+  return data !== null;
+}
+
+/**
  * Resolve the post-auth redirect destination for a given user.
  *
  * - admin/superadmin → /admin
