@@ -31,6 +31,7 @@ import { createClient } from "@/lib/supabase/server";
 import { phoneInputSchema } from "@/validations/auth";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { getUserRowById, isPhoneNumberTaken } from "@/services/authUsers";
+import { createOtpChallenge } from "@/services/otpLimiter";
 
 export interface SendPhoneOtpResult {
   success: boolean;
@@ -109,6 +110,19 @@ export async function sendPhoneOtp(
     }
 
     captureTaggedError(error, "auth-phone-gate", { extra: { step: "sendPhoneOtp.updateUser" } });
+    return {
+      success: false,
+      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+    };
+  }
+
+  // ── Open the ≤5-attempt challenge anchored to THIS OTP's 60s lifetime ──────
+  // Same lifecycle-anchored limiter as sign-in (open-issue #12 fix) — reused,
+  // not forked. Only after a successful GoTrue phone-change send.
+  try {
+    await createOtpChallenge(e164Phone);
+  } catch (err) {
+    captureTaggedError(err, "auth-phone-gate", { extra: { step: "createOtpChallenge" } });
     return {
       success: false,
       errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",

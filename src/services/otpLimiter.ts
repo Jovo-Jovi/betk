@@ -3,15 +3,38 @@
  *
  * GoTrue does NOT track per-token failed attempts — it only has per-IP
  * throttling (ADR-010 §4). This service provides the app-layer ≤5-attempt
- * counter backed by `betk.otp_tokens`.
+ * counter backed by `betk.otp_tokens`, and is the SOLE owner of AC-AUTH-2
+ * clause 4.
+ *
+ * LIFECYCLE-ANCHORED (Phase 02 / T08-FIX, open-issue #12)
+ * ------------------------------------------------------
+ * The counter is anchored to ONE OTP issuance, NOT to a wall-clock window:
+ *   • At SEND time the caller invokes `createOtpChallenge(phone)` which inserts
+ *     exactly one row with `expires_at = now + 60s` (the OTP lifetime) and
+ *     `attempt_count = 0`, after superseding any still-active row for the phone.
+ *   • At VERIFY time `recordOtpAttempt(phone)` selects the active row
+ *     (`expires_at > now AND is_used = false`) and increments THAT row.
+ * Because the same row serves the whole 60s OTP lifetime, attempts cannot
+ * "reset" by crossing a 60s epoch boundary — the defect fixed here, where an
+ * absolute wall-clock bucket let a mid-bucket OTP straddle two counters and earn
+ * ~10 attempts on one valid code.
+ *
+ * OVERLAPPING-ROWS RULE (deterministic): GoTrue `SMS_MAX_FREQUENCY = 60s`
+ * normally prevents two live OTPs per phone, but to be deterministic on resend
+ * edge cases: (a) `createOtpChallenge` supersedes (marks `is_used = true`) every
+ * prior active row before inserting the new one, and (b) `recordOtpAttempt`
+ * selects the MOST RECENT active row (highest `expires_at`). So at most one row
+ * is ever counted, and it is always the freshest issuance.
  *
  * Security contract (NEVER violate):
  *   • NEVER store the raw OTP anywhere in this file or its callers.
- *   • token_hash = SHA-256 of a server-generated nonce keyed to phone +
- *     the 60-second challenge window; it is NOT derivable from the OTP.
- *   • The DB CHECK(attempt_count <= 5) is the hard backstop.
- *   • attempt_count increments BEFORE calling GoTrue so a timeout cannot
- *     grant a free extra attempt.
+ *   • `token_hash` is an opaque random server nonce (NOT derived from the OTP,
+ *     NOT used for lookup) — retained only to satisfy the NOT NULL column and as
+ *     an audit id.
+ *   • The DB `CHECK(attempt_count <= 5)` (`chk_otp_attempts`) is the hard
+ *     backstop; the logic here stops at 5 before writing.
+ *   • `attempt_count` increments BEFORE calling GoTrue so a timeout / wrong code
+ *     cannot grant a free extra attempt.
  *
  * Table: betk.otp_tokens (service-only — no client-readable RLS policy).
  * Cleanup: hourly pg_cron `cleanup-otp-tokens` purges expired rows.
@@ -20,7 +43,7 @@
  */
 
 import "server-only";
-import { createHash } from "crypto";
+import { randomBytes } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /** Maximum allowed verify attempts per OTP challenge (AC-AUTH-2). */
@@ -32,129 +55,125 @@ const OTP_TTL_SECONDS = 60;
 // ── Internal helpers ───────────────────────────────────────────────────────
 
 /**
- * Derive an opaque SHA-256 nonce from `phone + challengeWindowMs`.
+ * Generate an opaque 64-char hex server nonce for `token_hash`.
  *
- * GoTrue issues at most one OTP per 60 s (SMS_MAX_FREQUENCY). We round `now`
- * to the 60-second boundary so all verify attempts within the same GoTrue
- * challenge share one `otp_tokens` row.
- *
- * The hash is NOT derivable from the OTP — it encodes only the phone and the
- * time-window, both of which are non-secret.
+ * This is NOT derived from the OTP and is NOT used to look up the row (lookup is
+ * by phone + active-window). It exists only to satisfy the `token_hash NOT NULL`
+ * column and to give each challenge an audit-distinct value.
  */
-function deriveTokenHash(phone: string, windowStartMs: number): string {
-  return createHash("sha256")
-    .update(`betk-otp-challenge:${phone}:${windowStartMs}`)
-    .digest("hex");
-}
-
-/** Round `nowMs` down to the nearest 60-second boundary. */
-function challengeWindowStart(nowMs: number): number {
-  const windowMs = OTP_TTL_SECONDS * 1000;
-  return Math.floor(nowMs / windowMs) * windowMs;
+function newTokenHash(): string {
+  return randomBytes(32).toString("hex");
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
 export interface OtpLimiterResult {
-  /** Whether the attempt is allowed (attempt_count was below MAX before this call). */
+  /** Whether the attempt is allowed (the active challenge had < MAX attempts). */
   allowed: boolean;
-  /** attempt_count AFTER this call (1 = first attempt; MAX+1 = blocked). */
+  /** attempt_count AFTER this call (1 = first attempt; 0 = no active challenge). */
   attemptsUsed: number;
+}
+
+/**
+ * Open an OTP challenge for `phone` — call this at SEND time, AFTER GoTrue has
+ * successfully issued the OTP (`signInWithOtp` / `updateUser({ phone })`).
+ *
+ * Inserts exactly one `otp_tokens` row anchored to the OTP lifetime
+ * (`expires_at = now + 60s`, `attempt_count = 0`, `is_used = false`), after
+ * superseding any prior still-active row for the phone (so only the freshest
+ * issuance is ever counted — see the OVERLAPPING-ROWS RULE).
+ *
+ * SERVER ONLY (service-role; `betk.otp_tokens` has no client-writable policy).
+ */
+export async function createOtpChallenge(phone: string): Promise<void> {
+  const supabase = createServiceClient();
+  const nowIso = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + OTP_TTL_SECONDS * 1000).toISOString();
+
+  // Supersede any still-active challenge for this phone (resend edge case).
+  const { error: supersedeErr } = await supabase
+    .schema("betk")
+    .from("otp_tokens")
+    .update({ is_used: true })
+    .eq("phone_number", phone)
+    .eq("is_used", false)
+    .gt("expires_at", nowIso);
+
+  if (supersedeErr) {
+    throw new Error(`[otpLimiter] supersede failed: ${supersedeErr.message}`);
+  }
+
+  const { error: insertErr } = await supabase
+    .schema("betk")
+    .from("otp_tokens")
+    .insert({
+      phone_number: phone,
+      token_hash: newTokenHash(),
+      expires_at: expiresAt,
+      attempt_count: 0,
+      is_used: false,
+    });
+
+  if (insertErr) {
+    throw new Error(`[otpLimiter] createOtpChallenge insert failed: ${insertErr.message}`);
+  }
 }
 
 /**
  * Record a verify attempt for `phone` and return whether it is allowed.
  *
- * Call this BEFORE forwarding to `supabase.auth.verifyOtp()`.
+ * Call this BEFORE forwarding to `supabase.auth.verifyOtp()` so a wrong/expired
+ * code still consumes an attempt.
  *
- * Algorithm:
- *   1. SELECT the current row for (phone, challenge-window).
- *   2a. Row missing → INSERT with attempt_count = 1 (first attempt; allowed).
- *   2b. attempt_count already MAX → reject immediately (no DB write needed).
- *   2c. attempt_count < MAX → UPDATE to attempt_count + 1 (allowed if ≤ MAX).
+ * Algorithm (lifecycle-anchored):
+ *   1. SELECT the most-recent ACTIVE row (`expires_at > now AND is_used=false`).
+ *   2. No active row → reject (no live challenge to verify against).
+ *   3. attempt_count >= MAX → reject (≤5 reached on this OTP).
+ *   4. else → increment attempt_count on THAT row and allow.
  *
- * The DB `chk_otp_attempts CHECK(attempt_count <= 5)` is the hard backstop
- * that catches any race or off-by-one in the logic above.
+ * The same row serves the entire 60s OTP lifetime, so crossing a wall-clock 60s
+ * boundary cannot reset the counter (open-issue #12 fix). The DB
+ * `chk_otp_attempts CHECK(attempt_count <= 5)` is the hard backstop.
  */
 export async function recordOtpAttempt(
   phone: string,
 ): Promise<OtpLimiterResult> {
   const supabase = createServiceClient();
-  const nowMs = Date.now();
-  const windowStartMs = challengeWindowStart(nowMs);
-  const tokenHash = deriveTokenHash(phone, windowStartMs);
-  const expiresAt = new Date(windowStartMs + OTP_TTL_SECONDS * 1000).toISOString();
+  const nowIso = new Date().toISOString();
 
-  // 1. Read the existing row for this challenge window (if any).
-  const { data: existing, error: readErr } = await supabase
+  // 1. Most-recent active row for this phone (highest expires_at).
+  const { data: row, error: readErr } = await supabase
     .schema("betk")
     .from("otp_tokens")
     .select("id, attempt_count")
-    .eq("token_hash", tokenHash)
     .eq("phone_number", phone)
+    .eq("is_used", false)
+    .gt("expires_at", nowIso)
+    .order("expires_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (readErr) {
     throw new Error(`[otpLimiter] read failed: ${readErr.message}`);
   }
 
-  if (!existing) {
-    // 2a. First attempt — insert with attempt_count = 1.
-    const { error: insertErr } = await supabase
-      .schema("betk")
-      .from("otp_tokens")
-      .insert({
-        phone_number: phone,
-        token_hash: tokenHash,
-        expires_at: expiresAt,
-        attempt_count: 1,
-        is_used: false,
-      });
-
-    if (insertErr) {
-      // Concurrent insert race — read again and fall through to increment path.
-      if (insertErr.code !== "23505") {
-        throw new Error(`[otpLimiter] insert failed: ${insertErr.message}`);
-      }
-      // Retry read after race.
-      const { data: raceRow, error: raceErr } = await supabase
-        .schema("betk")
-        .from("otp_tokens")
-        .select("id, attempt_count")
-        .eq("token_hash", tokenHash)
-        .eq("phone_number", phone)
-        .maybeSingle();
-      if (raceErr || !raceRow) {
-        throw new Error("[otpLimiter] race recovery read failed");
-      }
-      return incrementExistingRow(supabase, raceRow.id, raceRow.attempt_count);
-    }
-
-    return { allowed: true, attemptsUsed: 1 };
+  // 2. No active challenge — nothing to verify against. Reject (request a new code).
+  if (!row) {
+    return { allowed: false, attemptsUsed: 0 };
   }
 
-  // 2b / 2c. Row exists — check and increment.
-  return incrementExistingRow(supabase, existing.id, existing.attempt_count);
-}
-
-/** Increment an existing row; enforce the MAX cap. */
-async function incrementExistingRow(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  rowId: string,
-  currentCount: number,
-): Promise<OtpLimiterResult> {
-  if (currentCount >= MAX_OTP_ATTEMPTS) {
-    return { allowed: false, attemptsUsed: currentCount };
+  // 3. Cap reached on this OTP.
+  if (row.attempt_count >= MAX_OTP_ATTEMPTS) {
+    return { allowed: false, attemptsUsed: row.attempt_count };
   }
 
-  const nextCount = currentCount + 1;
-
+  // 4. Increment THIS row's counter.
+  const nextCount = row.attempt_count + 1;
   const { error: updateErr } = await supabase
     .schema("betk")
     .from("otp_tokens")
     .update({ attempt_count: nextCount })
-    .eq("id", rowId);
+    .eq("id", row.id);
 
   if (updateErr) {
     // DB CHECK violation (23514) means attempt_count > 5 — block.
@@ -171,7 +190,8 @@ async function incrementExistingRow(
 }
 
 /**
- * Mark the otp_tokens row as used after a successful `verifyOtp`.
+ * Mark the active OTP challenge row(s) for `phone` as used after a successful
+ * `verifyOtp`. Closes the challenge so the same OTP cannot be re-counted.
  *
  * Best-effort audit trail. Silently swallows errors — a non-critical failure
  * here must never block session creation.
@@ -179,15 +199,15 @@ async function incrementExistingRow(
 export async function markOtpUsed(phone: string): Promise<void> {
   try {
     const supabase = createServiceClient();
-    const windowStartMs = challengeWindowStart(Date.now());
-    const tokenHash = deriveTokenHash(phone, windowStartMs);
+    const nowIso = new Date().toISOString();
 
     await supabase
       .schema("betk")
       .from("otp_tokens")
       .update({ is_used: true })
-      .eq("token_hash", tokenHash)
-      .eq("phone_number", phone);
+      .eq("phone_number", phone)
+      .eq("is_used", false)
+      .gt("expires_at", nowIso);
   } catch {
     // Best-effort — do not throw.
   }

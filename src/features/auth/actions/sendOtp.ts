@@ -22,6 +22,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { phoneInputSchema } from "@/validations/auth";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
+import { createOtpChallenge } from "@/services/otpLimiter";
 
 export interface SendOtpResult {
   success: boolean;
@@ -72,6 +73,22 @@ export async function sendOtp(
     }
 
     captureTaggedError(error, "auth");
+    return {
+      success: false,
+      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+    };
+  }
+
+  // ── Open the ≤5-attempt challenge anchored to THIS OTP's 60s lifetime ──────
+  // Only after a successful GoTrue send (so we never supersede a still-valid
+  // challenge on a rate-limited resend). The lifecycle-anchored limiter
+  // (open-issue #12 fix) counts attempts against this single row at verify time.
+  try {
+    await createOtpChallenge(e164Phone);
+  } catch (err) {
+    // The SMS was sent but we couldn't open the attempt counter — fail closed:
+    // without an active challenge row, verify would reject every attempt anyway.
+    captureTaggedError(err, "auth", { extra: { step: "createOtpChallenge" } });
     return {
       success: false,
       errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
