@@ -65,6 +65,25 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+
+        /* ── Catalog (Phase 03 design-catalog kit) ── */
+        // Contrast-corrected status text (used on /15 tints)
+        "warning-text": "hsl(var(--warning-text))",
+        "accent-text": "hsl(var(--accent-text))",
+
+        // Rating star gold
+        star: "hsl(var(--star))",
+
+        // Seller-level metallics (bg / fg / ring)
+        "level-bronze-bg": "hsl(var(--level-bronze-bg))",
+        "level-bronze-fg": "hsl(var(--level-bronze-fg))",
+        "level-bronze-ring": "hsl(var(--level-bronze-ring))",
+        "level-silver-bg": "hsl(var(--level-silver-bg))",
+        "level-silver-fg": "hsl(var(--level-silver-fg))",
+        "level-silver-ring": "hsl(var(--level-silver-ring))",
+        "level-gold-bg": "hsl(var(--level-gold-bg))",
+        "level-gold-fg": "hsl(var(--level-gold-fg))",
+        "level-gold-ring": "hsl(var(--level-gold-ring))",
       },
 
       /* ── Border radius — 0.625 rem base (UI Spec §1) ── */

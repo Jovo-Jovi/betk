@@ -56,6 +56,21 @@
     --font-display: var(--font-cairo), "IBM Plex Sans Arabic", system-ui, sans-serif;
     --font-body:    var(--font-ibm-plex-sans-arabic), "Noto Sans Arabic", system-ui, sans-serif;
     --font-mono:    var(--font-ibm-plex-mono), ui-monospace, monospace;
+
+    /* Catalog (Phase 03 design-catalog kit) — contrast-corrected status text, rating star, seller-level metallics */
+    --warning-text:      38 92% 32%;   /* warning text on warning/15 tint */
+    --accent-text:       28 92% 40%;   /* accent text on accent/15 tint */
+    --star:              38 92% 50%;   /* rating star gold */
+
+    --level-bronze-bg:   28 45% 92%;
+    --level-bronze-fg:   28 55% 34%;
+    --level-bronze-ring: 28 45% 60%;
+    --level-silver-bg:   220 12% 92%;
+    --level-silver-fg:   220 10% 38%;
+    --level-silver-ring: 220 10% 65%;
+    --level-gold-bg:     43 80% 90%;
+    --level-gold-fg:     38 70% 32%;
+    --level-gold-ring:   43 80% 55%;
   }
 
   .dark {
@@ -90,6 +105,21 @@
     --border:                40 12% 22%;
     --input:                 40 12% 22%;
     --ring:                  158 64% 68%;
+
+    /* Catalog (Phase 03 design-catalog kit) */
+    --warning-text:      38 92% 62%;
+    --accent-text:       28 92% 62%;
+    --star:              38 92% 55%;
+
+    --level-bronze-bg:   28 30% 16%;
+    --level-bronze-fg:   28 50% 70%;
+    --level-bronze-ring: 28 35% 40%;
+    --level-silver-bg:   220 10% 18%;
+    --level-silver-fg:   220 12% 72%;
+    --level-silver-ring: 220 10% 45%;
+    --level-gold-bg:     43 40% 16%;
+    --level-gold-fg:     43 70% 65%;
+    --level-gold-ring:   43 60% 45%;
   }
 }
 

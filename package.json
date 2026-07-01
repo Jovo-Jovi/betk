@@ -18,6 +18,10 @@
     "db:types": "supabase gen types typescript --linked --schema betk,betk_analytics > src/lib/supabase/types.ts"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.2.1",
+    "@radix-ui/react-dialog": "^1.1.18",
+    "@radix-ui/react-select": "^2.3.2",
+    "@radix-ui/react-slot": "^1.3.0",
     "@sentry/nextjs": "^9.22.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",

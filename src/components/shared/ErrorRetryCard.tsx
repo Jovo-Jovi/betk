@@ -1,26 +1,31 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, RotateCw } from "lucide-react";
+
 /**
- * ErrorRetryCard — minimal unstyled placeholder.
- * TODO(Phase DS): Replace with Claude Design system component.
- * Spec: UI_STATE_STANDARDS.md — section-level error with retry CTA.
+ * ErrorRetryCard — section-level error scoped to the failed region so the
+ * rest of the page survives. Non-technical Arabic copy + retry. Per
+ * UI_STATE_STANDARDS §6 — never expose SQL/RLS/internal reasons.
  */
 export interface ErrorRetryCardProps {
-  /** Non-technical Arabic error message. */
   message?: string;
-  /** Called when the user taps "retry". */
   onRetry?: () => void;
+  compact?: boolean;
+  className?: string;
 }
 
-export function ErrorRetryCard({
-  message = "حدث خطأ ما، يرجى المحاولة مجدداً.",
-  onRetry,
-}: ErrorRetryCardProps) {
+export function ErrorRetryCard({ message = "حدث خطأ ما، يرجى المحاولة مجدداً.", onRetry, compact = false, className }: ErrorRetryCardProps) {
   return (
-    <div data-slot="error-retry-card" role="alert">
-      <p>{message}</p>
+    <div role="alert" className={cn("flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 text-center", compact ? "p-5" : "px-6 py-8", className)}>
+      <span className="flex size-11 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+        <AlertTriangle className="size-[22px]" />
+      </span>
+      <p className="max-w-xs text-[0.9375rem] font-semibold leading-relaxed text-foreground">{message}</p>
       {onRetry && (
-        <button type="button" onClick={onRetry}>
-          إعادة المحاولة
-        </button>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          <RotateCw className="size-[15px]" /> إعادة المحاولة
+        </Button>
       )}
     </div>
   );
