@@ -49,6 +49,16 @@ All six resolved per the MVP Freeze Sheet. No further expansion.
 - **OD-4 — Google OAuth: IN.** Sign-in via phone-OTP **or** Google OAuth (Supabase Auth links both). `users.phone_number` becomes nullable+UNIQUE; `users.auth_provider` records origin. **Verified phone required before transacting** (checkout / become seller / payout). R-A01 amended: "phone-OTP + Google OAuth; phone verification gated to transactions." *Schema change: YES (phone nullable + `auth_provider`).*
 - **OD-5 — Sessions UI OUT / WhatsApp templates merged.** No sessions/active-sessions page. WhatsApp template management lives under **Admin → Settings → Notifications** (no standalone page). Post-MVP: security dashboard, session management, advanced template admin. *Schema change: NO.*
 - **OD-6 — Table count: 43 (documentation).** Authoritative inventory + counting methodology added to `BETK_ERD.md §1.1`. *Schema change: NO.*
+- **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the existing 56 pages — no new pages, no new tables, no new content columns, no new dependency.
+  - **Shell.** All chrome translated via `next-intl` catalogs (`messages/ar.json`, `messages/en.json`); BETK owns EN UI copy.
+  - **Structured content** (categories, badges, statuses, filters, governorates, delivery) bilingual via existing `*_ar`/`*_en` columns; BETK-filled.
+  - **Goods** (titles, store names, collection names) bilingual via existing `title_en`/`name_en` columns; display `COALESCE(locale column, other)` (never blank). Populated by BETK for categories/collections and by **sellers** for goods — bilingual seller entry is a listing-form decision (Phase 04+).
+  - **Descriptions/bios:** single field, in the author's language, shown as-is to everyone. **No machine translation. No `_en` body columns.**
+  - **Transactional/structured fields** (price, stock, condition, dates) language-neutral/enum.
+  - **Routing:** path-prefix, `localePrefix:'as-needed'`. Arabic default + unprefixed (existing URLs/SEO preserved); English under `/en`. Locale validated at edge (∈{ar,en} else 404); middleware normalizes locale BEFORE role gates — gate logic unchanged.
+  - **Theme:** `next-themes`, class strategy on `<html>`. Tokens shipped Phase 01 T03.
+  - **Persistence:** locale URL+cookie, theme localStorage. No user/content DB column.
+  - Post-MVP: on-demand content translation; per-account persisted preferences; more locales. *Schema change: NO. New dependency: NONE.*
 
 ## 7. Success metrics
 
@@ -65,7 +75,7 @@ All six resolved per the MVP Freeze Sheet. No further expansion.
 
 ## 8. Sign-off
 
-Scope FROZEN and signed 2026-06-13 (OD-1…OD-6 resolved in §6). After sign-off, additions require a written change request and re-baselining of the PRD and phases.
+Scope FROZEN and signed 2026-06-13 (OD-1…OD-6); amended OD-7 2026-07-01 — bilingual AR/EN web app + theme, no schema, no new dependency. After sign-off, additions require a written change request and re-baselining of the PRD and phases.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______
