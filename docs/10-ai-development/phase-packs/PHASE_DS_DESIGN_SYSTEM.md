@@ -35,24 +35,55 @@ Build the four layout shells from BETK_UI_SPEC.md §2 (RTL): PublicShell (sticky
 ```
 - **Done when:** shells match §2 nav patterns; RTL placement correct (logo/account mirrored).
 
-## DS04 — Export to branch (Claude Design → GitHub)
+## DS04 — Consolidated design-system land + gate (Cursor)
+- **Surface:** Cursor · **Model:** Opus (UI-reviewer + security), then Sonnet if wiring fixes needed · **Skill:** skill-ui-reviewer, skill-security-reviewer, skill-nextjs-engineer
+- **PRECONDITION:** design-expert review signed off + real logo present in the handoff package. Do NOT run before both.
 - **Prompt:**
-```
-Commit the generated components and shells to a new branch feature/design-system (frontend files only: src/components/ui, src/components/shared, src/app shells, tailwind.config.ts, app/globals.css). Open a PR to develop with a summary listing every component and which UI Spec §4 entry it satisfies.
-```
-- **Done when:** PR open against `develop` with the component→spec mapping.
+```Read SESSION_CONTEXT.md, then execute DS04 — land the full settled design system onto feature/design-catalog, gate it, and open the PR. Integration + review ONLY — do NOT restyle or change any component's visual contract. If a component needs a visual/behavioral change to work, STOP and flag to Claude Design.
+BRANCH FRESHNESS (avoid the stale-base mistake):
 
-## DS05 — Cursor hand-off: review + wire data
-- **Surface:** **Cursor** · **Model:** Opus (UI-reviewer + Security review), then Sonnet (wiring) · **Skill:** skill-ui-reviewer, skill-security-reviewer, skill-ui-engineer
-- **Prompt (Cursor):**
-```
-Review PR feature/design-system as the UI-reviewer + Security reviewer. For each component verify against its BETK_UI_SPEC.md §3/§4 usage: components present, RTL correct, tokens used (no hardcoded colors), shadcn extended not overridden, and empty/loading/error states implemented. Confirm no business logic or secrets are embedded. Reject with the specific spec line for any miss. After merge to develop, wire data into the shared components within the relevant feature folders using existing Server Actions/queries — WITHOUT changing any component's visual contract. Update DEVELOPMENT_JOURNAL.md.
-```
-- **Done when:** PR passes CI + UI-reviewer + Security gates, merges to `develop`; feature pages compose the merged components with live data; journal updated.
+Confirm feature/design-catalog is still exactly current origin/main + the 21 catalog files (git fetch first; if origin/main advanced since b648566, rebase feature/design-catalog onto the current tip and report the diff). The branch base MUST be current origin/main (which already carries T01 + T01-FIX).
 
----
+LAND (from the settled Claude-Design handoff package + CHANGELOG):
 
-## Notes
-- Claude Design copies *selected* files, not the whole repo — keep the selection to the frontend subfolder (brief, DS01).
-- If you choose Option A (early), run DS01–DS04 right after Phase 01/03, then Phases 04–14 consume the merged components; DS05 wiring happens incrementally inside each feature phase. If Option B (late), run the whole pack after Phase 14 as one polish pass (expect restyle rework on already-built pages).
-- The visual contract boundary is enforced everywhere: `.cursorrules`, master prompt, skill-ui-engineer/reviewer, and BETK_GIT_WORKFLOW all state that Cursor composes + wires but never restyles shared components.
+Add the 10 net-new src/components/shared/*.tsx (6 DS02: MessageThread, ImageUploader, AddressForm, OrderTimeline, SLABadge, ConfirmDialog; 4 shells: PublicShell, BuyerShell, SellerShell, AdminShell) + update shared/index.ts barrel to export all 31 + prop types.
+Apply any expert-driven changes to the 21 catalog files ONLY where the package CHANGELOG flags them. Report a diff of all 21 vs b648566 so unchanged files carry their prior gate forward and changed ones get re-reviewed.
+Land the real logo (asset in public/ or a Logo component in components/shared, per the package); wire it into PublicShell in place of the DS01 typographic wordmark.
+Apply any new tokens from the package into BOTH :root and .dark in app/globals.css (additive only) + matching tailwind.config.ts utility keys. If no new tokens, confirm still the 113-set.
+
+BASE PRIMITIVE VERIFICATION (flagged by DS02/DS03 — scaffold via official shadcn CLI if missing, never hand-edit ui/):
+
+5. Confirm the real components/ui/ exposes: Button size="icon" + variant="destructive" + asChild; standard Dialog subcomponents (ConfirmDialog); Sheet + Avatar subcomponents (shells); ui/label (AddressForm/MessageThread). Scaffold any missing primitive; report what you scaffolded.
+
+6. ACCOUNT-MENU DECISION: if the account dropdown should render in-shell, scaffold ui/dropdown-menu and wire it in PublicShell; otherwise leave account as a slot. State which you did.
+SHELL WIRING (app-router files are Cursor-owned; shells are neutral chrome):
+
+7. Wire PublicShell into src/app/(public)/layout.tsx (replacing the bare T09 placeholder) — swap the shell's plain <a> for next/link and pass current pathname as activePath. THIS IS REQUIRED: T02 Homepage must render inside PublicShell, not the placeholder.
+
+8. Wire BuyerShell into src/app/(buyer)/layout.tsx (replacing the T05 placeholder), same <a>→next/link + activePath.
+
+9. SellerShell + AdminShell LAND AS COMPONENTS ONLY — do not create seller/admin layout files now; their owning phases wire them. (Optional trivial fix: move /admin/users nav item from System to Moderation per §2.)
+GATE (report each):
+
+pnpm typecheck exit 0, zero errors anywhere (this is the real test of the clean-room translation of the 10 net-new; fix import/type wiring ONLY).
+pnpm lint clean (the 2 pre-existing no-img-element warnings on ImageGallery/ListingCard are expected/allowed — do NOT swap to next/image here; that's a DS decision carried separately).
+Tailwind resolution (silent-empty check): run the real tailwindcss CLI; confirm all token utilities used by the new components emit real hsl(var(...)) rules, not empty. Report the probes.
+Tokens present in BOTH :root and .dark.
+components/ui/* untouched except CLI-scaffolded additions (report the diff).
+No docs/handoff residue; nothing in src/ imports from docs/handoff.
+check-service-import + check-zod-coverage green.
+
+UI-REVIEWER + SECURITY PASS (across all 31, per BETK_UI_SPEC §3/§4):
+
+Each component: present, RTL correct (logical props, mirrored placement), tokens-only (zero raw hsl/hex), shadcn extended not overridden, and default/loading/empty/error states implemented. Reject any miss with the specific §4 spec line.
+Confirm NO business logic, NO data wiring, NO secrets embedded in any shared component (presentational + props only).
+
+PR:
+
+Push feature/design-catalog to origin, open a PR to main with a component→UI-Spec-§4 mapping table (every component → the §4 entry it satisfies) as the description.
+
+REPORT: branch freshness/rebase status; the 21-vs-b648566 diff; net-new landed; primitives scaffolded; account-menu decision; shell wiring done (Public + Buyer); tailwind/typecheck/lint/gate results; UI-reviewer + security verdict per component; PR link.
+
+Close-out → update SESSION_CONTEXT + DEVELOPMENT_JOURNAL. Do NOT merge and do NOT start T02 — I give the merge verdict after reviewing this.
+```
+- **Done when:** all 31 landed on feature/design-catalog; the 10 net-new + any changed catalog files pass typecheck/lint/tailwind-resolution + UI-reviewer + security; PublicShell + BuyerShell wired into their real layouts; component→spec PR open to main; gate clean. Merge on review verdict → then T02.
