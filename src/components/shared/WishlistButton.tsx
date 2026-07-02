@@ -3,27 +3,31 @@ import { cn } from "@/lib/utils";
 import { Heart } from "lucide-react";
 
 /**
- * WishlistButton — heart toggle for saving a listing. `overlay` is the
- * frosted pill placed over a card hero (top-end). Guests should be routed
- * to /auth/login on tap by the caller.
+ * WishlistButton — heart toggle for saving a listing. i18n: the aria-labels
+ * for both states come in as props (Arabic defaults). `overlay` is the
+ * frosted pill over a card hero (top-end). Route guests to /auth/login on tap.
  */
 export interface WishlistButtonProps {
   active?: boolean;
   onToggle?: (next: boolean) => void;
   size?: "sm" | "md" | "lg";
   overlay?: boolean;
+  /** aria-label when not saved. Default "أضف للمفضلة". */
+  addLabel?: string;
+  /** aria-label when saved. Default "إزالة من المفضلة". */
+  removeLabel?: string;
   className?: string;
 }
 
 const PX = { sm: "size-8", md: "size-9", lg: "size-11" } as const;
 const ICO = { sm: 16, md: 19, lg: 22 } as const;
 
-export function WishlistButton({ active = false, onToggle, size = "md", overlay = false, className }: WishlistButtonProps) {
+export function WishlistButton({ active = false, onToggle, size = "md", overlay = false, addLabel = "أضف للمفضلة", removeLabel = "إزالة من المفضلة", className }: WishlistButtonProps) {
   return (
     <button
       type="button"
       aria-pressed={active}
-      aria-label={active ? "إزالة من المفضلة" : "أضف للمفضلة"}
+      aria-label={active ? removeLabel : addLabel}
       onClick={() => onToggle?.(!active)}
       className={cn(
         "inline-flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",

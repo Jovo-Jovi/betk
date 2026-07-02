@@ -151,6 +151,134 @@
     "otpInvalidOrExpired": "الكود غير صحيح أو منتهي الصلاحية. يُرجى المحاولة مرة أخرى أو طلب كود جديد.",
     "loginFailedGeneric": "حدث خطأ أثناء تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
     "deactivateFailed": "تعذّر تعطيل الحساب. يُرجى المحاولة مرة أخرى.",
-    "googleSignInFailed": "تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى."
+    "googleSignInFailed": "تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مجدداً."
+  },
+  "catalog": {
+    "status": {
+      "order": {
+        "pending": "قيد الانتظار",
+        "confirmed": "مؤكد",
+        "preparing": "قيد التحضير",
+        "dispatched": "تم الشحن",
+        "delivered": "تم التسليم",
+        "cancelled": "ملغي",
+        "returned": "مرتجع"
+      },
+      "seller": {
+        "pending": "قيد المراجعة",
+        "active": "نشط",
+        "suspended": "موقوف",
+        "banned": "محظور"
+      },
+      "payment": {
+        "pending": "بانتظار الدفع",
+        "confirmed": "تم الدفع",
+        "failed": "فشل الدفع",
+        "refunded": "مسترد"
+      },
+      "listing": {
+        "draft": "مسودة",
+        "active": "منشور",
+        "sold_out": "نفد المخزون",
+        "paused": "متوقف",
+        "removed": "محذوف"
+      },
+      "dispute": {
+        "submitted": "مُقدّم",
+        "under_review": "قيد المراجعة",
+        "awaiting_seller": "بانتظار البائع",
+        "resolved": "تم الحل",
+        "closed": "مغلق"
+      },
+      "boost": {
+        "pending_payment": "بانتظار الدفع",
+        "active": "مميّز",
+        "expired": "منتهي",
+        "cancelled": "ملغي"
+      },
+      "payout": {
+        "pending": "قيد الانتظار",
+        "processing": "قيد المعالجة",
+        "processed": "تم التحويل",
+        "rejected": "مرفوض"
+      }
+    },
+    "stock": {
+      "labels": {
+        "in_stock": "متوفر",
+        "low": "كمية محدودة",
+        "sold_out": "نفد المخزون",
+        "made_to_order": "حسب الطلب",
+        "service": "متاح"
+      },
+      "remaining": "{qty, plural, =0 {لا كمية متبقية} one {باقي قطعة واحدة} two {باقي قطعتان} few {باقي # قطع} many {باقي # قطعة} other {باقي # قطعة}}"
+    },
+    "level": {
+      "bronze": "برونزي",
+      "silver": "فضي",
+      "gold": "ذهبي"
+    },
+    "price": {
+      "currency": "ج.م",
+      "startingFrom": "يبدأ من",
+      "perHour": "/ ساعة",
+      "quote": "السعر عند الطلب"
+    },
+    "filters": {
+      "title": "تصفية",
+      "clear": "مسح",
+      "clearAll": "مسح الكل",
+      "remove": "إزالة {label}",
+      "category": "الفئة",
+      "type": "النوع",
+      "governorate": "المحافظة",
+      "priceRange": "نطاق السعر (ج.م)",
+      "sort": "الترتيب",
+      "allGovernorates": "كل المحافظات",
+      "apply": "تطبيق",
+      "resultCount": "{count, plural, =0 {لا توجد نتائج} one {عرض نتيجة واحدة} two {عرض نتيجتين} few {عرض # نتائج} many {عرض # نتيجة} other {عرض # نتيجة}}",
+      "types": {
+        "all": "الكل",
+        "product": "منتجات",
+        "service": "خدمات"
+      },
+      "sorts": {
+        "relevance": "الأكثر صلة",
+        "newest": "الأحدث",
+        "price_asc": "السعر: من الأقل",
+        "popular": "الأكثر رواجًا"
+      }
+    },
+    "collection": {
+      "seeAll": "عرض الكل"
+    },
+    "rating": {
+      "reviews": "{count, plural, =0 {لا تقييمات} one {تقييم واحد} two {تقييمان} few {# تقييمات} many {# تقييمًا} other {# تقييم}}"
+    },
+    "verified": {
+      "label": "بائع موثّق"
+    },
+    "wishlist": {
+      "add": "أضف للمفضلة",
+      "remove": "إزالة من المفضلة"
+    },
+    "search": {
+      "placeholder": "ابحث في بيتك…",
+      "clear": "مسح"
+    },
+    "follow": {
+      "follow": "تابع",
+      "following": "تتابعه"
+    },
+    "listing": {
+      "boost": "مميّز"
+    },
+    "store": {
+      "listingCount": "{count, plural, =0 {لا إعلانات} one {إعلان واحد} two {إعلانان} few {# إعلانات} many {# إعلانًا} other {# إعلان}}"
+    },
+    "seller": {
+      "responseTime": "{hours, plural, =0 {يرد خلال أقل من ساعة} one {يرد خلال ساعة واحدة} two {يرد خلال ساعتين} few {يرد خلال # ساعات} many {يرد خلال # ساعة} other {يرد خلال # ساعة}}"
+    }
   }
 }

@@ -9,7 +9,9 @@ import type { SellerLevel } from "@/constants/enums";
 
 /**
  * StoreCard — storefront summary (Homepage featured row, Following, Search).
- * Cover strip + overlapping avatar, name, verified + level, rating, follow.
+ * i18n: the listing-count line comes in as a template prop ("{count} إعلان"
+ * default); "{count}" → listingCount. Cover strip uses --primary/--accent
+ * tokens (Tailwind alpha utilities, no raw HSL).
  */
 export interface StoreCardProps {
   name: string;
@@ -21,12 +23,14 @@ export interface StoreCardProps {
   reviews?: number;
   governorate?: string;
   listingCount?: number;
+  /** Listing-count line; "{count}" → listingCount. Default "{count} إعلان". */
+  listingCountLabel?: string;
   following?: boolean;
   onToggleFollow?: (next: boolean) => void;
   className?: string;
 }
 
-export function StoreCard({ name, avatar, cover, level, verified, rating, reviews, governorate, listingCount, following, onToggleFollow, className }: StoreCardProps) {
+export function StoreCard({ name, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, className }: StoreCardProps) {
   return (
     <div className={cn("flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-card", className)}>
       <div
@@ -47,7 +51,7 @@ export function StoreCard({ name, avatar, cover, level, verified, rating, review
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {typeof rating === "number" && <StarRating value={rating} size={13} count={reviews} />}
             {governorate && <span>{governorate}</span>}
-            {typeof listingCount === "number" && <span>{listingCount} إعلان</span>}
+            {typeof listingCount === "number" && <span>{listingCountLabel.replace("{count}", String(listingCount))}</span>}
           </div>
         </div>
         <FollowButton following={following} onToggle={onToggleFollow} size="sm" />

@@ -151,6 +151,134 @@
     "otpInvalidOrExpired": "The code is incorrect or has expired. Please try again or request a new code.",
     "loginFailedGeneric": "An error occurred while signing in. Please try again.",
     "deactivateFailed": "Could not deactivate the account. Please try again.",
-    "googleSignInFailed": "Could not start Google sign-in. Please try again."
+    "googleSignInFailed": "Could not start Google sign-in. Please try again.",
+    "unexpectedError": "An unexpected error occurred. Please try again."
+  },
+  "catalog": {
+    "status": {
+      "order": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "preparing": "Preparing",
+        "dispatched": "Shipped",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "returned": "Returned"
+      },
+      "seller": {
+        "pending": "Pending review",
+        "active": "Active",
+        "suspended": "Suspended",
+        "banned": "Banned"
+      },
+      "payment": {
+        "pending": "Awaiting payment",
+        "confirmed": "Paid",
+        "failed": "Payment failed",
+        "refunded": "Refunded"
+      },
+      "listing": {
+        "draft": "Draft",
+        "active": "Published",
+        "sold_out": "Sold out",
+        "paused": "Paused",
+        "removed": "Removed"
+      },
+      "dispute": {
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "awaiting_seller": "Awaiting seller",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "boost": {
+        "pending_payment": "Awaiting payment",
+        "active": "Featured",
+        "expired": "Expired",
+        "cancelled": "Cancelled"
+      },
+      "payout": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "processed": "Paid out",
+        "rejected": "Rejected"
+      }
+    },
+    "stock": {
+      "labels": {
+        "in_stock": "In stock",
+        "low": "Limited stock",
+        "sold_out": "Sold out",
+        "made_to_order": "Made to order",
+        "service": "Available"
+      },
+      "remaining": "{qty, plural, =0 {Out of stock} one {# item left} other {# items left}}"
+    },
+    "level": {
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold"
+    },
+    "price": {
+      "currency": "EGP",
+      "startingFrom": "Starting from",
+      "perHour": "/ hour",
+      "quote": "Price on request"
+    },
+    "filters": {
+      "title": "Filter",
+      "clear": "Clear",
+      "clearAll": "Clear all",
+      "remove": "Remove {label}",
+      "category": "Category",
+      "type": "Type",
+      "governorate": "Governorate",
+      "priceRange": "Price range (EGP)",
+      "sort": "Sort",
+      "allGovernorates": "All governorates",
+      "apply": "Apply",
+      "resultCount": "{count, plural, =0 {No results} one {Showing # result} other {Showing # results}}",
+      "types": {
+        "all": "All",
+        "product": "Products",
+        "service": "Services"
+      },
+      "sorts": {
+        "relevance": "Most relevant",
+        "newest": "Newest",
+        "price_asc": "Price: lowest first",
+        "popular": "Most popular"
+      }
+    },
+    "collection": {
+      "seeAll": "See all"
+    },
+    "rating": {
+      "reviews": "{count, plural, =0 {No reviews} one {# review} other {# reviews}}"
+    },
+    "verified": {
+      "label": "Verified seller"
+    },
+    "wishlist": {
+      "add": "Add to wishlist",
+      "remove": "Remove from wishlist"
+    },
+    "search": {
+      "placeholder": "Search BETK…",
+      "clear": "Clear"
+    },
+    "follow": {
+      "follow": "Follow",
+      "following": "Following"
+    },
+    "listing": {
+      "boost": "Featured"
+    },
+    "store": {
+      "listingCount": "{count, plural, =0 {No listings} one {# listing} other {# listings}}"
+    },
+    "seller": {
+      "responseTime": "{hours, plural, =0 {Responds in under an hour} one {Responds within # hour} other {Responds within # hours}}"
+    }
   }
 }

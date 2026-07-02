@@ -3,17 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Check, Plus } from "lucide-react";
 
 /**
- * FollowButton — follow/unfollow a store (store_follows). Composes the
- * shadcn ui Button: filled "تابع" → outline "تتابعه".
+ * FollowButton — follow/unfollow a store (store_follows). i18n: both state
+ * labels come in as props (Arabic defaults). Composes the shadcn ui Button:
+ * filled (not following) → outline (following).
  */
 export interface FollowButtonProps {
   following?: boolean;
   onToggle?: (next: boolean) => void;
   size?: "sm" | "default" | "lg";
+  /** Label when not following. Default "تابع". */
+  followLabel?: string;
+  /** Label when following. Default "تتابعه". */
+  followingLabel?: string;
   className?: string;
 }
 
-export function FollowButton({ following = false, onToggle, size = "default", className }: FollowButtonProps) {
+export function FollowButton({ following = false, onToggle, size = "default", followLabel = "تابع", followingLabel = "تتابعه", className }: FollowButtonProps) {
   return (
     <Button
       type="button"
@@ -24,7 +29,7 @@ export function FollowButton({ following = false, onToggle, size = "default", cl
       className={className}
     >
       {following ? <Check className="size-4" /> : <Plus className="size-4" />}
-      {following ? "تتابعه" : "تابع"}
+      {following ? followingLabel : followLabel}
     </Button>
   );
 }

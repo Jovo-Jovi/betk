@@ -4,20 +4,24 @@ import { Search, X } from "lucide-react";
 
 /**
  * SearchBar — pill search input. RTL: magnifier on the start side, clear on
- * the end. Arabic placeholder. Controlled.
+ * the end. i18n: placeholder (already a prop) + the clear-button aria-label
+ * come in as props with Arabic defaults. Controlled.
  */
 export interface SearchBarProps {
   value?: string;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
+  /** Input placeholder. Default "ابحث في بيتك…". */
   placeholder?: string;
+  /** Clear-button aria-label. Default "مسح". */
+  clearLabel?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
 
 const H = { sm: "h-10", md: "h-[46px]", lg: "h-[52px]" } as const;
 
-export function SearchBar({ value = "", onChange, onSubmit, placeholder = "ابحث في بيتك…", size = "md", className }: SearchBarProps) {
+export function SearchBar({ value = "", onChange, onSubmit, placeholder = "ابحث في بيتك…", clearLabel = "مسح", size = "md", className }: SearchBarProps) {
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onSubmit?.(value); }}
@@ -32,7 +36,7 @@ export function SearchBar({ value = "", onChange, onSubmit, placeholder = "اب�
         className="min-w-0 flex-1 bg-transparent text-[0.9375rem] text-foreground outline-none placeholder:text-muted-foreground"
       />
       {value && (
-        <button type="button" onClick={() => onChange?.("")} aria-label="مسح" className="text-muted-foreground">
+        <button type="button" onClick={() => onChange?.("")} aria-label={clearLabel} className="text-muted-foreground">
           <X className="size-[17px]" />
         </button>
       )}
