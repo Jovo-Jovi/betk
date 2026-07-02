@@ -106,6 +106,21 @@
       "cancel": "إلغاء",
       "confirmButton": "تأكيد التعطيل",
       "processing": "جارٍ التعطيل…"
+    },
+    "settings": {
+      "sectionLabel": "الإعدادات",
+      "title": "اللغة والمظهر",
+      "languageLabel": "اللغة",
+      "languageOptions": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "themeLabel": "المظهر",
+      "themeOptions": {
+        "light": "فاتح",
+        "dark": "داكن",
+        "system": "تلقائي (حسب الجهاز)"
+      }
     }
   },
   "validation": {

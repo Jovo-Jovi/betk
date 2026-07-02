@@ -20,6 +20,8 @@ import { getTranslations } from "next-intl/server";
 import { getProfile } from "@/features/buyer-account/queries/getProfile";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
 import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
+import { LanguageSwitcher } from "./_components/LanguageSwitcher";
+import { ThemeSwitcher } from "./_components/ThemeSwitcher";
 import { Link } from "@/i18n/navigation";
 
 /**
@@ -90,6 +92,13 @@ export default async function AccountPage() {
           initialGovernorate={buyerProfile.governorate}
           initialCity={buyerProfile.city ?? ""}
         />
+      </section>
+
+      {/* ── Settings: language (AR/EN) + theme (light/dark/system) — OD-7/BL-03 ── */}
+      <section data-slot="account-settings" aria-label={t("settings.sectionLabel")}>
+        <h2>{t("settings.title")}</h2>
+        <LanguageSwitcher />
+        <ThemeSwitcher />
       </section>
 
       {/* ── Account deactivation (OD-2 — sets users.deleted_at; no hard delete) ─ */}

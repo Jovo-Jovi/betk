@@ -106,6 +106,21 @@
       "cancel": "Cancel",
       "confirmButton": "Confirm deactivation",
       "processing": "Deactivating…"
+    },
+    "settings": {
+      "sectionLabel": "Settings",
+      "title": "Language & theme",
+      "languageLabel": "Language",
+      "languageOptions": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "themeLabel": "Theme",
+      "themeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
     }
   },
   "validation": {
