@@ -19,21 +19,26 @@ import { GOVERNORATE_VALUES } from "@/constants/governorates";
  *   full_name   VARCHAR(100) NOT NULL
  *   governorate VARCHAR(50)  NOT NULL
  *   city        VARCHAR(100) nullable
+ *
+ * NOTE — i18n (OD-7 / BL-02): `message` values are translation KEYS into the
+ * `validation` namespace (messages/{ar,en}.json), NOT display strings. The
+ * calling Server Action must translate via
+ * `(await getTranslations("validation"))(issue.message)`.
  */
 export const updateProfileSchema = z.object({
   full_name: z
     .string()
     .trim()
-    .min(2, { message: "الاسم الكامل مطلوب (حرفان على الأقل)" })
-    .max(100, { message: "الاسم الكامل لا يتجاوز 100 حرف" }),
+    .min(2, { message: "fullNameRequired" })
+    .max(100, { message: "fullNameTooLong" }),
   governorate: z.enum(GOVERNORATE_VALUES as [string, ...string[]], {
-    required_error: "المحافظة مطلوبة",
-    invalid_type_error: "اختر محافظة صحيحة",
+    required_error: "governorateRequired",
+    invalid_type_error: "governorateInvalid",
   }),
   city: z
     .string()
     .trim()
-    .max(100, { message: "اسم المدينة لا يتجاوز 100 حرف" })
+    .max(100, { message: "cityTooLong" })
     .optional()
     .or(z.literal("")),
 });
@@ -52,7 +57,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
  */
 export const deactivateAccountSchema = z.object({
   confirm: z.literal("DEACTIVATE", {
-    errorMap: () => ({ message: "يجب تأكيد تعطيل الحساب قبل المتابعة." }),
+    errorMap: () => ({ message: "deactivateConfirmRequired" }),
   }),
 });
 

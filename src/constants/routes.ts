@@ -13,7 +13,30 @@
  *   href={routes.seller.orderDetail(orderId)}
  *   href={routes.admin.disputeDetail(id)}
  *   href={routes.checkout(inquiryId)}
+ *
+ * ── LOCALE-AWARE (OD-7) ──────────────────────────────────────────────────────
+ * These builders return the CANONICAL, locale-neutral path — which is exactly the
+ * Arabic URL, since ar is the default locale and is UNPREFIXED. English lives
+ * under `/en`.
+ *
+ * Preferred: pass these paths to the locale-aware `Link` / `redirect` from
+ * `@/i18n/navigation`, which prepend `/en` automatically for the English locale
+ * (and nothing for Arabic). Only reach for `withLocale()` below when you need the
+ * final href as a plain string (e.g. a `<link rel>`, a metadata URL, or a raw
+ * `NextResponse.redirect`).
  */
+
+import type { AppLocale } from "@/i18n/routing";
+import { routing } from "@/i18n/routing";
+
+/**
+ * Prefix a canonical route with the locale segment (ar → unprefixed, en → /en).
+ * `withLocale(routes.account, "en")` → "/en/account"; `(…, "ar")` → "/account".
+ */
+export function withLocale(path: string, locale: AppLocale): string {
+  if (locale === routing.defaultLocale) return path;
+  return path === "/" ? `/${locale}` : `/${locale}${path}`;
+}
 
 // ── Public / Guest ─────────────────────────────────────────────────────────
 // UI Spec §2 top-level + §3 PUBLIC/GUEST pages

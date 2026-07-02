@@ -8,9 +8,11 @@ import { WishlistButton } from "./WishlistButton";
 import type { PriceType } from "@/constants/enums";
 
 /**
- * ListingCard — the core catalog tile. Square hero, boost badge (start/top)
- * when boosted, wishlist toggle (end/top), title_ar (2-line clamp), price,
- * store, rating, stock. Lifts shadow-card → shadow-card-hover on hover.
+ * ListingCard — the core catalog tile. i18n: the "boost" badge label comes
+ * in as a prop (Arabic default); title/store are data. Nested strings
+ * (price qualifiers, stock, wishlist aria) are handled by the child
+ * components' own i18n props — forward them via the pass-through props below
+ * if you need to localize them here. Lifts shadow-card → shadow-card-hover.
  * NOTE: swap the <img> for next/image once image domains are configured.
  */
 export interface ListingCardProps {
@@ -22,6 +24,8 @@ export interface ListingCardProps {
   rating?: number;
   reviews?: number;
   boosted?: boolean;
+  /** Boost badge label. Default "مميّز". */
+  boostLabel?: string;
   saved?: boolean;
   onToggleSave?: (next: boolean) => void;
   stockQty?: number | null;
@@ -33,7 +37,7 @@ export interface ListingCardProps {
 
 export function ListingCard({
   titleAr, image, price, priceType = "fixed", storeName, rating, reviews,
-  boosted, saved, onToggleSave, stockQty, isMadeToOrder, isService, onClick, className,
+  boosted, boostLabel = "مميّز", saved, onToggleSave, stockQty, isMadeToOrder, isService, onClick, className,
 }: ListingCardProps) {
   return (
     <div
@@ -48,7 +52,7 @@ export function ListingCard({
         </div>
         {boosted && (
           <span className="absolute start-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[0.6875rem] font-bold text-accent-foreground">
-            <Zap className="size-3" fill="currentColor" /> مميّز
+            <Zap className="size-3" fill="currentColor" /> {boostLabel}
           </span>
         )}
         <span className="absolute end-2 top-2">

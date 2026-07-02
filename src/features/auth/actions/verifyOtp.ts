@@ -22,8 +22,10 @@
 import * as Sentry from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { otpVerifySchema } from "@/validations/auth";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { recordOtpAttempt, markOtpUsed } from "@/services/otpLimiter";
 import { updateLastLoginAt, resolvePostAuthRedirect } from "@/services/authUsers";
@@ -44,6 +46,9 @@ export async function verifyOtp(
 ): Promise<VerifyOtpResult> {
   setFeatureContext("auth");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation ─────────────────────────────────────────────────────────
   const rawPhone = formData.get("phone");
   const rawToken = formData.get("token");
@@ -54,8 +59,7 @@ export async function verifyOtp(
   });
 
   if (!parsed.success) {
-    const msg = parsed.error.errors[0]?.message ?? "بيانات غير صحيحة";
-    return { errorAr: msg };
+    return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
   const { phone, token } = parsed.data;
@@ -71,7 +75,7 @@ export async function verifyOtp(
 
   if (!limiter.allowed) {
     return {
-      errorAr: "تم تجاوز الحد الأقصى لعدد المحاولات. يُرجى طلب كود جديد.",
+      errorAr: tErrors("otpAttemptsExceeded"),
     };
   }
 
@@ -86,9 +90,9 @@ export async function verifyOtp(
 
   if (verifyError || !sessionData.user) {
     // GoTrue returns errors for: wrong code, expired, already used.
-    // Map all to a single generic Arabic message (avoid enumeration).
+    // Map all to a single generic message (avoid enumeration).
     return {
-      errorAr: "الكود غير صحيح أو منتهي الصلاحية. يُرجى المحاولة مرة أخرى أو طلب كود جديد.",
+      errorAr: tErrors("otpInvalidOrExpired"),
     };
   }
 
@@ -110,12 +114,12 @@ export async function verifyOtp(
       // R-A05: deactivated / suspended user — clear GoTrue session and block.
       await supabase.auth.signOut();
       return {
-        errorAr: "هذا الحساب غير نشط. يُرجى التواصل مع الدعم.",
+        errorAr: tErrors("accountInactive"),
       };
     }
     captureTaggedError(err, "auth");
     return {
-      errorAr: "حدث خطأ أثناء تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("loginFailedGeneric"),
     };
   }
 

@@ -3,6 +3,8 @@
 > Step 15 task pack (BETK Dev OS). FR-PUB-1..5: Homepage, Search, Category, Listing Detail, Storefront.
 > Generated 2026-06-30 by the Phase-02 review chat after Phase 02 sign-off.
 > **Design-system placement decision: Option A (DS early).** Phase 03 composes *real* Claude-Design components, not placeholders.
+>
+> **🔴 T02+ PAUSED (OD-7, 2026-07-01) — pending the Bilingual AR/EN + Theme (BL) track.** T01 + T01-FIX are DONE; T02 onward is on hold until the BL track's **BL-05** gate merges (`feature/bilingual-i18n`; see `OD7_BILINGUAL_THEME_TRACK.md` + SESSION_CONTEXT "Active initiative"). **From T02 onward, every page is authored bilingual + themed:** an EN shell (`next-intl`, EN under `/en`) alongside the Arabic-first RTL layout, **bilingual names/titles** via the existing `*_ar`/`*_en` columns displayed `COALESCE(locale column, other)` (never blank), and **light/dark** theming (`next-themes`). **Descriptions/bios render as-authored (single language, no translation).** Wherever this pack says "Arabic-first / RTL", read it as **"+ EN shell + bilingual names/titles + light/dark"** (the Arabic-first default is unchanged).
 
 ---
 
@@ -11,7 +13,7 @@
 - **Read-only public surface + exactly 2 auth-gated writes** (`toggleWishlist`, `toggleFollow`). No new tables, no new RLS policies — the public-SELECT RLS and the `wishlist_own` / `store_follows` self-scope policies are already live from Phase 01.
 - **Public RLS is the security boundary** (ARCHITECTURE §4). Guest reads only; guest write-actions redirect to `/auth/login?returnUrl=…`. Server Actions re-check auth; never trust the client.
 - **Frozen scope (OD-1…OD-6) respected** — no new pages/tables/features beyond FR-PUB.
-- **Arabic-first / RTL-first.** `name_ar`/`title_ar` primary; logical CSS properties only.
+- **Arabic-first / RTL-first + EN shell + bilingual names/titles + light/dark (OD-7, from T02 onward).** `name_ar`/`title_ar` remain the primary/default; logical CSS properties only. Add an EN shell (`next-intl`, EN under `/en`) and display bilingual names/titles via existing `*_ar`/`*_en` columns as `COALESCE(locale column, other)` (never blank); support light/dark theme (`next-themes`). Descriptions/bios render as-authored (single language, no translation).
 - **Compose, don't restyle.** Wire data into `components/shared` (Claude-Design-owned). No hardcoded colors, no editing `components/ui/*`, no forking shared components. Visual gaps → flag to Claude Design, do not patch in a feature folder (BETK_CODEBASE_ARCHITECTURE §Design-system ownership).
 - **Caching** (ARCHITECTURE §search/cache): homepage strips 60s TTL, `rating_aggregates` 5-min TTL. Section-level degradation — a failed strip never hard-fails the page.
 - **Search scale:** GIN on `listings.search_vector`, `unaccent` for Arabic; safe to ~500K listings on tsvector+GIN.

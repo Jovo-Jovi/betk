@@ -1,35 +1,59 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import createIntlMiddleware from "next-intl/middleware";
 import type { Database } from "@/lib/supabase/types";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
+import { routing } from "@/i18n/routing";
 
 /**
- * BETK auth middleware — route-group gates + session refresh.
- * Spec: BETK_ARCHITECTURE.md §4 · BETK_UI_SPEC.md §2 · SESSION_CONTEXT (R-A05, R-S04, OD-4).
+ * BETK auth middleware — locale negotiation (OD-7) + route-group gates + session
+ * refresh.
+ * Spec: BETK_ARCHITECTURE.md §4 · ADR-002 (i18n) · BETK_UI_SPEC.md §2 ·
+ *       SESSION_CONTEXT (R-A05, R-S04, OD-4).
  *
- * Responsibilities (skeleton — Phase 01/T10):
- *  1. Refresh the Supabase Auth session on every matched request (cookie-bound SSR pattern).
- *  2. Gate route groups: (public) open · (buyer) auth required · (seller)/seller role=seller
- *     · (admin)/admin is_admin().
- *  3. Block check (R-A05): authenticated users with status != 'active' OR deleted_at != NULL
- *     are routed to /blocked.
+ * Responsibilities:
+ *  1. Locale (OD-7): next-intl negotiates the locale (ar default/unprefixed, en
+ *     under /en) and sets the NEXT_LOCALE cookie + rewrite. This runs FIRST.
+ *  2. Refresh the Supabase Auth session on every matched request.
+ *  3. Gate route groups on the LOCALE-STRIPPED path: (public) open · (buyer)
+ *     auth required · (seller)/seller role=seller · (admin)/admin is_admin().
+ *  4. R-A05 block: authenticated users with status != 'active' OR deleted_at
+ *     != NULL → /blocked (locale-preserving).
  *
- * The security boundary is RLS in Postgres (BETK_ERD §3); this gate is a UX convenience
- * and a defence-in-depth layer. Server Actions re-check role/ownership before mutating.
+ * ───────────────────────────────────────────────────────────────────────────
+ * SECURITY — LOCALE IS NORMALIZED BEFORE GATE EVALUATION (OD-7 invariant).
+ *
+ * `splitLocale()` strips any `/en` prefix (ar has none) BEFORE `gateFor()` runs,
+ * so a route's gate is evaluated on the exact same path regardless of locale.
+ * Therefore every prior (pre-OD-7) gate verdict is provably UNCHANGED — each
+ * matcher yields the identical Gate for the AR and EN URL:
+ *
+ *   URL (AR)        URL (EN)            stripped path   gateFor() → verdict
+ *   /               /en                 /               public   (unchanged)
+ *   /search         /en/search          /search         public   (unchanged)
+ *   /listing/x      /en/listing/x       /listing/x      public   (unchanged)
+ *   /auth/login     /en/auth/login      /auth/login     public   (unchanged)
+ *   /blocked        /en/blocked         /blocked        public   (unchanged)
+ *   /account        /en/account         /account        buyer    (unchanged)
+ *   /orders         /en/orders          /orders         buyer    (unchanged)
+ *   /wishlist,/inbox,/notifications,/checkout,/disputes  → buyer  (unchanged)
+ *   /seller         /en/seller          /seller         seller   (unchanged)
+ *   /seller/status  /en/seller/status   /seller/status  seller   (unchanged, R-S04 loop-safe)
+ *   /admin          /en/admin           /admin          admin    (unchanged)
+ *
+ * Redirect targets (login / blocked / role-mismatch / seller-status) are re-
+ * localized to the SAME normalized locale, so a gate never drops the user out of
+ * their locale and never changes WHO is allowed through.
+ *
+ * The security boundary is RLS in Postgres (BETK_ERD §3); this gate is a UX
+ * convenience + defence-in-depth. Server Actions re-check role/ownership.
  *
  * TODO(OD-4 / Phase 04·07·13): the verified-phone transaction gate
- * (`users.phone_number IS NOT NULL`) is NOT enforced here. Google-OAuth users may browse,
- * wishlist, and follow with no phone. Checkout, become-seller, and payout are gated in their
- * respective Server Actions + RLS WITH CHECK — never in this middleware.
+ * (`users.phone_number IS NOT NULL`) is NOT enforced here — it lives in the
+ * checkout / become-seller / payout Server Actions + RLS WITH CHECK.
  */
 
-// Login route (BETK_UI_SPEC §2). Phase 02 builds the page; here we only redirect to it.
 const LOGIN_ROUTE = "/auth/login";
-
-// Public routes (BETK_UI_SPEC §2 "public") need no session: "/" (homepage), /search,
-// /category, /listing, /store, /auth/* (login·verify·register), and /blocked (kept
-// reachable so blocked users never loop). These are the default — anything NOT matched
-// by the protected/role prefixes below is treated as public.
 
 // Buyer (protected) prefixes — any authenticated user (BETK_UI_SPEC §2 "protected").
 const BUYER_PREFIXES = [
@@ -45,12 +69,16 @@ const BUYER_PREFIXES = [
 const SELLER_PREFIX = "/seller";
 const ADMIN_PREFIX = "/admin";
 
-// Seller landing for pending/rejected/suspended sellers (R-S04) — must be reachable while
-// the seller's profile is not yet active.
+// Seller landing for pending/rejected/suspended sellers (R-S04) — must be
+// reachable while the seller's profile is not yet active.
 const SELLER_STATUS_ROUTE = "/seller/status";
 
 type Gate = "public" | "buyer" | "seller" | "admin";
 
+/**
+ * Gate for a LOCALE-STRIPPED pathname. UNCHANGED from the pre-OD-7 logic —
+ * callers must pass the path with any `/en` prefix already removed.
+ */
 function gateFor(pathname: string): Gate {
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {
     return "admin";
@@ -59,9 +87,7 @@ function gateFor(pathname: string): Gate {
     return "seller";
   }
   if (
-    BUYER_PREFIXES.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    )
+    BUYER_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
   ) {
     return "buyer";
   }
@@ -69,9 +95,39 @@ function gateFor(pathname: string): Gate {
   return "public";
 }
 
+/**
+ * Split the locale prefix from a pathname (OD-7). The default locale (ar) is
+ * unprefixed; only non-default locales (en) carry a `/<locale>` prefix.
+ * Returns the normalized locale + the path with the prefix removed (always
+ * leading-slash). This is what makes gates locale-invariant.
+ */
+function splitLocale(pathname: string): { locale: string; path: string } {
+  for (const locale of routing.locales) {
+    if (locale === routing.defaultLocale) continue; // ar is unprefixed
+    if (pathname === `/${locale}`) return { locale, path: "/" };
+    if (pathname.startsWith(`/${locale}/`)) {
+      return { locale, path: pathname.slice(locale.length + 1) };
+    }
+  }
+  return { locale: routing.defaultLocale, path: pathname };
+}
+
+/** Re-apply the locale prefix to a stripped path for a redirect target. */
+function localize(locale: string, path: string): string {
+  if (locale === routing.defaultLocale) return path; // ar → unprefixed
+  return path === "/" ? `/${locale}` : `/${locale}${path}`;
+}
+
+const intlMiddleware = createIntlMiddleware(routing);
+
 export async function middleware(request: NextRequest) {
-  // Mutable response that accumulates refreshed auth cookies (Supabase SSR pattern).
-  let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+
+  // ── 1. Locale negotiation FIRST (OD-7) ────────────────────────────────────
+  // next-intl sets the NEXT_LOCALE cookie + rewrites the request to the internal
+  // localized path. We keep its response and attach refreshed auth cookies to it
+  // (do NOT recreate the response, or the locale rewrite/cookie would be lost).
+  const response = intlMiddleware(request);
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,7 +143,6 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );
@@ -96,16 +151,19 @@ export async function middleware(request: NextRequest) {
     },
   );
 
+  // ── 2. Refresh session ─────────────────────────────────────────────────────
   // IMPORTANT: getUser() revalidates the token with the Auth server and refreshes
-  // cookies — do not trust getSession() in middleware. Keep this call before any gating.
+  // cookies — do not trust getSession() in middleware. Keep this before gating.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const gate = gateFor(pathname);
+  // ── 3. Normalize locale BEFORE gating (security invariant) ─────────────────
+  const { locale, path } = splitLocale(pathname);
+  const gate = gateFor(path);
 
-  // Public routes: refresh session and pass through. No DB read (keeps homepage lean).
+  // Public routes: keep the locale response (rewrite + refreshed cookies). No DB
+  // read (keeps homepage lean).
   if (gate === "public") {
     return response;
   }
@@ -113,19 +171,17 @@ export async function middleware(request: NextRequest) {
   // All remaining gates require an authenticated session.
   if (!user) {
     const url = request.nextUrl.clone();
-    url.pathname = LOGIN_ROUTE;
+    url.pathname = localize(locale, LOGIN_ROUTE);
     url.search = "";
-    // Preserve the original destination so Phase 02 login can bounce the user back.
-    // sanitizeReturnUrl guards against open-redirect: only local paths (single '/' prefix,
-    // not protocol-relative or absolute) are forwarded; anything else falls back to '/'.
-    const raw = `${pathname}${request.nextUrl.search}`;
-    const safeReturn = sanitizeReturnUrl(raw);
-    url.searchParams.set("returnUrl", safeReturn);
+    // Preserve the original (locale-stripped) destination; sanitizeReturnUrl
+    // guards against open-redirect (only local single-'/'-prefixed paths).
+    const raw = `${path}${request.nextUrl.search}`;
+    url.searchParams.set("returnUrl", sanitizeReturnUrl(raw));
     return copyCookies(response, NextResponse.redirect(url));
   }
 
-  // Single indexed lookup (PK on users.id) for block + role. RLS policy `users_self`
-  // scopes this to the caller's own row. Select only what the gates need.
+  // Single indexed lookup (PK on users.id) for block + role. RLS `users_self`
+  // scopes this to the caller's own row.
   const { data: profile, error } = await supabase
     .schema("betk")
     .from("users")
@@ -133,37 +189,38 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .maybeSingle();
 
-  // No profile row (or read error) → cannot establish role/status. Send to login rather
-  // than leak access. (A fully onboarded user always has a betk.users row.)
+  // No profile row (or read error) → cannot establish role/status → login.
   if (error || !profile) {
     const url = request.nextUrl.clone();
-    url.pathname = LOGIN_ROUTE;
+    url.pathname = localize(locale, LOGIN_ROUTE);
     url.search = "";
-    const raw2 = `${pathname}${request.nextUrl.search}`;
+    const raw2 = `${path}${request.nextUrl.search}`;
     url.searchParams.set("returnUrl", sanitizeReturnUrl(raw2));
     return copyCookies(response, NextResponse.redirect(url));
   }
 
   // R-A05 block check: suspended / banned / pending / soft-deleted → /blocked.
   if (profile.status !== "active" || profile.deleted_at !== null) {
-    return redirect(request, response, "/blocked");
+    return redirect(request, response, localize(locale, "/blocked"));
   }
 
   if (gate === "admin") {
-    // is_admin(): role IN ('admin','superadmin') AND status='active' (status already checked).
+    // is_admin(): role IN ('admin','superadmin') AND status='active' (checked above).
     if (profile.role !== "admin" && profile.role !== "superadmin") {
-      return redirect(request, response, "/");
+      return redirect(request, response, localize(locale, "/"));
     }
     return response;
   }
 
   if (gate === "seller") {
     if (profile.role !== "seller") {
-      return redirect(request, response, "/");
+      return redirect(request, response, localize(locale, "/"));
     }
-    // R-S04: pending/rejected/suspended sellers go to /seller/status, not the dashboard.
-    // /seller/status itself must stay reachable to avoid a redirect loop.
-    if (pathname !== SELLER_STATUS_ROUTE) {
+    // R-S04: pending/rejected/suspended sellers go to /seller/status, not the
+    // dashboard. /seller/status itself must stay reachable to avoid a loop —
+    // the check uses the locale-stripped `path`, so the loop-guard is
+    // locale-invariant.
+    if (path !== SELLER_STATUS_ROUTE) {
       const { data: sellerProfile } = await supabase
         .schema("betk")
         .from("seller_profiles")
@@ -172,7 +229,7 @@ export async function middleware(request: NextRequest) {
         .maybeSingle();
 
       if (!sellerProfile || sellerProfile.status !== "active") {
-        return redirect(request, response, SELLER_STATUS_ROUTE);
+        return redirect(request, response, localize(locale, SELLER_STATUS_ROUTE));
       }
     }
     return response;
@@ -182,13 +239,13 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-/** Copy accumulated (refreshed) auth cookies onto a redirect response. */
+/** Copy accumulated (locale + refreshed auth) cookies onto a redirect response. */
 function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
   from.cookies.getAll().forEach((cookie) => to.cookies.set(cookie));
   return to;
 }
 
-/** Build a same-origin redirect that preserves refreshed auth cookies. */
+/** Build a same-origin redirect that preserves locale + refreshed auth cookies. */
 function redirect(
   request: NextRequest,
   response: NextResponse,
@@ -202,10 +259,12 @@ function redirect(
 
 export const config = {
   /**
-   * Run on every path EXCEPT Next internals and static assets. Keeps middleware off the
-   * hot path for `_next/*`, the favicon, and common static file extensions.
+   * Run on every path EXCEPT API routes, Next internals, and static assets.
+   * `api` is excluded so route handlers are neither localized nor gated here
+   * (no API routes exist yet; auth for API is handled per-handler). Keeps
+   * middleware off the hot path for `_next/*`, the favicon, and static files.
    */
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|css|js|map|txt|xml|json)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|css|js|map|txt|xml|json)$).*)",
   ],
 };

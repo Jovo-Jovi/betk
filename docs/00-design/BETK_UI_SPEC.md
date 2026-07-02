@@ -908,6 +908,24 @@ Step-by-step states, mapped to `users`, `otp_tokens`, `sessions`, and C3 §5 RLS
 
 ---
 
+## 4. Localization & theming (OD-7)
+
+BETK is a **bilingual Arabic/English** app with **light/dark** theming over the existing 56 pages — **no new pages/tables/content columns, no translation service** (ADR-002; scope OD-7). This section is the ground truth for how any page localizes.
+
+- **Locales & URLs.** `ar` (default) + `en`. Routing is `localePrefix: 'as-needed'`: **Arabic is unprefixed** (existing URLs/SEO unchanged — `/`, `/listing/[id]`, `/seller`, …); **English is mirrored under `/en`** (`/en`, `/en/listing/[id]`, …). A locale outside `{ar, en}` is a **404**. Locale persists via the URL + `NEXT_LOCALE` cookie.
+- **Direction & fonts.** `<html dir lang>` derives from the locale: **ar → `dir="rtl"` `lang="ar"`**, **en → `dir="ltr"` `lang="en"`**. Keep using logical Tailwind utilities (`ps-*/pe-*/ms-*/me-*/start-*/end-*`) so the same components mirror correctly under LTR; no raw `left/right` in shared components. LTR islands (Latin handles, BETK refs, tracking numbers) still use `dir="ltr"` wrappers.
+- **Theme.** Light/dark via `next-themes`, class strategy on `<html>` (`.dark`), matching the Phase 01 T03 tokens; `defaultTheme="system"`. Theme persists in `localStorage`. No DB column.
+- **What is translated vs shown as-authored:**
+  - **Shell chrome** (nav, buttons, labels, empty/error/validation copy) → `next-intl` catalogs `messages/{ar,en}.json` (BETK owns EN copy).
+  - **Structured lists** (categories, badges, statuses, filters, governorates, delivery) → existing `*_ar`/`*_en` columns.
+  - **Names/titles** (listing titles, store/collection/category names) → **`localizedName()` = `COALESCE(locale column, other)`**, never blank (`title_en` is nullable — no migration; the seller-entered bilingual title is a Phase-04 listing-form decision).
+  - **Descriptions / store bios / custom-order notes** → a **single field in the author's language, shown as-authored to everyone**. No translation, no fallback (an English user may see an Arabic description — accepted).
+  - **Transactional/structured fields** (price, stock, condition, dates) → language-neutral/enum.
+- **Switch location.** The language switch (AR ↔ EN) and theme switch (light/dark/system) live in **Account → Settings** (built in BL-03). Switching language keeps the user on the same page in the other locale.
+- **Deferred papercut.** `order_items` snapshots only `listing_title_ar`, so English buyers' order history shows the Arabic title (fixing = a future `_en` column, out of OD-7 scope).
+
+---
+
 ## Appendix A — Gap Register
 
 ### [DATA GAP] — wireframe/use-case data needs with no matching table

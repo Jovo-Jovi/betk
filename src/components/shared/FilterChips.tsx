@@ -3,8 +3,10 @@ import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
 /**
- * FilterChips — active-filter row above search/category results. Per-chip
- * remove (×) + "مسح الكل" when more than one. Renders null when empty.
+ * FilterChips — active-filter row above results. i18n: the "clear all" label
+ * and the per-chip remove aria-label come in as props (Arabic defaults).
+ * "{label}" in `removeLabel` is interpolated with the chip label.
+ * Renders null when empty.
  */
 export interface FilterChip {
   id: string;
@@ -15,10 +17,14 @@ export interface FilterChipsProps {
   chips: FilterChip[];
   onRemove?: (id: string) => void;
   onClearAll?: () => void;
+  /** "Clear all" action label. Default "مسح الكل". */
+  clearAllLabel?: string;
+  /** Per-chip remove aria template; "{label}" → chip label. Default "إزالة {label}". */
+  removeLabel?: string;
   className?: string;
 }
 
-export function FilterChips({ chips, onRemove, onClearAll, className }: FilterChipsProps) {
+export function FilterChips({ chips, onRemove, onClearAll, clearAllLabel = "مسح الكل", removeLabel = "إزالة {label}", className }: FilterChipsProps) {
   if (!chips?.length) return null;
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -28,7 +34,7 @@ export function FilterChips({ chips, onRemove, onClearAll, className }: FilterCh
           <button
             type="button"
             onClick={() => onRemove?.(c.id)}
-            aria-label={`إزالة ${c.label}`}
+            aria-label={removeLabel.replace("{label}", c.label)}
             className="inline-flex size-[18px] items-center justify-center rounded-full bg-primary/20"
           >
             <X className="size-[11px]" />
@@ -37,7 +43,7 @@ export function FilterChips({ chips, onRemove, onClearAll, className }: FilterCh
       ))}
       {chips.length > 1 && onClearAll && (
         <button type="button" onClick={onClearAll} className="text-[0.8125rem] font-semibold text-muted-foreground underline">
-          مسح الكل
+          {clearAllLabel}
         </button>
       )}
     </div>

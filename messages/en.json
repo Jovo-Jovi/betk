@@ -1,0 +1,284 @@
+{
+  "common": {
+    "appName": "BETK",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "backToHome": "Back to home",
+    "or": "or"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "account": "Account"
+  },
+  "auth": {
+    "loginTitle": "Welcome to BETK",
+    "loginSubtitle": "Enter your phone number to receive a verification code",
+    "login": {
+      "metaTitle": "Sign in — BETK",
+      "metaDescription": "Enter your phone number to continue",
+      "legalPrefix": "By continuing, you agree to the",
+      "terms": "Terms & Conditions",
+      "and": "and",
+      "privacy": "Privacy Policy"
+    },
+    "google": {
+      "continueLabel": "Continue with Google",
+      "connecting": "Connecting…",
+      "ariaLabel": "Continue with Google"
+    },
+    "phoneForm": {
+      "label": "Phone number",
+      "placeholder": "01XXXXXXXXX",
+      "submitting": "Sending…",
+      "submit": "Send code"
+    },
+    "verify": {
+      "metaTitle": "Verify code — BETK",
+      "metaDescription": "Enter the verification code sent to your phone",
+      "title": "Verify your phone number",
+      "subtitle": "Enter the 6-digit verification code sent to your phone.",
+      "expiryNote": "The code is valid for 60 seconds only.",
+      "sentTo": "The code was sent to",
+      "otpLabel": "Verification code (6 digits)",
+      "verifying": "Verifying…",
+      "confirm": "Confirm",
+      "wrongNumber": "Wrong number?",
+      "editNumber": "Edit number"
+    },
+    "register": {
+      "metaTitle": "Complete registration — BETK",
+      "metaDescription": "Complete your profile to continue",
+      "title": "Complete your profile",
+      "subtitle": "One last step — tell us a bit about yourself",
+      "fullNameLabel": "Full name",
+      "fullNamePlaceholder": "e.g. Mohamed Ahmed",
+      "governorateLabel": "Governorate",
+      "governoratePlaceholder": "Select your governorate",
+      "cityLabel": "City",
+      "cityOptional": "(optional)",
+      "cityPlaceholder": "e.g. Nasr City",
+      "saving": "Saving…",
+      "submit": "Complete registration"
+    },
+    "phone": {
+      "metaTitle": "Add phone number — BETK",
+      "metaDescription": "Add a verified phone number to complete transactions",
+      "title": "Add your phone number",
+      "subtitle": "To complete a purchase or any transaction, a verified Egyptian phone number is required.",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "01XXXXXXXXX",
+      "sentTo": "The code was sent to",
+      "otpLabel": "Verification code (6 digits)",
+      "verifying": "Verifying…",
+      "confirmNumber": "Confirm number",
+      "sending": "Sending…",
+      "submit": "Send code"
+    }
+  },
+  "account": {
+    "title": "Account",
+    "pageTitle": "Profile",
+    "phoneAddBanner": "To complete a purchase or any transaction, you must add a verified phone number.",
+    "addPhoneLink": "Add phone number",
+    "identityInfoLabel": "Account details",
+    "phoneLabel": "Phone number",
+    "phoneMissing": "Not added yet —",
+    "authMethodLabel": "Sign-in method",
+    "authProviderPhone": "Phone (OTP)",
+    "authProviderGoogle": "Google",
+    "editProfileLabel": "Edit profile",
+    "profileForm": {
+      "successMessage": "Changes saved successfully.",
+      "fullNameLabel": "Full name *",
+      "governorateLabel": "Governorate *",
+      "governoratePlaceholder": "Select governorate",
+      "cityLabel": "City / district (optional)",
+      "saving": "Saving…",
+      "submit": "Save changes"
+    },
+    "deactivate": {
+      "sectionLabel": "Deactivate account",
+      "title": "Deactivate account",
+      "description": "Deactivating your account prevents you from signing in or making any transactions. Your data will not be deleted, and the account can be reactivated later via support.",
+      "revealButton": "Deactivate my account",
+      "confirmLabel": "I confirm I want to deactivate my account and sign out.",
+      "cancel": "Cancel",
+      "confirmButton": "Confirm deactivation",
+      "processing": "Deactivating…"
+    },
+    "settings": {
+      "sectionLabel": "Settings",
+      "title": "Language & theme",
+      "languageLabel": "Language",
+      "languageOptions": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "themeLabel": "Theme",
+      "themeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    }
+  },
+  "validation": {
+    "invalidInput": "Invalid data",
+    "phoneRequired": "Phone number is required",
+    "invalidEgyptianPhone": "Invalid Egyptian phone number. Use the format 01XXXXXXXXX or +201XXXXXXXXX",
+    "invalidPhoneSimple": "Invalid phone number",
+    "otpLength": "The code must be 6 digits",
+    "otpDigitsOnly": "The code must contain digits only",
+    "fullNameRequired": "Full name is required (at least 2 characters)",
+    "fullNameTooLong": "Full name must not exceed 100 characters",
+    "governorateRequired": "Governorate is required",
+    "governorateInvalid": "Select a valid governorate",
+    "cityTooLong": "City name must not exceed 100 characters",
+    "deactivateConfirmRequired": "You must confirm deactivation before continuing."
+  },
+  "errors": {
+    "invalidInput": "Invalid data. Please check your input.",
+    "mustLoginFirst": "You must sign in first.",
+    "profileSaveFailed": "An error occurred while saving your profile. Please try again.",
+    "rateLimited": "Please wait one minute before requesting a new code.",
+    "sendOtpFailed": "An error occurred while sending the code. Please try again.",
+    "accountInactive": "This account is not active. Please contact support.",
+    "accountNotFound": "Could not find your account. Please sign in again.",
+    "phoneAlreadyVerified": "You already have a verified phone number on your account.",
+    "phoneTaken": "This phone number is already in use on another account.",
+    "otpAttemptsExceeded": "Maximum number of attempts exceeded. Please request a new code.",
+    "otpInvalidOrExpired": "The code is incorrect or has expired. Please try again or request a new code.",
+    "loginFailedGeneric": "An error occurred while signing in. Please try again.",
+    "deactivateFailed": "Could not deactivate the account. Please try again.",
+    "googleSignInFailed": "Could not start Google sign-in. Please try again.",
+    "unexpectedError": "An unexpected error occurred. Please try again."
+  },
+  "catalog": {
+    "status": {
+      "order": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "preparing": "Preparing",
+        "dispatched": "Shipped",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "returned": "Returned"
+      },
+      "seller": {
+        "pending": "Pending review",
+        "active": "Active",
+        "suspended": "Suspended",
+        "banned": "Banned"
+      },
+      "payment": {
+        "pending": "Awaiting payment",
+        "confirmed": "Paid",
+        "failed": "Payment failed",
+        "refunded": "Refunded"
+      },
+      "listing": {
+        "draft": "Draft",
+        "active": "Published",
+        "sold_out": "Sold out",
+        "paused": "Paused",
+        "removed": "Removed"
+      },
+      "dispute": {
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "awaiting_seller": "Awaiting seller",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "boost": {
+        "pending_payment": "Awaiting payment",
+        "active": "Featured",
+        "expired": "Expired",
+        "cancelled": "Cancelled"
+      },
+      "payout": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "processed": "Paid out",
+        "rejected": "Rejected"
+      }
+    },
+    "stock": {
+      "labels": {
+        "in_stock": "In stock",
+        "low": "Limited stock",
+        "sold_out": "Sold out",
+        "made_to_order": "Made to order",
+        "service": "Available"
+      },
+      "remaining": "{qty, plural, =0 {Out of stock} one {# item left} other {# items left}}"
+    },
+    "level": {
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold"
+    },
+    "price": {
+      "currency": "EGP",
+      "startingFrom": "Starting from",
+      "perHour": "/ hour",
+      "quote": "Price on request"
+    },
+    "filters": {
+      "title": "Filter",
+      "clear": "Clear",
+      "clearAll": "Clear all",
+      "remove": "Remove {label}",
+      "category": "Category",
+      "type": "Type",
+      "governorate": "Governorate",
+      "priceRange": "Price range (EGP)",
+      "sort": "Sort",
+      "allGovernorates": "All governorates",
+      "apply": "Apply",
+      "resultCount": "{count, plural, =0 {No results} one {Showing # result} other {Showing # results}}",
+      "types": {
+        "all": "All",
+        "product": "Products",
+        "service": "Services"
+      },
+      "sorts": {
+        "relevance": "Most relevant",
+        "newest": "Newest",
+        "price_asc": "Price: lowest first",
+        "popular": "Most popular"
+      }
+    },
+    "collection": {
+      "seeAll": "See all"
+    },
+    "rating": {
+      "reviews": "{count, plural, =0 {No reviews} one {# review} other {# reviews}}"
+    },
+    "verified": {
+      "label": "Verified seller"
+    },
+    "wishlist": {
+      "add": "Add to wishlist",
+      "remove": "Remove from wishlist"
+    },
+    "search": {
+      "placeholder": "Search BETK…",
+      "clear": "Clear"
+    },
+    "follow": {
+      "follow": "Follow",
+      "following": "Following"
+    },
+    "listing": {
+      "boost": "Featured"
+    },
+    "store": {
+      "listingCount": "{count, plural, =0 {No listings} one {# listing} other {# listings}}"
+    },
+    "seller": {
+      "responseTime": "{hours, plural, =0 {Responds in under an hour} one {Responds within # hour} other {Responds within # hours}}"
+    }
+  }
+}

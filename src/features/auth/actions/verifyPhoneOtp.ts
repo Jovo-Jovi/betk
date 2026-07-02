@@ -31,8 +31,10 @@
 import * as Sentry from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { otpVerifySchema } from "@/validations/auth";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { recordOtpAttempt, markOtpUsed } from "@/services/otpLimiter";
 import { setUserPhoneNumber } from "@/services/authUsers";
 import { setFeatureContext } from "@/services/sentry";
@@ -49,6 +51,9 @@ export async function verifyPhoneOtp(
 ): Promise<VerifyPhoneOtpResult> {
   setFeatureContext("auth-phone-gate");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation (reuses the T02 6-digit OTP schema) ─────────────────────
   const parsed = otpVerifySchema.safeParse({
     phone: formData.get("phone"),
@@ -56,8 +61,7 @@ export async function verifyPhoneOtp(
   });
 
   if (!parsed.success) {
-    const msg = parsed.error.errors[0]?.message ?? "بيانات غير صحيحة";
-    return { errorAr: msg };
+    return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
   const { phone, token } = parsed.data;
@@ -70,13 +74,13 @@ export async function verifyPhoneOtp(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { errorAr: "يجب تسجيل الدخول أولاً." };
+    return { errorAr: tErrors("mustLoginFirst") };
   }
 
   // ── ≤5 attempts per token (REUSED limiter; increment BEFORE GoTrue) ────────
   const limiter = await recordOtpAttempt(phone);
   if (!limiter.allowed) {
-    return { errorAr: "تم تجاوز الحد الأقصى لعدد المحاولات. يُرجى طلب كود جديد." };
+    return { errorAr: tErrors("otpAttemptsExceeded") };
   }
 
   // ── GoTrue phone-change verify ─────────────────────────────────────────────
@@ -90,7 +94,7 @@ export async function verifyPhoneOtp(
   if (verifyError) {
     // wrong / expired / already-used — single generic message (avoid enumeration).
     return {
-      errorAr: "الكود غير صحيح أو منتهي الصلاحية. يُرجى المحاولة مرة أخرى أو طلب كود جديد.",
+      errorAr: tErrors("otpInvalidOrExpired"),
     };
   }
 
@@ -102,7 +106,7 @@ export async function verifyPhoneOtp(
 
   if ("conflict" in result) {
     // uq_users_phone rejected at write time — clean message, never merge.
-    return { errorAr: "رقم الهاتف مستخدم بالفعل في حساب آخر." };
+    return { errorAr: tErrors("phoneTaken") };
   }
 
   // ── Observability (no PII beyond the user id) ──────────────────────────────

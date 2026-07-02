@@ -1,0 +1,284 @@
+{
+  "common": {
+    "appName": "بيتك",
+    "loading": "جارٍ التحميل…",
+    "retry": "إعادة المحاولة",
+    "backToHome": "العودة إلى الرئيسية",
+    "or": "أو"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "search": "بحث",
+    "account": "حسابي"
+  },
+  "auth": {
+    "loginTitle": "أهلاً بك في بيتك",
+    "loginSubtitle": "ادخل رقم هاتفك لاستلام كود التحقق",
+    "login": {
+      "metaTitle": "تسجيل الدخول — BETK",
+      "metaDescription": "ادخل رقم هاتفك للمتابعة",
+      "legalPrefix": "بالمتابعة، أنت توافق على",
+      "terms": "الشروط والأحكام",
+      "and": "و",
+      "privacy": "سياسة الخصوصية"
+    },
+    "google": {
+      "continueLabel": "متابعة عبر Google",
+      "connecting": "جارٍ الاتصال…",
+      "ariaLabel": "متابعة عبر Google"
+    },
+    "phoneForm": {
+      "label": "رقم الهاتف",
+      "placeholder": "01XXXXXXXXX",
+      "submitting": "جارٍ الإرسال…",
+      "submit": "إرسال الكود"
+    },
+    "verify": {
+      "metaTitle": "تأكيد الكود — BETK",
+      "metaDescription": "أدخل كود التحقق المرسل إلى هاتفك",
+      "title": "تأكيد رقم هاتفك",
+      "subtitle": "أدخل كود التحقق المؤلف من ٦ أرقام والمُرسَل إلى هاتفك.",
+      "expiryNote": "الكود صالح لمدة ٦٠ ثانية فقط.",
+      "sentTo": "أُرسل الكود إلى",
+      "otpLabel": "كود التحقق (٦ أرقام)",
+      "verifying": "جارٍ التحقق…",
+      "confirm": "تأكيد",
+      "wrongNumber": "رقم خاطئ؟",
+      "editNumber": "تعديل الرقم"
+    },
+    "register": {
+      "metaTitle": "إكمال التسجيل — BETK",
+      "metaDescription": "أكمل ملفك الشخصي للمتابعة",
+      "title": "أكمل ملفك الشخصي",
+      "subtitle": "خطوة أخيرة — أخبرنا عن نفسك قليلاً",
+      "fullNameLabel": "الاسم الكامل",
+      "fullNamePlaceholder": "مثال: محمد أحمد",
+      "governorateLabel": "المحافظة",
+      "governoratePlaceholder": "اختر محافظتك",
+      "cityLabel": "المدينة",
+      "cityOptional": "(اختياري)",
+      "cityPlaceholder": "مثال: مدينة نصر",
+      "saving": "جاري الحفظ…",
+      "submit": "إكمال التسجيل"
+    },
+    "phone": {
+      "metaTitle": "إضافة رقم هاتف — BETK",
+      "metaDescription": "أضف رقم هاتف موثّق لإتمام المعاملات",
+      "title": "أضف رقم هاتفك",
+      "subtitle": "لإتمام الشراء أو أي معاملة، يلزم رقم هاتف مصري موثّق عبر كود تحقق.",
+      "phoneLabel": "رقم الهاتف",
+      "phonePlaceholder": "01XXXXXXXXX",
+      "sentTo": "أُرسل الكود إلى",
+      "otpLabel": "كود التحقق (٦ أرقام)",
+      "verifying": "جارٍ التحقق…",
+      "confirmNumber": "تأكيد الرقم",
+      "sending": "جارٍ الإرسال…",
+      "submit": "إرسال الكود"
+    }
+  },
+  "account": {
+    "title": "الحساب",
+    "pageTitle": "الملف الشخصي",
+    "phoneAddBanner": "لإتمام الشراء أو أي معاملة، يجب إضافة رقم هاتف موثّق.",
+    "addPhoneLink": "أضف رقم هاتف",
+    "identityInfoLabel": "بيانات الحساب",
+    "phoneLabel": "رقم الهاتف",
+    "phoneMissing": "لم يُضَف بعد —",
+    "authMethodLabel": "طريقة تسجيل الدخول",
+    "authProviderPhone": "رقم الهاتف (OTP)",
+    "authProviderGoogle": "Google",
+    "editProfileLabel": "تعديل الملف الشخصي",
+    "profileForm": {
+      "successMessage": "تم حفظ التعديلات بنجاح.",
+      "fullNameLabel": "الاسم الكامل *",
+      "governorateLabel": "المحافظة *",
+      "governoratePlaceholder": "اختر المحافظة",
+      "cityLabel": "المدينة / الحي (اختياري)",
+      "saving": "جارٍ الحفظ…",
+      "submit": "حفظ التعديلات"
+    },
+    "deactivate": {
+      "sectionLabel": "تعطيل الحساب",
+      "title": "تعطيل الحساب",
+      "description": "تعطيل الحساب يمنعك من تسجيل الدخول أو إجراء أي معاملات. لن يتم حذف بياناتك، ويمكن إعادة تفعيل الحساب لاحقًا عبر الدعم.",
+      "revealButton": "تعطيل حسابي",
+      "confirmLabel": "أؤكد رغبتي في تعطيل حسابي وتسجيل الخروج.",
+      "cancel": "إلغاء",
+      "confirmButton": "تأكيد التعطيل",
+      "processing": "جارٍ التعطيل…"
+    },
+    "settings": {
+      "sectionLabel": "الإعدادات",
+      "title": "اللغة والمظهر",
+      "languageLabel": "اللغة",
+      "languageOptions": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "themeLabel": "المظهر",
+      "themeOptions": {
+        "light": "فاتح",
+        "dark": "داكن",
+        "system": "تلقائي (حسب الجهاز)"
+      }
+    }
+  },
+  "validation": {
+    "invalidInput": "بيانات غير صحيحة",
+    "phoneRequired": "رقم الهاتف مطلوب",
+    "invalidEgyptianPhone": "رقم هاتف مصري غير صحيح. استخدم صيغة 01XXXXXXXXX أو +201XXXXXXXXX",
+    "invalidPhoneSimple": "رقم الهاتف غير صحيح",
+    "otpLength": "الكود يجب أن يكون 6 أرقام",
+    "otpDigitsOnly": "الكود يجب أن يحتوي على أرقام فقط",
+    "fullNameRequired": "الاسم الكامل مطلوب (حرفان على الأقل)",
+    "fullNameTooLong": "الاسم الكامل لا يتجاوز 100 حرف",
+    "governorateRequired": "المحافظة مطلوبة",
+    "governorateInvalid": "اختر محافظة صحيحة",
+    "cityTooLong": "اسم المدينة لا يتجاوز 100 حرف",
+    "deactivateConfirmRequired": "يجب تأكيد تعطيل الحساب قبل المتابعة."
+  },
+  "errors": {
+    "invalidInput": "بيانات غير صحيحة. يُرجى التحقق من المدخلات.",
+    "mustLoginFirst": "يجب تسجيل الدخول أولاً.",
+    "profileSaveFailed": "حدث خطأ أثناء حفظ الملف الشخصي. يُرجى المحاولة مرة أخرى.",
+    "rateLimited": "يُرجى الانتظار دقيقة واحدة قبل طلب كود جديد.",
+    "sendOtpFailed": "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+    "accountInactive": "هذا الحساب غير نشط. يُرجى التواصل مع الدعم.",
+    "accountNotFound": "تعذّر العثور على الحساب. يُرجى تسجيل الدخول مجددًا.",
+    "phoneAlreadyVerified": "لديك رقم هاتف موثّق بالفعل على حسابك.",
+    "phoneTaken": "رقم الهاتف مستخدم بالفعل في حساب آخر.",
+    "otpAttemptsExceeded": "تم تجاوز الحد الأقصى لعدد المحاولات. يُرجى طلب كود جديد.",
+    "otpInvalidOrExpired": "الكود غير صحيح أو منتهي الصلاحية. يُرجى المحاولة مرة أخرى أو طلب كود جديد.",
+    "loginFailedGeneric": "حدث خطأ أثناء تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
+    "deactivateFailed": "تعذّر تعطيل الحساب. يُرجى المحاولة مرة أخرى.",
+    "googleSignInFailed": "تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مجدداً."
+  },
+  "catalog": {
+    "status": {
+      "order": {
+        "pending": "قيد الانتظار",
+        "confirmed": "مؤكد",
+        "preparing": "قيد التحضير",
+        "dispatched": "تم الشحن",
+        "delivered": "تم التسليم",
+        "cancelled": "ملغي",
+        "returned": "مرتجع"
+      },
+      "seller": {
+        "pending": "قيد المراجعة",
+        "active": "نشط",
+        "suspended": "موقوف",
+        "banned": "محظور"
+      },
+      "payment": {
+        "pending": "بانتظار الدفع",
+        "confirmed": "تم الدفع",
+        "failed": "فشل الدفع",
+        "refunded": "مسترد"
+      },
+      "listing": {
+        "draft": "مسودة",
+        "active": "منشور",
+        "sold_out": "نفد المخزون",
+        "paused": "متوقف",
+        "removed": "محذوف"
+      },
+      "dispute": {
+        "submitted": "مُقدّم",
+        "under_review": "قيد المراجعة",
+        "awaiting_seller": "بانتظار البائع",
+        "resolved": "تم الحل",
+        "closed": "مغلق"
+      },
+      "boost": {
+        "pending_payment": "بانتظار الدفع",
+        "active": "مميّز",
+        "expired": "منتهي",
+        "cancelled": "ملغي"
+      },
+      "payout": {
+        "pending": "قيد الانتظار",
+        "processing": "قيد المعالجة",
+        "processed": "تم التحويل",
+        "rejected": "مرفوض"
+      }
+    },
+    "stock": {
+      "labels": {
+        "in_stock": "متوفر",
+        "low": "كمية محدودة",
+        "sold_out": "نفد المخزون",
+        "made_to_order": "حسب الطلب",
+        "service": "متاح"
+      },
+      "remaining": "{qty, plural, =0 {لا كمية متبقية} one {باقي قطعة واحدة} two {باقي قطعتان} few {باقي # قطع} many {باقي # قطعة} other {باقي # قطعة}}"
+    },
+    "level": {
+      "bronze": "برونزي",
+      "silver": "فضي",
+      "gold": "ذهبي"
+    },
+    "price": {
+      "currency": "ج.م",
+      "startingFrom": "يبدأ من",
+      "perHour": "/ ساعة",
+      "quote": "السعر عند الطلب"
+    },
+    "filters": {
+      "title": "تصفية",
+      "clear": "مسح",
+      "clearAll": "مسح الكل",
+      "remove": "إزالة {label}",
+      "category": "الفئة",
+      "type": "النوع",
+      "governorate": "المحافظة",
+      "priceRange": "نطاق السعر (ج.م)",
+      "sort": "الترتيب",
+      "allGovernorates": "كل المحافظات",
+      "apply": "تطبيق",
+      "resultCount": "{count, plural, =0 {لا توجد نتائج} one {عرض نتيجة واحدة} two {عرض نتيجتين} few {عرض # نتائج} many {عرض # نتيجة} other {عرض # نتيجة}}",
+      "types": {
+        "all": "الكل",
+        "product": "منتجات",
+        "service": "خدمات"
+      },
+      "sorts": {
+        "relevance": "الأكثر صلة",
+        "newest": "الأحدث",
+        "price_asc": "السعر: من الأقل",
+        "popular": "الأكثر رواجًا"
+      }
+    },
+    "collection": {
+      "seeAll": "عرض الكل"
+    },
+    "rating": {
+      "reviews": "{count, plural, =0 {لا تقييمات} one {تقييم واحد} two {تقييمان} few {# تقييمات} many {# تقييمًا} other {# تقييم}}"
+    },
+    "verified": {
+      "label": "بائع موثّق"
+    },
+    "wishlist": {
+      "add": "أضف للمفضلة",
+      "remove": "إزالة من المفضلة"
+    },
+    "search": {
+      "placeholder": "ابحث في بيتك…",
+      "clear": "مسح"
+    },
+    "follow": {
+      "follow": "تابع",
+      "following": "تتابعه"
+    },
+    "listing": {
+      "boost": "مميّز"
+    },
+    "store": {
+      "listingCount": "{count, plural, =0 {لا إعلانات} one {إعلان واحد} two {إعلانان} few {# إعلانات} many {# إعلانًا} other {# إعلان}}"
+    },
+    "seller": {
+      "responseTime": "{hours, plural, =0 {يرد خلال أقل من ساعة} one {يرد خلال ساعة واحدة} two {يرد خلال ساعتين} few {يرد خلال # ساعات} many {يرد خلال # ساعة} other {يرد خلال # ساعة}}"
+    }
+  }
+}

@@ -19,8 +19,10 @@
  * The callback route is T03 scope.
  */
 
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { phoneInputSchema } from "@/validations/auth";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { createOtpChallenge } from "@/services/otpLimiter";
 
@@ -38,15 +40,18 @@ export async function sendOtp(
 ): Promise<SendOtpResult> {
   setFeatureContext("auth");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation + E.164 normalisation ──────────────────────────────────
   const raw = formData.get("phone");
   const parsed = phoneInputSchema.safeParse({ phone: raw });
 
   if (!parsed.success) {
-    const msg =
-      parsed.error.errors[0]?.message ??
-      "رقم هاتف غير صحيح";
-    return { success: false, errorAr: msg };
+    return {
+      success: false,
+      errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message),
+    };
   }
 
   const e164Phone = parsed.data.phone;
@@ -68,14 +73,14 @@ export async function sendOtp(
     if (isRateLimit) {
       return {
         success: false,
-        errorAr: "يُرجى الانتظار دقيقة واحدة قبل طلب كود جديد.",
+        errorAr: tErrors("rateLimited"),
       };
     }
 
     captureTaggedError(error, "auth");
     return {
       success: false,
-      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("sendOtpFailed"),
     };
   }
 
@@ -91,7 +96,7 @@ export async function sendOtp(
     captureTaggedError(err, "auth", { extra: { step: "createOtpChallenge" } });
     return {
       success: false,
-      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("sendOtpFailed"),
     };
   }
 

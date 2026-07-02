@@ -27,8 +27,10 @@
  * Sentry feature tag: 'auth-phone-gate'.
  */
 
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { phoneInputSchema } from "@/validations/auth";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { getUserRowById, isPhoneNumberTaken } from "@/services/authUsers";
 import { createOtpChallenge } from "@/services/otpLimiter";
@@ -47,12 +49,17 @@ export async function sendPhoneOtp(
 ): Promise<SendPhoneOtpResult> {
   setFeatureContext("auth-phone-gate");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation + E.164 normalisation ──────────────────────────────────
   const parsed = phoneInputSchema.safeParse({ phone: formData.get("phone") });
 
   if (!parsed.success) {
-    const msg = parsed.error.errors[0]?.message ?? "رقم هاتف غير صحيح";
-    return { success: false, errorAr: msg };
+    return {
+      success: false,
+      errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message),
+    };
   }
 
   const e164Phone = parsed.data.phone;
@@ -65,24 +72,24 @@ export async function sendPhoneOtp(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { success: false, errorAr: "يجب تسجيل الدخول أولاً." };
+    return { success: false, errorAr: tErrors("mustLoginFirst") };
   }
 
   // ── Eligibility: active + currently phone-NULL ─────────────────────────────
   const row = await getUserRowById(user.id);
   if (!row) {
-    return { success: false, errorAr: "تعذّر العثور على الحساب. يُرجى تسجيل الدخول مجددًا." };
+    return { success: false, errorAr: tErrors("accountNotFound") };
   }
   if (row.deleted_at !== null || row.status !== "active") {
-    return { success: false, errorAr: "هذا الحساب غير نشط. يُرجى التواصل مع الدعم." };
+    return { success: false, errorAr: tErrors("accountInactive") };
   }
   if (row.phone_number !== null) {
-    return { success: false, errorAr: "لديك رقم هاتف موثّق بالفعل على حسابك." };
+    return { success: false, errorAr: tErrors("phoneAlreadyVerified") };
   }
 
   // ── UX pre-check (authoritative guard is the 23505 catch at write time) ────
   if (await isPhoneNumberTaken(e164Phone)) {
-    return { success: false, errorAr: "رقم الهاتف مستخدم بالفعل في حساب آخر." };
+    return { success: false, errorAr: tErrors("phoneTaken") };
   }
 
   // ── GoTrue phone-change OTP (reuses GoTrue OTP — not a second path) ────────
@@ -99,20 +106,20 @@ export async function sendPhoneOtp(
     if (isRateLimit) {
       return {
         success: false,
-        errorAr: "يُرجى الانتظار دقيقة واحدة قبل طلب كود جديد.",
+        errorAr: tErrors("rateLimited"),
       };
     }
 
     // GoTrue may also reject if the phone is already registered to another
     // identity — surface a clean "in use" message rather than a generic error.
     if (msg.includes("already") && msg.includes("registered")) {
-      return { success: false, errorAr: "رقم الهاتف مستخدم بالفعل في حساب آخر." };
+      return { success: false, errorAr: tErrors("phoneTaken") };
     }
 
     captureTaggedError(error, "auth-phone-gate", { extra: { step: "sendPhoneOtp.updateUser" } });
     return {
       success: false,
-      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("sendOtpFailed"),
     };
   }
 
@@ -125,7 +132,7 @@ export async function sendPhoneOtp(
     captureTaggedError(err, "auth-phone-gate", { extra: { step: "createOtpChallenge" } });
     return {
       success: false,
-      errorAr: "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("sendOtpFailed"),
     };
   }
 

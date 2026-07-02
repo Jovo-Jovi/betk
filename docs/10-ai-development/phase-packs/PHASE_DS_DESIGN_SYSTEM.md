@@ -87,3 +87,15 @@ REPORT: branch freshness/rebase status; the 21-vs-b648566 diff; net-new landed; 
 Close-out → update SESSION_CONTEXT + DEVELOPMENT_JOURNAL. Do NOT merge and do NOT start T02 — I give the merge verdict after reviewing this.
 ```
 - **Done when:** all 31 landed on feature/design-catalog; the 10 net-new + any changed catalog files pass typecheck/lint/tailwind-resolution + UI-reviewer + security; PublicShell + BuyerShell wired into their real layouts; component→spec PR open to main; gate clean. Merge on review verdict → then T02.
+
+---
+
+## DS-I18N — De-hardcode the shared kit for bilingual AR/EN (Claude Design) · **OD-7**
+- **Surface:** **Claude Design** (NOT Cursor) · **Branch:** `feature/bilingual-i18n` · **Scope authority:** OD-7 (`BETK_MVP_SCOPE.md §6`) + `OD7_BILINGUAL_THEME_TRACK.md`
+- **Note:** DS-I18N modifies the **already-merged** (PR #33, now-trunk) shared components — the design gate is spent, so there is **no separate design gate**; DS-I18N is **verified within BL-05** (the bilingual+theme gate).
+- **Prompt (Claude Design chat):**
+```
+Claude Design task DS-I18N. Branch: feature/bilingual-i18n.
+The 21 shared catalog components (FilterSheet, StatusBadge, StockBadge, LevelBadge, PriceBlock, …) ship Arabic string literals baked in. Refactor each to accept its display strings as i18n keys/props (no Arabic literals inside), preserving all current visuals. Verify every component renders correctly on a DARK canvas (.dark) and under LTR (locale=en) — report bidi/mirroring or dark-contrast issues. Return updated components on this branch. Design-system change; Cursor must not edit these internals.
+```
+- **Done when:** the 21 shared components carry no baked-in Arabic literals (strings exposed as i18n keys/props, visuals preserved); each verified on a dark canvas (`.dark`) and under LTR (`locale=en`); bidi/mirroring + dark-contrast issues reported; updated components returned on `feature/bilingual-i18n`. Verified within **BL-05** (no separate design gate).
