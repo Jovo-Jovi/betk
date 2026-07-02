@@ -2,7 +2,7 @@
 
 > **Purpose.** Working plan + task prompts to make BETK a bilingual **Arabic/English** web app with light/dark theming — no translation service, no new pages/tables, no new content columns. Execute one task per Cursor window; paste each result to the review chat for a PASS/FAIL verdict before advancing.
 >
-> **Status:** Git setup DONE. Branch `feature/bilingual-i18n` cut off `main` (`b829dbf`) and pushed. Next task: **BL-00**.
+> **Status:** BL-00 through BL-04 DONE & COMMITTED (`f910cb6`/`22342de`/`95b469e`/`7e4a9f1` on `feature/bilingual-i18n`); DS-I18N (Claude Design) DONE. Next task: **BL-05** (Opus) — consolidated gate → merge → unblocks Phase 03 T02.
 > **Scope authority:** amends `BETK_MVP_SCOPE.md §6` as **OD-7** (see §3). No schema change, no new dependency.
 > **Frozen elsewhere:** OD-1…OD-6 unchanged. Phase 03 **T02+ is PAUSED** until BL-05 merges.
 
@@ -72,13 +72,13 @@ Closing line becomes:
 ```
 [DONE]  Step 1  Recon                     git report-only
 [DONE]  Step 2  Branch cut off main       feature/bilingual-i18n @ b829dbf
-        BL-00   Docs / OD-7 scaffolding    Cursor · Opus   (docs only)
-        BL-01   i18n + theme foundation    Cursor · Opus   ← critical path, security-sensitive
-        BL-02   Extract non-shared strings Cursor · Sonnet
-        BL-03   Settings switcher          Cursor · Sonnet
-        DS-I18N De-hardcode shared kit     Claude Design chat (NOT Cursor)
-        BL-04   Wire DS keys + verify      Cursor · Sonnet (issued when DS-I18N returns)
-        BL-05   Consolidated gate → merge  Cursor · Opus   (issued at that point) → unblocks T02
+[DONE]  BL-00   Docs / OD-7 scaffolding    Cursor · Opus   (docs only)
+[DONE]  BL-01   i18n + theme foundation    Cursor · Opus   ← critical path, security-sensitive
+[DONE]  BL-02   Extract non-shared strings Cursor · Sonnet
+[DONE]  BL-03   Settings switcher          Cursor · Sonnet
+[DONE]  DS-I18N De-hardcode shared kit     Claude Design chat (NOT Cursor)
+[DONE]  BL-04   Wire DS keys + verify      Cursor · Sonnet (`7e4a9f1`)
+        BL-05   Consolidated gate → merge  Cursor · Opus   (NEXT) → unblocks T02
 ```
 
 One task per window. Close-out each (SESSION_CONTEXT + journal + commit) before the next.
@@ -192,8 +192,8 @@ Spec (bilingual+theme gate only — design gate spent via PR #33):
 | BL-01-FIX 404 | Opus | ✅ done | `f910cb6` | approved | removed `[locale]/loading.tsx`; homepage → `(public)/`; loading relocated to (public)/(auth)/(buyer). `/xx`,`/en/<unknown>`,`/<unknown>` now HARD **404**+noindex (localized UI); valid pages keep Suspense; all gate verdicts unchanged; `/xx/admin`→404 & `/en/admin`→gate-redirect (no leak); `.dark` on `<html>` confirmed (Playwright); build/TS/lint/guards/unit green. Folded into the BL-01 commit. |
 | BL-02 strings | Sonnet | ✅ done | `22342de` | approved | all in-scope Arabic extracted to `messages/{ar,en}.json` (111/111 key parity, zero orphans); RSC pages use `getTranslations`(+`generateMetadata`), client components use `useTranslations`; Zod messages → keys via new `translateZodIssue` helper (resolved at render time, `t.has()`-guarded); 7 Server Actions localized; `scripts/check-no-hardcoded-arabic.mjs` guard added to CI (27 files, 0 found) + independently re-verified via ripgrep; `constants/governorates.ts` confirmed zero-diff; build+TS+lint+guards+unit(40) green pre- and post-commit; runtime smoke (AR+EN) passed on `/auth/{login,register,verify,phone}`+`/account`+`/blocked` |
 | BL-03 switcher | Sonnet 5 | ✅ done | `95b469e` | approved | `LanguageSwitcher`/`ThemeSwitcher` (new, `account/_components/`) wired into a new Settings section on `/account`; `messages/{ar,en}.json` +`account.settings` (120/120 parity); no new route/dep/DB column; BL-03-VERIFY (read-only, pre-commit) PASS on all 5 sections — anti-flash `<html suppressHydrationWarning>`+`ThemeProvider` wiring, keyed-not-literal copy (grep sweep 0 matches), key parity 120/120 zero orphans, zero `components/ui`/`components/shared` diff, full regression (typecheck+lint+guards(3)+unit(40)+build green); gate-redirect smoke unchanged; not e2e-verified with a real authenticated session (Playwright chromium binary unavailable in this sandbox — no network egress) |
-| DS-I18N kit | Claude Design | ☐ | | | |
-| BL-04 wire | Sonnet | ☐ | | | |
+| DS-I18N kit | Claude Design | ✅ done | — | — | 16 of 21 shared components refactored to accept string/label props (Arabic defaults preserved, no restyle); 5 unchanged (EmptyState, StarRating, CategoryGrid, ImageGallery, CatalogSkeletons); landed by BL-04 |
+| BL-04 wire | Sonnet 5 | ✅ done | `7e4a9f1` | approved | landed the 16 DS-I18N files verbatim (zero `components/ui` touched); `catalog.*` namespace in `messages/{ar,en}.json` (198/198 parity) incl. ICU plurals; new `src/i18n/catalogLabels.ts` builder helpers; `ErrorRetryCard` wired live (`error.tsx`); `CollectionStrip.dir` from locale server-side; new `catalogI18n.unit.test.ts` (26 tests, parity + ICU @0/1/2/3/11); BL-04-FIX folded in — reverted `StatusBadge.DEFAULT_LABELS` to `Partial<...>` (DS-I18N regression, `flag` domain never had labels, TS2741) restoring `main`'s exact contract, carry-forward to Design in §7; `_handoff` tree deleted; typecheck+build+lint+guards(3)+unit(66) all green |
 | BL-05 gate+merge | Opus | ☐ | | | unblocks T02 |
 
 ---
