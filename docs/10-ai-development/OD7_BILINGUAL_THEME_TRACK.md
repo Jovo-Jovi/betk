@@ -187,8 +187,9 @@ Spec (bilingual+theme gate only — design gate spent via PR #33):
 |---|---|---|---|---|---|
 | Step 1 recon | — | ✅ done | — | — | design-catalog ⊆ main |
 | Step 2 branch | Sonnet | ✅ done | `b829dbf` | — | feature/bilingual-i18n pushed |
-| BL-00 docs | Opus | ☐ | | | |
-| BL-01 foundation | Opus | ☐ | | | |
+| BL-00 docs | Opus | ✅ done | `51cc79f` | — | OD-7 scope + BL scaffolding |
+| BL-01 foundation | Opus | ✅ done (awaiting gate) | (uncommitted) | pending review | next-intl+next-themes; `[locale]` move; middleware locale-before-gates (verdicts provably unchanged); build+TS+lint+unit green; runtime smoke passed |
+| BL-01-FIX 404 | Opus | ✅ done (awaiting gate) | (uncommitted) | pending review | removed `[locale]/loading.tsx`; homepage → `(public)/`; loading relocated to (public)/(auth)/(buyer). `/xx`,`/en/<unknown>`,`/<unknown>` now HARD **404**+noindex (localized UI); valid pages keep Suspense; all gate verdicts unchanged; `/xx/admin`→404 & `/en/admin`→gate-redirect (no leak); `.dark` on `<html>` confirmed (Playwright); build/TS/lint/guards/unit green |
 | BL-02 strings | Sonnet | ☐ | | | |
 | BL-03 switcher | Sonnet | ☐ | | | |
 | DS-I18N kit | Claude Design | ☐ | | | |

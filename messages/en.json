@@ -1,0 +1,20 @@
+{
+  "common": {
+    "appName": "BETK",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "backToHome": "Back to home"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "account": "Account"
+  },
+  "auth": {
+    "loginTitle": "Welcome to BETK",
+    "loginSubtitle": "Enter your phone number to receive a verification code"
+  },
+  "account": {
+    "title": "Account"
+  }
+}

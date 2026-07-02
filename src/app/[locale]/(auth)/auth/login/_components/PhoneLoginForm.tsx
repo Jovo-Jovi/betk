@@ -13,8 +13,7 @@
  */
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import type { Route } from "next";
+import { useRouter } from "@/i18n/navigation";
 import { sendOtp, type SendOtpResult } from "@/features/auth/actions/sendOtp";
 
 interface Props {
@@ -34,7 +33,8 @@ export function PhoneLoginForm({ returnUrl }: Props) {
       const params = new URLSearchParams();
       params.set("phone", state.normalizedPhone);
       if (returnUrl && returnUrl !== "/") params.set("returnUrl", returnUrl);
-      router.push(`/auth/verify?${params.toString()}` as Route);
+      // Locale-aware router (OD-7): stays on the current locale automatically.
+      router.push(`/auth/verify?${params.toString()}`);
     }
   }, [state.success, state.normalizedPhone, returnUrl, router]);
 

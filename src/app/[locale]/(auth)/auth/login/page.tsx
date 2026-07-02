@@ -13,6 +13,7 @@
  */
 
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { PhoneLoginForm } from "./_components/PhoneLoginForm";
 import { GoogleSignInButton } from "./_components/GoogleSignInButton";
@@ -31,14 +32,16 @@ export default async function LoginPage({ searchParams }: Props) {
   // Guard: only forward safe local paths.
   const returnUrl = sanitizeReturnUrl(rawReturnUrl);
 
+  // OD-7 / BL-01: proves the next-intl pipeline on one existing page. The full
+  // string extraction for the auth surface lands in BL-02.
+  const t = await getTranslations("auth");
+
   return (
     <div className="w-full max-w-sm flex flex-col gap-8">
       {/* Header */}
       <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">أهلاً بك في BETK</h1>
-        <p className="text-sm text-muted-foreground">
-          ادخل رقم هاتفك لاستلام كود التحقق
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("loginTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("loginSubtitle")}</p>
       </div>
 
       {/* Phone OTP form */}

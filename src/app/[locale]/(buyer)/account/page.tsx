@@ -16,19 +16,17 @@
  */
 
 import { notFound } from "next/navigation";
-import type { Route } from "next";
 import { getProfile } from "@/features/buyer-account/queries/getProfile";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
 import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 /**
- * Phone-capture entry point path (T07 — /auth/phone is now live; the page
- * consumes requireVerifiedPhone() to gate + drive the capture flow). Cast to
- * Route because the standalone `tsc` typecheck doesn't regenerate Next's
- * build-time typed-routes union (repo convention for route literals).
+ * Phone-capture entry point path (T07 — /auth/phone is live). Uses the
+ * locale-aware Link from @/i18n/navigation, so the href is a canonical
+ * (locale-neutral) path that resolves under the current locale (OD-7).
  */
-const PHONE_CAPTURE_PATH = "/auth/phone" as Route;
+const PHONE_CAPTURE_PATH = "/auth/phone";
 
 const AUTH_PROVIDER_LABELS: Record<string, string> = {
   phone: "رقم الهاتف (OTP)",

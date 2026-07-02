@@ -30,6 +30,7 @@
  */
 
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { deactivateAccountSchema } from "@/validations/account";
@@ -101,5 +102,8 @@ export async function deactivateAccount(
   }
 
   // redirect() throws NEXT_REDIRECT — keep it outside the try/catch above.
-  redirect(POST_DEACTIVATION_PATH);
+  // Unprefixed "/" resolves to the Arabic (default) home; after sign-out the
+  // locale cookie no longer matters. `as Route` per the repo route-literal
+  // convention (standalone tsc doesn't regenerate Next's typed-routes union).
+  redirect(POST_DEACTIVATION_PATH as Route);
 }
