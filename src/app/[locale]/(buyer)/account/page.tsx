@@ -16,6 +16,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getProfile } from "@/features/buyer-account/queries/getProfile";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
 import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
@@ -28,11 +29,6 @@ import { Link } from "@/i18n/navigation";
  */
 const PHONE_CAPTURE_PATH = "/auth/phone";
 
-const AUTH_PROVIDER_LABELS: Record<string, string> = {
-  phone: "رقم الهاتف (OTP)",
-  google: "Google",
-};
-
 export default async function AccountPage() {
   const profile = await getProfile();
 
@@ -41,10 +37,13 @@ export default async function AccountPage() {
   }
 
   const { buyerProfile, user } = profile;
+  const t = await getTranslations("account");
 
   const isPhoneNull = user.phone_number === null || user.phone_number === undefined;
   const authProviderLabel =
-    AUTH_PROVIDER_LABELS[user.auth_provider] ?? user.auth_provider;
+    user.auth_provider === "google"
+      ? t("authProviderGoogle")
+      : t("authProviderPhone");
 
   return (
     <main data-slot="account-page">
@@ -52,40 +51,40 @@ export default async function AccountPage() {
       {isPhoneNull && (
         <div data-slot="phone-add-banner" role="alert" aria-live="polite">
           <p>
-            لإتمام الشراء أو أي معاملة، يجب إضافة رقم هاتف موثّق.{" "}
+            {t("phoneAddBanner")}{" "}
             {/* T07 entry point — link only; phone-capture flow implemented in T07 */}
-            <Link href={PHONE_CAPTURE_PATH}>أضف رقم هاتف</Link>
+            <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
           </p>
         </div>
       )}
 
-      <h1>الملف الشخصي</h1>
+      <h1>{t("pageTitle")}</h1>
 
       {/* ── Read-only identity fields (betk.users — no UPDATE policy) ──────── */}
-      <section data-slot="identity-info" aria-label="بيانات الحساب">
+      <section data-slot="identity-info" aria-label={t("identityInfoLabel")}>
         <dl>
           <div>
-            <dt>رقم الهاتف</dt>
+            <dt>{t("phoneLabel")}</dt>
             {/* R-A06: phone_number is read-only — rendered, never editable */}
             <dd>
               {user.phone_number ?? (
                 <span data-slot="phone-missing">
-                  لم يُضَف بعد —{" "}
+                  {t("phoneMissing")}{" "}
                   {/* T07 entry point */}
-                  <Link href={PHONE_CAPTURE_PATH}>أضف رقم هاتف</Link>
+                  <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
                 </span>
               )}
             </dd>
           </div>
           <div>
-            <dt>طريقة تسجيل الدخول</dt>
+            <dt>{t("authMethodLabel")}</dt>
             <dd>{authProviderLabel}</dd>
           </div>
         </dl>
       </section>
 
       {/* ── Editable profile fields (betk.buyer_profiles — bp_self RLS) ─────── */}
-      <section data-slot="profile-edit" aria-label="تعديل الملف الشخصي">
+      <section data-slot="profile-edit" aria-label={t("editProfileLabel")}>
         <ProfileEditForm
           initialFullName={buyerProfile.full_name}
           initialGovernorate={buyerProfile.governorate}
@@ -94,7 +93,7 @@ export default async function AccountPage() {
       </section>
 
       {/* ── Account deactivation (OD-2 — sets users.deleted_at; no hard delete) ─ */}
-      <section data-slot="account-deactivate" aria-label="تعطيل الحساب">
+      <section data-slot="account-deactivate" aria-label={t("deactivate.sectionLabel")}>
         <DeactivateAccountForm />
       </section>
     </main>

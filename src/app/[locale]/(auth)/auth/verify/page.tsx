@@ -15,13 +15,17 @@
 
 import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { OtpVerifyForm } from "./_components/OtpVerifyForm";
 
-export const metadata: Metadata = {
-  title: "تأكيد الكود — BETK",
-  description: "أدخل كود التحقق المرسل إلى هاتفك",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.verify");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
 /** Mask all but the last 4 digits of a phone number for display. */
 function maskPhone(e164: string): string {
@@ -47,18 +51,17 @@ export default async function VerifyPage({ searchParams }: Props) {
 
   const returnUrl = sanitizeReturnUrl(rawReturnUrl);
   const maskedPhone = maskPhone(rawPhone);
+  const t = await getTranslations("auth.verify");
 
   return (
     <div className="w-full max-w-sm flex flex-col gap-8">
       {/* Header */}
       <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">تأكيد رقم هاتفك</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          أدخل كود التحقق المؤلف من ٦ أرقام والمُرسَل إلى هاتفك.
+          {t("subtitle")}
           <br />
-          <span className="text-xs">
-            الكود صالح لمدة ٦٠ ثانية فقط.
-          </span>
+          <span className="text-xs">{t("expiryNote")}</span>
         </p>
       </div>
 
@@ -71,12 +74,12 @@ export default async function VerifyPage({ searchParams }: Props) {
 
       {/* Back link */}
       <p className="text-sm text-center text-muted-foreground">
-        رقم خاطئ؟{" "}
+        {t("wrongNumber")}{" "}
         <a
           href={`/auth/login${returnUrl !== "/" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
           className="text-primary underline underline-offset-4 hover:no-underline"
         >
-          تعديل الرقم
+          {t("editNumber")}
         </a>
       </p>
     </div>

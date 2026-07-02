@@ -10,9 +10,12 @@
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 
 export function GoogleSignInButton() {
+  const t = useTranslations("auth.google");
+  const tErrors = useTranslations("errors");
   const [isPending, setIsPending] = useState(false);
   const [errorAr, setErrorAr] = useState<string | null>(null);
 
@@ -33,7 +36,7 @@ export function GoogleSignInButton() {
     });
 
     if (error) {
-      setErrorAr("تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.");
+      setErrorAr(tErrors("googleSignInFailed"));
       setIsPending(false);
     }
     // On success, the browser is redirected automatically — no further action needed.
@@ -46,7 +49,7 @@ export function GoogleSignInButton() {
         onClick={handleGoogleSignIn}
         disabled={isPending}
         className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background h-10 px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-        aria-label="متابعة عبر Google"
+        aria-label={t("ariaLabel")}
       >
         {/* Google logo SVG (inline — no external asset fetch) */}
         <svg
@@ -73,7 +76,7 @@ export function GoogleSignInButton() {
             fill="#EA4335"
           />
         </svg>
-        <span>{isPending ? "جارٍ الاتصال…" : "متابعة عبر Google / Continue with Google"}</span>
+        <span>{isPending ? t("connecting") : t("continueLabel")}</span>
       </button>
       {errorAr && (
         <p className="text-sm text-destructive text-center" role="alert">

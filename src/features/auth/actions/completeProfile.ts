@@ -24,8 +24,10 @@
 import * as Sentry from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { completeProfileSchema } from "@/validations/auth";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
@@ -42,6 +44,9 @@ export async function completeProfile(
 ): Promise<CompleteProfileResult> {
   setFeatureContext("auth");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation ─────────────────────────────────────────────────────────
   const parsed = completeProfileSchema.safeParse({
     full_name: formData.get("full_name"),
@@ -51,9 +56,7 @@ export async function completeProfile(
   });
 
   if (!parsed.success) {
-    const msg =
-      parsed.error.errors[0]?.message ?? "بيانات غير صحيحة. يُرجى التحقق من المدخلات.";
-    return { errorAr: msg };
+    return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
   const { full_name, governorate, city, returnUrl: rawReturnUrl } = parsed.data;
@@ -69,7 +72,7 @@ export async function completeProfile(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { errorAr: "يجب تسجيل الدخول أولاً." };
+    return { errorAr: tErrors("mustLoginFirst") };
   }
 
   // ── Upsert buyer_profiles (bp_self RLS — authenticated cookie client) ──────
@@ -95,7 +98,7 @@ export async function completeProfile(
       extra: { step: "completeProfile.upsert" },
     });
     return {
-      errorAr: "حدث خطأ أثناء حفظ الملف الشخصي. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("profileSaveFailed"),
     };
   }
 

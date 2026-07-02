@@ -14,6 +14,7 @@
  */
 
 import { useActionState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { updateProfile } from "@/features/buyer-account/actions/updateProfile";
 import type { UpdateProfileResult } from "@/features/buyer-account/actions/updateProfile";
 import { GOVERNORATES } from "@/constants/governorates";
@@ -29,17 +30,19 @@ export function ProfileEditForm({
   initialGovernorate,
   initialCity,
 }: ProfileEditFormProps) {
+  const t = useTranslations("account.profileForm");
+  const locale = useLocale();
   const [state, formAction, isPending] = useActionState<
     UpdateProfileResult | null,
     FormData
   >(updateProfile, null);
 
   return (
-    <form action={formAction} data-slot="profile-edit-form" dir="rtl">
+    <form action={formAction} data-slot="profile-edit-form">
       {/* Success message */}
       {state?.success && (
         <p role="status" data-slot="success-msg">
-          تم حفظ التعديلات بنجاح.
+          {t("successMessage")}
         </p>
       )}
 
@@ -52,7 +55,7 @@ export function ProfileEditForm({
 
       {/* full_name */}
       <div data-slot="field">
-        <label htmlFor="full_name">الاسم الكامل *</label>
+        <label htmlFor="full_name">{t("fullNameLabel")}</label>
         <input
           id="full_name"
           name="full_name"
@@ -67,7 +70,7 @@ export function ProfileEditForm({
 
       {/* governorate */}
       <div data-slot="field">
-        <label htmlFor="governorate">المحافظة *</label>
+        <label htmlFor="governorate">{t("governorateLabel")}</label>
         <select
           id="governorate"
           name="governorate"
@@ -75,10 +78,10 @@ export function ProfileEditForm({
           required
           disabled={isPending}
         >
-          <option value="">اختر المحافظة</option>
+          <option value="">{t("governoratePlaceholder")}</option>
           {GOVERNORATES.map((g) => (
             <option key={g.value} value={g.value}>
-              {g.labelAr}
+              {locale === "en" ? g.labelEn : g.labelAr}
             </option>
           ))}
         </select>
@@ -86,7 +89,7 @@ export function ProfileEditForm({
 
       {/* city (optional) */}
       <div data-slot="field">
-        <label htmlFor="city">المدينة / الحي (اختياري)</label>
+        <label htmlFor="city">{t("cityLabel")}</label>
         <input
           id="city"
           name="city"
@@ -99,7 +102,7 @@ export function ProfileEditForm({
       </div>
 
       <button type="submit" disabled={isPending} data-slot="submit-btn">
-        {isPending ? "جارٍ الحفظ…" : "حفظ التعديلات"}
+        {isPending ? t("saving") : t("submit")}
       </button>
     </form>
   );

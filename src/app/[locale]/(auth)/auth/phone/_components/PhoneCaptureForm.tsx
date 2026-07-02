@@ -16,6 +16,7 @@
  */
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import {
   sendPhoneOtp,
   type SendPhoneOtpResult,
@@ -35,6 +36,7 @@ function maskPhone(e164: string): string {
 }
 
 export function PhoneCaptureForm() {
+  const t = useTranslations("auth.phone");
   const [sendState, sendAction, sendPending] = useActionState(
     sendPhoneOtp,
     sendInitial,
@@ -50,12 +52,12 @@ export function PhoneCaptureForm() {
   if (otpSent) {
     const phone = sendState.normalizedPhone!;
     return (
-      <form action={verifyAction} className="flex flex-col gap-4 w-full" dir="rtl">
+      <form action={verifyAction} className="flex flex-col gap-4 w-full">
         {/* Hidden field — the E.164 phone the OTP was sent to. */}
         <input type="hidden" name="phone" value={phone} />
 
         <p className="text-sm text-muted-foreground text-center">
-          أُرسل الكود إلى{" "}
+          {t("sentTo")}{" "}
           <span className="font-mono font-semibold text-foreground" dir="ltr">
             {maskPhone(phone)}
           </span>
@@ -63,7 +65,7 @@ export function PhoneCaptureForm() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="token" className="text-sm font-medium text-foreground">
-            كود التحقق (٦ أرقام)
+            {t("otpLabel")}
           </label>
           <input
             id="token"
@@ -93,7 +95,7 @@ export function PhoneCaptureForm() {
           disabled={verifyPending}
           className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
         >
-          {verifyPending ? "جارٍ التحقق…" : "تأكيد الرقم"}
+          {verifyPending ? t("verifying") : t("confirmNumber")}
         </button>
       </form>
     );
@@ -101,10 +103,10 @@ export function PhoneCaptureForm() {
 
   // ── Step 1: phone entry ────────────────────────────────────────────────────
   return (
-    <form action={sendAction} className="flex flex-col gap-4 w-full" dir="rtl">
+    <form action={sendAction} className="flex flex-col gap-4 w-full">
       <div className="flex flex-col gap-1">
         <label htmlFor="phone" className="text-sm font-medium text-foreground">
-          رقم الهاتف
+          {t("phoneLabel")}
         </label>
         <input
           id="phone"
@@ -113,7 +115,7 @@ export function PhoneCaptureForm() {
           inputMode="tel"
           dir="ltr"
           autoComplete="tel"
-          placeholder="01XXXXXXXXX"
+          placeholder={t("phonePlaceholder")}
           required
           disabled={sendPending}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono text-start"
@@ -132,7 +134,7 @@ export function PhoneCaptureForm() {
         disabled={sendPending}
         className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       >
-        {sendPending ? "جارٍ الإرسال…" : "إرسال الكود"}
+        {sendPending ? t("sending") : t("submit")}
       </button>
     </form>
   );

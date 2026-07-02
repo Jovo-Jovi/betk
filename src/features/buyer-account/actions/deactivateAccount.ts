@@ -32,8 +32,10 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import * as Sentry from "@sentry/nextjs";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { deactivateAccountSchema } from "@/validations/account";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { deactivateAccount as deactivateUserRow } from "@/services/authUsers";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
@@ -52,15 +54,16 @@ export async function deactivateAccount(
 ): Promise<DeactivateAccountResult> {
   setFeatureContext("buyer-account");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation: explicit confirmation required ──────────────────────────
   const parsed = deactivateAccountSchema.safeParse({
     confirm: formData.get("confirm"),
   });
 
   if (!parsed.success) {
-    const msg =
-      parsed.error.errors[0]?.message ?? "يجب تأكيد تعطيل الحساب قبل المتابعة.";
-    return { errorAr: msg };
+    return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
   // ── Verify authenticated session — id comes from GoTrue, never the form ─────
@@ -71,7 +74,7 @@ export async function deactivateAccount(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { errorAr: "يجب تسجيل الدخول أولاً." };
+    return { errorAr: tErrors("mustLoginFirst") };
   }
 
   // ── Set deleted_at for auth.uid() only (service-role, deleted_at-only) ──────
@@ -82,7 +85,7 @@ export async function deactivateAccount(
       extra: { step: "deactivateAccount.update" },
     });
     return {
-      errorAr: "تعذّر تعطيل الحساب. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("deactivateFailed"),
     };
   }
 

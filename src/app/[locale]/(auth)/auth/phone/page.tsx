@@ -20,6 +20,7 @@
 
 import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   requireVerifiedPhone,
   PhoneRequiredError,
@@ -29,10 +30,13 @@ import {
 } from "@/features/auth";
 import { PhoneCaptureForm } from "./_components/PhoneCaptureForm";
 
-export const metadata: Metadata = {
-  title: "إضافة رقم هاتف — BETK",
-  description: "أضف رقم هاتف موثّق لإتمام المعاملات",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.phone");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
 export default async function PhoneCapturePage() {
   let needsCapture = false;
@@ -62,13 +66,13 @@ export default async function PhoneCapturePage() {
     redirect("/account" as Route);
   }
 
+  const t = await getTranslations("auth.phone");
+
   return (
     <div className="w-full max-w-sm flex flex-col gap-8">
       <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">أضف رقم هاتفك</h1>
-        <p className="text-sm text-muted-foreground">
-          لإتمام الشراء أو أي معاملة، يلزم رقم هاتف مصري موثّق عبر كود تحقق.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <PhoneCaptureForm />

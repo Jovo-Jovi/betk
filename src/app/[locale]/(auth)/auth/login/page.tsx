@@ -5,7 +5,7 @@
  *
  * - Phone entry with Egyptian-format Zod validation (01X local + +20 E.164).
  *   Normalised to E.164 before signInWithOtp is called.
- * - "متابعة عبر Google" button: initiates OAuth redirect (callback = T03 scope).
+ * - Google continue button: initiates OAuth redirect (callback = T03 scope).
  * - returnUrl from query param — sanitised by sanitizeReturnUrl (open-redirect guard).
  * - R-A02: GoTrue max_frequency=60s; rate-limit error surfaced in Arabic.
  *
@@ -18,13 +18,16 @@ import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { PhoneLoginForm } from "./_components/PhoneLoginForm";
 import { GoogleSignInButton } from "./_components/GoogleSignInButton";
 
-export const metadata: Metadata = {
-  title: "تسجيل الدخول — BETK",
-  description: "ادخل رقم هاتفك للمتابعة",
-};
-
 interface Props {
   searchParams: Promise<{ returnUrl?: string }>;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.login");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
 }
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -32,9 +35,8 @@ export default async function LoginPage({ searchParams }: Props) {
   // Guard: only forward safe local paths.
   const returnUrl = sanitizeReturnUrl(rawReturnUrl);
 
-  // OD-7 / BL-01: proves the next-intl pipeline on one existing page. The full
-  // string extraction for the auth surface lands in BL-02.
   const t = await getTranslations("auth");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="w-full max-w-sm flex flex-col gap-8">
@@ -50,7 +52,9 @@ export default async function LoginPage({ searchParams }: Props) {
       {/* Divider */}
       <div className="relative flex items-center gap-3">
         <div className="flex-1 border-t border-border" />
-        <span className="text-xs text-muted-foreground whitespace-nowrap">أو</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {tCommon("or")}
+        </span>
         <div className="flex-1 border-t border-border" />
       </div>
 
@@ -59,10 +63,11 @@ export default async function LoginPage({ searchParams }: Props) {
 
       {/* Legal note */}
       <p className="text-xs text-muted-foreground text-center leading-relaxed">
-        بالمتابعة، أنت توافق على{" "}
-        <span className="underline cursor-pointer">الشروط والأحكام</span>
-        {" "}و{" "}
-        <span className="underline cursor-pointer">سياسة الخصوصية</span>
+        {t("login.legalPrefix")}{" "}
+        <span className="underline cursor-pointer">{t("login.terms")}</span>
+        {" "}
+        {t("login.and")}{" "}
+        <span className="underline cursor-pointer">{t("login.privacy")}</span>
       </p>
     </div>
   );

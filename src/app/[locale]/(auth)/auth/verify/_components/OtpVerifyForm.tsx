@@ -17,6 +17,7 @@
  */
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { verifyOtp, type VerifyOtpResult } from "@/features/auth/actions/verifyOtp";
 
 interface Props {
@@ -28,6 +29,7 @@ interface Props {
 const initialState: VerifyOtpResult = {};
 
 export function OtpVerifyForm({ phone, maskedPhone, returnUrl }: Props) {
+  const t = useTranslations("auth.verify");
   const [state, formAction, isPending] = useActionState(verifyOtp, initialState);
 
   return (
@@ -37,7 +39,7 @@ export function OtpVerifyForm({ phone, maskedPhone, returnUrl }: Props) {
       <input type="hidden" name="returnUrl" value={returnUrl} />
 
       <p className="text-sm text-muted-foreground text-center">
-        أُرسل الكود إلى{" "}
+        {t("sentTo")}{" "}
         <span className="font-mono font-semibold text-foreground" dir="ltr">
           {maskedPhone}
         </span>
@@ -45,7 +47,7 @@ export function OtpVerifyForm({ phone, maskedPhone, returnUrl }: Props) {
 
       <div className="flex flex-col gap-1">
         <label htmlFor="token" className="text-sm font-medium text-foreground">
-          كود التحقق (٦ أرقام)
+          {t("otpLabel")}
         </label>
         <input
           id="token"
@@ -75,7 +77,7 @@ export function OtpVerifyForm({ phone, maskedPhone, returnUrl }: Props) {
         disabled={isPending}
         className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       >
-        {isPending ? "جارٍ التحقق…" : "تأكيد"}
+        {isPending ? t("verifying") : t("confirm")}
       </button>
     </form>
   );

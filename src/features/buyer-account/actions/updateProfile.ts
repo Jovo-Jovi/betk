@@ -24,8 +24,10 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileSchema } from "@/validations/account";
+import { translateZodIssue } from "@/validations/zodMessages";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 
@@ -41,6 +43,9 @@ export async function updateProfile(
 ): Promise<UpdateProfileResult> {
   setFeatureContext("buyer-account");
 
+  const tValidation = await getTranslations("validation");
+  const tErrors = await getTranslations("errors");
+
   // ── Zod validation ─────────────────────────────────────────────────────────
   const parsed = updateProfileSchema.safeParse({
     full_name: formData.get("full_name"),
@@ -49,9 +54,7 @@ export async function updateProfile(
   });
 
   if (!parsed.success) {
-    const msg =
-      parsed.error.errors[0]?.message ?? "بيانات غير صحيحة. يُرجى التحقق من المدخلات.";
-    return { errorAr: msg };
+    return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
   const { full_name, governorate, city } = parsed.data;
@@ -65,7 +68,7 @@ export async function updateProfile(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { errorAr: "يجب تسجيل الدخول أولاً." };
+    return { errorAr: tErrors("mustLoginFirst") };
   }
 
   // ── Upsert buyer_profiles (bp_self RLS — authenticated cookie client) ──────
@@ -90,7 +93,7 @@ export async function updateProfile(
       extra: { step: "updateProfile.upsert" },
     });
     return {
-      errorAr: "حدث خطأ أثناء حفظ الملف الشخصي. يُرجى المحاولة مرة أخرى.",
+      errorAr: tErrors("profileSaveFailed"),
     };
   }
 

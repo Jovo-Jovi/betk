@@ -23,15 +23,19 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { hasBuyerProfile } from "@/services/authUsers";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { RegisterForm } from "./_components/RegisterForm";
 
-export const metadata: Metadata = {
-  title: "إكمال التسجيل — BETK",
-  description: "أكمل ملفك الشخصي للمتابعة",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.register");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
 interface Props {
   searchParams: Promise<{ returnUrl?: string }>;
@@ -65,14 +69,14 @@ export default async function RegisterPage({ searchParams }: Props) {
   }
 
   // ── Render form ────────────────────────────────────────────────────────────
+  const t = await getTranslations("auth.register");
+
   return (
     <div className="w-full max-w-sm flex flex-col gap-8">
       {/* Header */}
       <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">أكمل ملفك الشخصي</h1>
-        <p className="text-sm text-muted-foreground">
-          خطوة أخيرة — أخبرنا عن نفسك قليلاً
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Profile completion form */}

@@ -13,6 +13,7 @@
  */
 
 import { useActionState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { sendOtp, type SendOtpResult } from "@/features/auth/actions/sendOtp";
 
@@ -23,6 +24,7 @@ interface Props {
 const initialState: SendOtpResult = { success: false };
 
 export function PhoneLoginForm({ returnUrl }: Props) {
+  const t = useTranslations("auth.phoneForm");
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(sendOtp, initialState);
 
@@ -45,7 +47,7 @@ export function PhoneLoginForm({ returnUrl }: Props) {
           htmlFor="phone"
           className="text-sm font-medium text-foreground"
         >
-          رقم الهاتف
+          {t("label")}
         </label>
         <input
           id="phone"
@@ -54,7 +56,7 @@ export function PhoneLoginForm({ returnUrl }: Props) {
           inputMode="tel"
           dir="ltr"
           autoComplete="tel"
-          placeholder="01XXXXXXXXX"
+          placeholder={t("placeholder")}
           required
           disabled={isPending}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono ltr text-start"
@@ -73,7 +75,7 @@ export function PhoneLoginForm({ returnUrl }: Props) {
         disabled={isPending}
         className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       >
-        {isPending ? "جارٍ الإرسال…" : "إرسال الكود"}
+        {isPending ? t("submitting") : t("submit")}
       </button>
     </form>
   );

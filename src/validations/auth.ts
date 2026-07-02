@@ -59,11 +59,18 @@ export type AuthIdentity = z.infer<typeof authIdentitySchema>;
 const EGYPTIAN_LOCAL_RE = /^01[0-9]{9}$/;
 const EGYPTIAN_E164_RE = /^\+201[0-9]{9}$/;
 
+/**
+ * NOTE — i18n (OD-7 / BL-02): Zod `message` values below are translation KEYS
+ * into the `validation` message namespace (messages/{ar,en}.json), NOT display
+ * strings. Callers (Server Actions) must translate the failing issue's message
+ * via `(await getTranslations("validation"))(issue.message)` before showing it
+ * to the user — never render `issue.message` directly.
+ */
 export const phoneInputSchema = z.object({
   phone: z
     .string()
     .trim()
-    .min(1, { message: "رقم الهاتف مطلوب" })
+    .min(1, { message: "phoneRequired" })
     .transform((raw) => {
       // Strip spaces, dashes, parentheses that users commonly add.
       const cleaned = raw.replace(/[\s\-().]/g, "");
@@ -80,7 +87,7 @@ export const phoneInputSchema = z.object({
       return cleaned;
     })
     .refine((normalized) => EGYPTIAN_E164_RE.test(normalized), {
-      message: "رقم هاتف مصري غير صحيح. استخدم صيغة 01XXXXXXXXX أو +201XXXXXXXXX",
+      message: "invalidEgyptianPhone",
     }),
 });
 
@@ -94,12 +101,12 @@ export type PhoneInput = z.infer<typeof phoneInputSchema>;
  */
 export const otpVerifySchema = z.object({
   phone: z.string().regex(EGYPTIAN_E164_RE, {
-    message: "رقم الهاتف غير صحيح",
+    message: "invalidPhoneSimple",
   }),
   token: z
     .string()
-    .length(6, { message: "الكود يجب أن يكون 6 أرقام" })
-    .regex(/^\d{6}$/, { message: "الكود يجب أن يحتوي على أرقام فقط" }),
+    .length(6, { message: "otpLength" })
+    .regex(/^\d{6}$/, { message: "otpDigitsOnly" }),
 });
 
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
@@ -152,16 +159,16 @@ export const completeProfileSchema = z.object({
   full_name: z
     .string()
     .trim()
-    .min(2, { message: "الاسم الكامل مطلوب (حرفان على الأقل)" })
-    .max(100, { message: "الاسم الكامل لا يتجاوز 100 حرف" }),
+    .min(2, { message: "fullNameRequired" })
+    .max(100, { message: "fullNameTooLong" }),
   governorate: z.enum(GOVERNORATE_VALUES as [string, ...string[]], {
-    required_error: "المحافظة مطلوبة",
-    invalid_type_error: "اختر محافظة صحيحة",
+    required_error: "governorateRequired",
+    invalid_type_error: "governorateInvalid",
   }),
   city: z
     .string()
     .trim()
-    .max(100, { message: "اسم المدينة لا يتجاوز 100 حرف" })
+    .max(100, { message: "cityTooLong" })
     .optional()
     .or(z.literal("")),
   returnUrl: z.string().optional(),

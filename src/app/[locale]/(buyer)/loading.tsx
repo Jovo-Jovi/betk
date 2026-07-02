@@ -7,8 +7,10 @@
  * catch-all.
  * TODO(Phase DS): replace EmptyState with a real skeleton layout.
  */
+import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/shared/EmptyState";
 
-export default function BuyerLoading() {
-  return <EmptyState message="جارٍ التحميل…" />;
+export default async function BuyerLoading() {
+  const t = await getTranslations("common");
+  return <EmptyState message={t("loading")} />;
 }

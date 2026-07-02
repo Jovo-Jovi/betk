@@ -11,6 +11,7 @@
  */
 
 import { useActionState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { completeProfile, type CompleteProfileResult } from "@/features/auth/actions/completeProfile";
 import { GOVERNORATES } from "@/constants/governorates";
 
@@ -21,6 +22,8 @@ interface Props {
 const initialState: CompleteProfileResult = {};
 
 export function RegisterForm({ returnUrl }: Props) {
+  const t = useTranslations("auth.register");
+  const locale = useLocale();
   const [state, action, isPending] = useActionState(completeProfile, initialState);
 
   return (
@@ -31,7 +34,7 @@ export function RegisterForm({ returnUrl }: Props) {
       {/* Full name */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="full_name" className="text-sm font-medium">
-          الاسم الكامل <span aria-hidden="true" className="text-destructive">*</span>
+          {t("fullNameLabel")} <span aria-hidden="true" className="text-destructive">*</span>
         </label>
         <input
           id="full_name"
@@ -39,7 +42,7 @@ export function RegisterForm({ returnUrl }: Props) {
           type="text"
           required
           autoComplete="name"
-          placeholder="مثال: محمد أحمد"
+          placeholder={t("fullNamePlaceholder")}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           aria-describedby={state.errorAr ? "form-error" : undefined}
         />
@@ -48,7 +51,7 @@ export function RegisterForm({ returnUrl }: Props) {
       {/* Governorate */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="governorate" className="text-sm font-medium">
-          المحافظة <span aria-hidden="true" className="text-destructive">*</span>
+          {t("governorateLabel")} <span aria-hidden="true" className="text-destructive">*</span>
         </label>
         <select
           id="governorate"
@@ -59,11 +62,11 @@ export function RegisterForm({ returnUrl }: Props) {
           aria-describedby={state.errorAr ? "form-error" : undefined}
         >
           <option value="" disabled>
-            اختر محافظتك
+            {t("governoratePlaceholder")}
           </option>
           {GOVERNORATES.map((gov) => (
             <option key={gov.value} value={gov.value}>
-              {gov.labelAr}
+              {locale === "en" ? gov.labelEn : gov.labelAr}
             </option>
           ))}
         </select>
@@ -72,15 +75,15 @@ export function RegisterForm({ returnUrl }: Props) {
       {/* City (optional) */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="city" className="text-sm font-medium">
-          المدينة{" "}
-          <span className="text-xs text-muted-foreground font-normal">(اختياري)</span>
+          {t("cityLabel")}{" "}
+          <span className="text-xs text-muted-foreground font-normal">{t("cityOptional")}</span>
         </label>
         <input
           id="city"
           name="city"
           type="text"
           autoComplete="address-level2"
-          placeholder="مثال: مدينة نصر"
+          placeholder={t("cityPlaceholder")}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
@@ -102,7 +105,7 @@ export function RegisterForm({ returnUrl }: Props) {
         disabled={isPending}
         className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
       >
-        {isPending ? "جاري الحفظ…" : "إكمال التسجيل"}
+        {isPending ? t("saving") : t("submit")}
       </button>
     </form>
   );

@@ -190,7 +190,7 @@ Spec (bilingual+theme gate only — design gate spent via PR #33):
 | BL-00 docs | Opus | ✅ done | `51cc79f` | — | OD-7 scope + BL scaffolding |
 | BL-01 foundation | Opus | ✅ done | `f910cb6` | approved | next-intl+next-themes; `[locale]` move; middleware locale-before-gates (verdicts provably unchanged); build+TS+lint+unit green; runtime smoke passed |
 | BL-01-FIX 404 | Opus | ✅ done | `f910cb6` | approved | removed `[locale]/loading.tsx`; homepage → `(public)/`; loading relocated to (public)/(auth)/(buyer). `/xx`,`/en/<unknown>`,`/<unknown>` now HARD **404**+noindex (localized UI); valid pages keep Suspense; all gate verdicts unchanged; `/xx/admin`→404 & `/en/admin`→gate-redirect (no leak); `.dark` on `<html>` confirmed (Playwright); build/TS/lint/guards/unit green. Folded into the BL-01 commit. |
-| BL-02 strings | Sonnet | ☐ | | | |
+| BL-02 strings | Sonnet | ✅ done | uncommitted | pending review | all in-scope Arabic extracted to `messages/{ar,en}.json`; RSC pages use `getTranslations`(+`generateMetadata`), client components use `useTranslations`; Zod messages → keys via new `translateZodIssue` helper; 7 Server Actions localized; `scripts/check-no-hardcoded-arabic.mjs` guard added to CI; build+TS+lint+guards+unit green; runtime smoke (AR+EN) passed on `/auth/{login,register,verify,phone}`+`/account`+`/blocked` |
 | BL-03 switcher | Sonnet | ☐ | | | |
 | DS-I18N kit | Claude Design | ☐ | | | |
 | BL-04 wire | Sonnet | ☐ | | | |

@@ -3,7 +3,8 @@
     "appName": "بيتك",
     "loading": "جارٍ التحميل…",
     "retry": "إعادة المحاولة",
-    "backToHome": "العودة إلى الرئيسية"
+    "backToHome": "العودة إلى الرئيسية",
+    "or": "أو"
   },
   "nav": {
     "home": "الرئيسية",
@@ -12,9 +13,129 @@
   },
   "auth": {
     "loginTitle": "أهلاً بك في بيتك",
-    "loginSubtitle": "ادخل رقم هاتفك لاستلام كود التحقق"
+    "loginSubtitle": "ادخل رقم هاتفك لاستلام كود التحقق",
+    "login": {
+      "metaTitle": "تسجيل الدخول — BETK",
+      "metaDescription": "ادخل رقم هاتفك للمتابعة",
+      "legalPrefix": "بالمتابعة، أنت توافق على",
+      "terms": "الشروط والأحكام",
+      "and": "و",
+      "privacy": "سياسة الخصوصية"
+    },
+    "google": {
+      "continueLabel": "متابعة عبر Google",
+      "connecting": "جارٍ الاتصال…",
+      "ariaLabel": "متابعة عبر Google"
+    },
+    "phoneForm": {
+      "label": "رقم الهاتف",
+      "placeholder": "01XXXXXXXXX",
+      "submitting": "جارٍ الإرسال…",
+      "submit": "إرسال الكود"
+    },
+    "verify": {
+      "metaTitle": "تأكيد الكود — BETK",
+      "metaDescription": "أدخل كود التحقق المرسل إلى هاتفك",
+      "title": "تأكيد رقم هاتفك",
+      "subtitle": "أدخل كود التحقق المؤلف من ٦ أرقام والمُرسَل إلى هاتفك.",
+      "expiryNote": "الكود صالح لمدة ٦٠ ثانية فقط.",
+      "sentTo": "أُرسل الكود إلى",
+      "otpLabel": "كود التحقق (٦ أرقام)",
+      "verifying": "جارٍ التحقق…",
+      "confirm": "تأكيد",
+      "wrongNumber": "رقم خاطئ؟",
+      "editNumber": "تعديل الرقم"
+    },
+    "register": {
+      "metaTitle": "إكمال التسجيل — BETK",
+      "metaDescription": "أكمل ملفك الشخصي للمتابعة",
+      "title": "أكمل ملفك الشخصي",
+      "subtitle": "خطوة أخيرة — أخبرنا عن نفسك قليلاً",
+      "fullNameLabel": "الاسم الكامل",
+      "fullNamePlaceholder": "مثال: محمد أحمد",
+      "governorateLabel": "المحافظة",
+      "governoratePlaceholder": "اختر محافظتك",
+      "cityLabel": "المدينة",
+      "cityOptional": "(اختياري)",
+      "cityPlaceholder": "مثال: مدينة نصر",
+      "saving": "جاري الحفظ…",
+      "submit": "إكمال التسجيل"
+    },
+    "phone": {
+      "metaTitle": "إضافة رقم هاتف — BETK",
+      "metaDescription": "أضف رقم هاتف موثّق لإتمام المعاملات",
+      "title": "أضف رقم هاتفك",
+      "subtitle": "لإتمام الشراء أو أي معاملة، يلزم رقم هاتف مصري موثّق عبر كود تحقق.",
+      "phoneLabel": "رقم الهاتف",
+      "phonePlaceholder": "01XXXXXXXXX",
+      "sentTo": "أُرسل الكود إلى",
+      "otpLabel": "كود التحقق (٦ أرقام)",
+      "verifying": "جارٍ التحقق…",
+      "confirmNumber": "تأكيد الرقم",
+      "sending": "جارٍ الإرسال…",
+      "submit": "إرسال الكود"
+    }
   },
   "account": {
-    "title": "الحساب"
+    "title": "الحساب",
+    "pageTitle": "الملف الشخصي",
+    "phoneAddBanner": "لإتمام الشراء أو أي معاملة، يجب إضافة رقم هاتف موثّق.",
+    "addPhoneLink": "أضف رقم هاتف",
+    "identityInfoLabel": "بيانات الحساب",
+    "phoneLabel": "رقم الهاتف",
+    "phoneMissing": "لم يُضَف بعد —",
+    "authMethodLabel": "طريقة تسجيل الدخول",
+    "authProviderPhone": "رقم الهاتف (OTP)",
+    "authProviderGoogle": "Google",
+    "editProfileLabel": "تعديل الملف الشخصي",
+    "profileForm": {
+      "successMessage": "تم حفظ التعديلات بنجاح.",
+      "fullNameLabel": "الاسم الكامل *",
+      "governorateLabel": "المحافظة *",
+      "governoratePlaceholder": "اختر المحافظة",
+      "cityLabel": "المدينة / الحي (اختياري)",
+      "saving": "جارٍ الحفظ…",
+      "submit": "حفظ التعديلات"
+    },
+    "deactivate": {
+      "sectionLabel": "تعطيل الحساب",
+      "title": "تعطيل الحساب",
+      "description": "تعطيل الحساب يمنعك من تسجيل الدخول أو إجراء أي معاملات. لن يتم حذف بياناتك، ويمكن إعادة تفعيل الحساب لاحقًا عبر الدعم.",
+      "revealButton": "تعطيل حسابي",
+      "confirmLabel": "أؤكد رغبتي في تعطيل حسابي وتسجيل الخروج.",
+      "cancel": "إلغاء",
+      "confirmButton": "تأكيد التعطيل",
+      "processing": "جارٍ التعطيل…"
+    }
+  },
+  "validation": {
+    "invalidInput": "بيانات غير صحيحة",
+    "phoneRequired": "رقم الهاتف مطلوب",
+    "invalidEgyptianPhone": "رقم هاتف مصري غير صحيح. استخدم صيغة 01XXXXXXXXX أو +201XXXXXXXXX",
+    "invalidPhoneSimple": "رقم الهاتف غير صحيح",
+    "otpLength": "الكود يجب أن يكون 6 أرقام",
+    "otpDigitsOnly": "الكود يجب أن يحتوي على أرقام فقط",
+    "fullNameRequired": "الاسم الكامل مطلوب (حرفان على الأقل)",
+    "fullNameTooLong": "الاسم الكامل لا يتجاوز 100 حرف",
+    "governorateRequired": "المحافظة مطلوبة",
+    "governorateInvalid": "اختر محافظة صحيحة",
+    "cityTooLong": "اسم المدينة لا يتجاوز 100 حرف",
+    "deactivateConfirmRequired": "يجب تأكيد تعطيل الحساب قبل المتابعة."
+  },
+  "errors": {
+    "invalidInput": "بيانات غير صحيحة. يُرجى التحقق من المدخلات.",
+    "mustLoginFirst": "يجب تسجيل الدخول أولاً.",
+    "profileSaveFailed": "حدث خطأ أثناء حفظ الملف الشخصي. يُرجى المحاولة مرة أخرى.",
+    "rateLimited": "يُرجى الانتظار دقيقة واحدة قبل طلب كود جديد.",
+    "sendOtpFailed": "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",
+    "accountInactive": "هذا الحساب غير نشط. يُرجى التواصل مع الدعم.",
+    "accountNotFound": "تعذّر العثور على الحساب. يُرجى تسجيل الدخول مجددًا.",
+    "phoneAlreadyVerified": "لديك رقم هاتف موثّق بالفعل على حسابك.",
+    "phoneTaken": "رقم الهاتف مستخدم بالفعل في حساب آخر.",
+    "otpAttemptsExceeded": "تم تجاوز الحد الأقصى لعدد المحاولات. يُرجى طلب كود جديد.",
+    "otpInvalidOrExpired": "الكود غير صحيح أو منتهي الصلاحية. يُرجى المحاولة مرة أخرى أو طلب كود جديد.",
+    "loginFailedGeneric": "حدث خطأ أثناء تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
+    "deactivateFailed": "تعذّر تعطيل الحساب. يُرجى المحاولة مرة أخرى.",
+    "googleSignInFailed": "تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى."
   }
 }

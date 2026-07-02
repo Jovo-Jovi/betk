@@ -16,10 +16,12 @@
 
 import { useState } from "react";
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { deactivateAccount } from "@/features/buyer-account/actions/deactivateAccount";
 import type { DeactivateAccountResult } from "@/features/buyer-account/actions/deactivateAccount";
 
 export function DeactivateAccountForm() {
+  const t = useTranslations("account.deactivate");
   const [showConfirm, setShowConfirm] = useState(false);
   const [state, formAction, isPending] = useActionState<
     DeactivateAccountResult | null,
@@ -27,12 +29,9 @@ export function DeactivateAccountForm() {
   >(deactivateAccount, null);
 
   return (
-    <div data-slot="deactivate-account" dir="rtl">
-      <h2>تعطيل الحساب</h2>
-      <p>
-        تعطيل الحساب يمنعك من تسجيل الدخول أو إجراء أي معاملات. لن يتم حذف بياناتك،
-        ويمكن إعادة تفعيل الحساب لاحقًا عبر الدعم.
-      </p>
+    <div data-slot="deactivate-account">
+      <h2>{t("title")}</h2>
+      <p>{t("description")}</p>
 
       {!showConfirm ? (
         <button
@@ -40,7 +39,7 @@ export function DeactivateAccountForm() {
           data-slot="deactivate-reveal-btn"
           onClick={() => setShowConfirm(true)}
         >
-          تعطيل حسابي
+          {t("revealButton")}
         </button>
       ) : (
         <form action={formAction} data-slot="deactivate-form">
@@ -60,7 +59,7 @@ export function DeactivateAccountForm() {
                 required
                 disabled={isPending}
               />{" "}
-              أؤكد رغبتي في تعطيل حسابي وتسجيل الخروج.
+              {t("confirmLabel")}
             </label>
           </div>
 
@@ -71,14 +70,14 @@ export function DeactivateAccountForm() {
               onClick={() => setShowConfirm(false)}
               disabled={isPending}
             >
-              إلغاء
+              {t("cancel")}
             </button>
             <button
               type="submit"
               data-slot="deactivate-confirm-btn"
               disabled={isPending}
             >
-              {isPending ? "جارٍ التعطيل…" : "تأكيد التعطيل"}
+              {isPending ? t("processing") : t("confirmButton")}
             </button>
           </div>
         </form>
