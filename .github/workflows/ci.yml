@@ -7,9 +7,14 @@
 #
 # Integration tests (tests/integration/rls.smoke.test.ts) hit live staging and
 # create/teardown auth users — they MUST NOT run in the default CI job silently.
-# They are gated behind the separate `rls-smoke` job, which only runs when
-# triggered on develop push or workflow_dispatch, and fails loudly when secrets
-# are absent.
+# They are gated behind the separate `rls-smoke` job, which runs the staging
+# suite when triggered on develop push or workflow_dispatch (explicit opt-in),
+# AND — as a BLOCKING gate — on any pull_request whose diff touches
+# supabase/migrations/** (RLS is the sole authz boundary, so a policy change
+# must be smoke-tested before merge). On non-migration PRs the job still runs but
+# short-circuits with an explicit "no migration changes" log line (never a silent
+# absence), so it can be marked "required" in branch protection and act as a
+# conditional gate. It fails loudly when secrets are absent — never a silent skip.
 
 name: CI
 
@@ -260,40 +265,98 @@ jobs:
         run: pnpm build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Opt-in: RLS smoke test — runs integration tests against staging.
-# INTENT: explicit, not silent. Must be triggered deliberately.
+# RLS smoke test — runs integration tests against staging.
+# INTENT: explicit, not silent. Conditionally REQUIRED, never a silent skip.
 #
-# Trigger options:
-#   1. workflow_dispatch
-#   2. Push to develop (auto, but only when secrets are configured)
+# When it runs the staging suite:
+#   1. workflow_dispatch                     (manual opt-in)
+#   2. Push to develop                       (auto opt-in)
+#   3. pull_request touching supabase/migrations/**  → BLOCKING gate
+#      (RLS is the sole authz boundary — a policy/migration change MUST be
+#       smoke-tested before merge; see docs/08-deployment/CICD_PIPELINE.md).
+#
+# The job ALWAYS runs on every PR (it is NOT job-level `if`-skipped) so it posts
+# a status check on every PR. That lets branch protection mark it "required" and
+# have it act as a conditional gate: BLOCKING exactly on migration-touching PRs,
+# and a cheap explicit no-op elsewhere. A job-level skip would post NO status,
+# and a "required" skipped check either blocks forever or vanishes silently —
+# both unacceptable. On a non-migration PR the "Detect migration changes" step
+# logs an explicit "no migration changes" line and short-circuits the suite.
+#
+# RESIDUAL RISK (accepted, mitigated): the harness mints/tears down real staging
+# GoTrue auth users. Two runs hitting staging at once could collide. Mitigations:
+# (a) the harness uses a per-run unique suffix on all unique columns + a prefix
+#     sweep that removes crashed-run leftovers before seeding
+#     (tests/integration/rls.smoke.test.ts); (b) the `concurrency` group above
+#     (ci-${{ github.ref }}) cancels an in-progress run for the SAME ref, so a
+#     PR never races itself. Cross-PR concurrency remains possible and is covered
+#     by (a). Do NOT drop the unique-suffix/sweep design without re-evaluating.
 #
 # Requires secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 #                   SUPABASE_SERVICE_KEY (+ Zod-loader placeholders for env.ts)
 # ─────────────────────────────────────────────────────────────────────────────
   rls-smoke:
-    name: RLS smoke (opt-in, staging)
-    # Only runs on workflow_dispatch or develop push — never on PRs from forks
-    # (secrets are unavailable to forks; failing silently is unacceptable).
+    name: RLS smoke (staging)
+    # Runs on workflow_dispatch, develop push, OR any pull_request. The PR case
+    # self-gates internally (Detect migration changes) so the check always posts
+    # a status; forks lack secrets, so the fail-loudly secret check below turns a
+    # migration-touching fork PR into a visible failure, never a silent pass.
     if: >
       (github.event_name == 'workflow_dispatch') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'pull_request')
     needs: [install, vitest, guards]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the PR diff can be computed against its base SHA.
+          fetch-depth: 0
+
+      # Decide whether to run the staging suite this invocation:
+      #   - workflow_dispatch / develop push → always run (explicit opt-in)
+      #   - pull_request → run ONLY if supabase/migrations/** changed in the PR;
+      #     otherwise emit an explicit "no migration changes" line and skip the
+      #     suite (a logged no-op, NOT a silent job-level skip).
+      - name: Detect migration changes
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "Trigger '$EVENT_NAME' is an explicit opt-in — running RLS smoke against staging."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- supabase/migrations/)"
+          if [ -n "$changed" ]; then
+            echo "Migration files changed in this PR — RLS smoke is REQUIRED and will run against staging:"
+            echo "$changed" | sed 's/^/  - /'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No migration changes (supabase/migrations/** untouched in this PR) — skipping RLS smoke."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.run == 'true'
         with:
           version: 9
       - uses: actions/setup-node@v4
+        if: steps.detect.outputs.run == 'true'
         with:
           node-version: 22
           cache: pnpm
       - uses: actions/cache/restore@v4
+        if: steps.detect.outputs.run == 'true'
         with:
           path: node_modules
           key: ${{ needs.install.outputs.cache-key }}
 
       - name: Verify staging secrets are present
+        if: steps.detect.outputs.run == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -306,10 +369,12 @@ jobs:
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::RLS smoke test requires secrets: ${missing[*]}"
             echo "::error::Add them under Settings → Secrets and variables → Actions."
+            echo "::error::A migration-touching PR must be smoke-tested — failing explicitly rather than skipping silently."
             exit 1
           fi
 
       - name: RLS smoke tests (staging)
+        if: steps.detect.outputs.run == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
