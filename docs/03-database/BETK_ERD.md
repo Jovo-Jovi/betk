@@ -74,7 +74,9 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 | betk_analytics.seller_snapshots | own store or admin | cron | cron | — | `seller_snap_own` |
 | betk_analytics.platform_snapshots | admin | cron | cron | — | `platform_snap_admin` |
 
-## 4. Index justifications (34 indexes)
+## 4. Index justifications (41 indexes)
+
+> **Count correction (T14 + R4):** the DoD/pre-build estimate was 34; live = **41 non-constraint indexes** (40 `idx_*` + the partial-unique `uq_active_boost_per_listing`). Over-provisioned, **none missing** — do not drop indexes to "match" the old estimate.
 
 GIN on `listings.search_vector` — full-text 1–2 keyword search (unaccent). B-tree `listings(store_id,status)`, `(category_id,status)`, partial `(created_at DESC) WHERE active&!deleted` (new arrivals), partial `(view_count DESC) WHERE active&!deleted` (popularity), `(store_id) WHERE active&!deleted` (storefront/location). `inquiries(store_id,status)`,`(buyer_id)`,`(store_id,last_message_at DESC)` (inbox sort). `orders(buyer_id,status)`,`(store_id,status)`,`(store_id,created_at DESC)`. `order_status_history(order_id,created_at DESC)`. `payments(order_id)`, partial `(status) WHERE pending`. `payouts(store_id)`, partial `(requested_at) WHERE pending`. `reviews(store_id) WHERE is_visible`. `disputes(status,sla_deadline) WHERE not resolved/closed` (SLA monitor), `(store_id)`. Partial unique `boosts(listing_id) WHERE active` (concurrent-boost guard, R-B01) + `boosts(expires_at) WHERE active` (expiry cron). `notifications(user_id) WHERE !is_read` (unread badge), `(user_id,sent_at DESC)`. `flagged_content(severity,created_at) WHERE pending`. `moderation_logs(target_id,target_type)`,`(admin_id,created_at DESC)`. `seller_snapshots(store_id,snapshot_date DESC)`,`(snapshot_date DESC)`. Apply all on day 1 (C2 §7.3).
 
@@ -102,4 +104,4 @@ GIN on `listings.search_vector` — full-text 1–2 keyword search (unaccent). B
 
 ## 9. Executable schema
 
-The full PostgreSQL 17 / Supabase DDL — extensions, **34 enum types** (verified via `pg_type` query, T12 2026-06-23), 43 `CREATE TABLE`s, constraints, 34 indexes, 5 triggers, 22 RLS policies, 2 helper functions, 6 pg_cron jobs — is the contract in `BETK_DATABASE_SCHEMA.sql`. Migrations run in the exact 057-step dependency order from C3 §7 (note the circular `inquiries.converted_to_order_id` ↔ `orders` resolved by ALTER after both exist; seed boost_packages at 039 and admin_settings at 048).
+The full PostgreSQL 17 / Supabase DDL — extensions, **34 enum types** (verified via `pg_type` query, T12 2026-06-23), 43 `CREATE TABLE`s, constraints, 41 indexes, 5 triggers, 39 RLS policies (36 permissive + 3 restrictive, post-T01-FIX), 2 helper functions, 6 pg_cron jobs — is the contract in `BETK_DATABASE_SCHEMA.sql`. Migrations run in the exact 057-step dependency order from C3 §7 (note the circular `inquiries.converted_to_order_id` ↔ `orders` resolved by ALTER after both exist; seed boost_packages at 039 and admin_settings at 048).

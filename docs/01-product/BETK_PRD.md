@@ -3,15 +3,15 @@
 
 ## 1. Executive summary
 
-BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 56 pages of the UI Spec and the 43-table schema.
+BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy — bilingual Arabic/English with light/dark theming (OD-7), Arabic-first by default. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 59 pages of the UI Spec and the 43-table schema.
 
 ## 2. Problem statement
 
-50.7M Egyptian social users sell informally over WhatsApp/Instagram with no trust layer, no structured payments, no discovery, and no buyer protection. No single platform serves products *and* services in one Arabic-first marketplace. Buyers cannot verify sellers, track orders, or recover from bad transactions; sellers cannot build durable storefronts or reputation.
+50.7M Egyptian social users sell informally over WhatsApp/Instagram with no trust layer, no structured payments, no discovery, and no buyer protection. No single platform serves products *and* services in one Arabic-first marketplace (bilingual AR/EN + light/dark, OD-7). Buyers cannot verify sellers, track orders, or recover from bad transactions; sellers cannot build durable storefronts or reputation.
 
 ## 3. Solution
 
-A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) where BETK never holds funds, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization.
+A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services; bilingual AR/EN + light/dark, OD-7), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) where BETK never holds funds, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization.
 
 ## 4. Actors
 
@@ -94,7 +94,7 @@ Format: **FR-[area]-[n]** → page (UI Spec §3) · auth gate · primary tables 
 ## 6. Non-functional requirements
 
 - **Performance:** homepage/storefront p95 < 2.5s on Egyptian mobile networks; cache homepage (60s TTL) and rating_aggregates (5-min TTL, Redis or Edge); PgBouncer from day 1 (C3 §8.1).
-- **Localization:** Arabic-first RTL throughout; LTR islands for digits/refs; `unaccent` search.
+- **Localization:** Arabic-first RTL throughout, bilingual AR/EN + light/dark theming (OD-7 — see `BETK_UI_SPEC.md §4`); LTR islands for digits/refs; `unaccent` search.
 - **Availability:** Supabase managed Postgres; Vercel edge; graceful section-level degradation (homepage strips fail independently).
 - **Scale assumptions:** < 50K listings, < 100K orders/month at launch; archive `notifications` > 90 days before 50K orders; partition `seller_snapshots` before 10K sellers (C3 §8.1).
 - **Accessibility:** WCAG AA targets; keyboard + screen-reader; focus ring on `--ring`.

@@ -35,7 +35,7 @@ BETK is served in **four presentation contexts** and every token, scale, and com
 - **Fonts** are direction-agnostic Arabic-first faces with Latin fallback (§3); they render both scripts. Body line-height is loosened for Arabic (`1.8`) and stays legible in Latin.
 - **Theme** never changes layout, dimensions, or radius — only color-token *values* swap between the light and `.dark` blocks in §2. Anatomy in §5 is theme-invariant.
 
-This is per **OD-7** (bilingual AR/EN + light/dark over the frozen 56 pages; no new pages/tables/deps/translation-service). See `BETK_UI_SPEC.md §4 Localization & theming` for the routing/gating/persistence contract.
+This is per **OD-7** (bilingual AR/EN + light/dark over the frozen 59 pages; no new pages/tables/deps/translation-service). See `BETK_UI_SPEC.md §4 Localization & theming` for the routing/gating/persistence contract.
 
 ---
 

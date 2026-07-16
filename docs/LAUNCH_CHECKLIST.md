@@ -17,7 +17,7 @@
 - [ ] Backup/PITR restore tested (DISASTER_RECOVERY)
 
 ## Performance & quality
-- [ ] All 34 indexes present in production
+- [ ] All 41 indexes present in production
 - [ ] Performance review — Core Web Vitals "good"; homepage/storefront p95 < 2.5s on EG mobile
 - [ ] Homepage 60s + rating_aggregates 5-min caching active
 - [ ] SEO review (RTL, metadata, sitemaps)
@@ -36,4 +36,4 @@
 ## Scope
 - [ ] OD-1..OD-6 reflected in code: no inventory_alerts table; deactivate-only account (`users.deleted_at`/`anonymized_at` present, no anonymization); no campaign entity; **Google OAuth IN** (phone nullable, `auth_provider`, verified-phone gate before checkout/become-seller/payout); sessions UI out + WhatsApp templates under Admin→Settings→Notifications; 43-table types
 - [ ] Auth: phone-OTP + Google OAuth both tested; transaction phone-gate enforced in Server Actions AND RLS WITH CHECK; deactivated users (`deleted_at`) blocked at login
-- [ ] All 56 UI Spec pages pass their acceptance criteria (QA + UI-reviewer sign-off)
+- [ ] All 59 UI Spec pages pass their acceptance criteria (QA + UI-reviewer sign-off)

@@ -14,11 +14,12 @@
 ## DS01 — Set up the design system (Claude Design)
 - **Surface:** Claude Design → "Set up your design system"
 - **Inputs:** paste `BETK_DESIGN_BRIEF.md`; **Link code from GitHub** → select only `src/components/ui`, `src/components/shared`, `src/app`, `tailwind.config.ts`, `app/globals.css`, `src/constants/statusColors.ts`; add fonts (Cairo, IBM Plex Sans Arabic, IBM Plex Mono) + BETK logo if available; skip .fig.
+- **Note (docs-hygiene, 2026-07-16):** this prompt's cited token values (radius `.625rem` etc.) predate the DESIGN-SYNC brief rewrite and are **superseded by the current `BETK_DESIGN_BRIEF.md`** (radius is now 12px/`0.75rem`, several tokens re-valued incl. `--primary`→teal) — treat the brief, not this prompt text, as the value source when this pack is next run.
 - **Prompt:**
 ```
-This is BETK — an Arabic-first, RIGHT-TO-LEFT marketplace for Egypt. All UI is RTL and Arabic by default (dir="rtl", lang="ar"); use logical CSS properties, not left/right. Build the design system from the attached BETK_DESIGN_BRIEF.md: use exactly the CSS-variable color tokens, the type scale, radius .625rem, and the shadow set defined there — do not invent new tokens or hardcode hex. Fonts: Cairo (display), IBM Plex Sans Arabic (body), IBM Plex Mono (refs/OTP/tracking). Component library is shadcn/ui on Tailwind — extend via wrappers, never modify the base components/ui. Confirm the system back to me as tokens + primitives before generating components.
+This is BETK — an Arabic-first, RIGHT-TO-LEFT marketplace for Egypt, bilingual Arabic/English with light/dark theming (OD-7). All UI defaults to RTL and Arabic (dir="rtl", lang="ar") with a full EN/LTR mirror (dir="ltr", lang="en") and a dark mode — build and verify both; use logical CSS properties, not left/right. Build the design system from the attached BETK_DESIGN_BRIEF.md: use exactly the CSS-variable color tokens (both light and dark), the type scale, the radius scale, and the shadow set defined there — do not invent new tokens or hardcode hex. Fonts: Cairo (display), IBM Plex Sans Arabic (body), IBM Plex Mono (refs/OTP/tracking). Component library is shadcn/ui on Tailwind — extend via wrappers, never modify the base components/ui. Confirm the system back to me as tokens + primitives before generating components.
 ```
-- **Done when:** Claude Design confirms tokens/fonts/RTL and reflects the shadcn base from the repo.
+- **Done when:** Claude Design confirms tokens/fonts/RTL+LTR+light/dark and reflects the shadcn base from the repo.
 
 ## DS02 — Generate / refine shared components (Claude Design)
 - **Prompt:**

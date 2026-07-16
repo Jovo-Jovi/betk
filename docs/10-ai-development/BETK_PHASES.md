@@ -2,7 +2,7 @@
 > Step 15 of the BETK Dev OS. Execution phases with BETK's actual feature names (from the UI Spec / PRD), in dependency order. Each phase: Objectives · Tasks · Files · Acceptance (→ UI Spec + PRD) · Tests · Docs to update. Build in this order; later phases depend on earlier.
 
 ## Phase 00 — Scope sign-off (gate, no code)
-Decide OD-1…OD-6 (MVP Scope §8) and sign. **No development begins until this is signed.** Doc: MVP_SCOPE §8, SESSION_CONTEXT.
+Decide OD-1…OD-6 (MVP Scope §6) and sign. **No development begins until this is signed.** Doc: MVP_SCOPE §6, SESSION_CONTEXT.
 
 ## Phase 01 — Foundation
 > Task pack: `phase-packs/PHASE_01_FOUNDATION.md` (14 tasks, Cursor prompts, migration grouping, freeze-delta SQL).
