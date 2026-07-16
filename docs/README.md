@@ -15,7 +15,7 @@
 `.cursor/` and `docs/` must both sit at the repo root (same level as `.git`) or the glob rules won't auto-attach.
 
 ## docs/ map (Dev OS Step 12 structure)
-- `00-design/BETK_UI_SPEC.md` — UI ground truth (56 pages)
+- `00-design/BETK_UI_SPEC.md` — UI ground truth (59 pages)
 - `00-design/BETK_DESIGN_BRIEF.md` — brief for Claude Design setup (tokens, fonts, RTL, component inventory)
 - `01-product/BETK_MVP_SCOPE.md` (frozen scope + OD-1…OD-6 decisions) · `BETK_PRD.md` (FRs + acceptance)
 - `02-architecture/` — `BETK_ARCHITECTURE.md`, `BETK_CODEBASE_ARCHITECTURE.md`, `ADR.md`

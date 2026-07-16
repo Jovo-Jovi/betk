@@ -46,7 +46,7 @@ Two Supabase clients (Dev OS Step 5): browser client (`lib/supabase/client.ts`, 
 
 Authorization is enforced in the database via RLS (`BETK_ERD.md §3`), not only in the UI. The auth gate in the UI (`public | protected | role:seller | role:admin`) is a UX convenience; the security boundary is RLS + `is_admin()`/`my_store_id()`. Server Actions additionally check role before mutating. Suspended/banned/deactivated users are blocked at middleware and re-checked per request (R-A05, now incl. `deleted_at`). Google-OAuth users may browse/wishlist/follow with no phone; checkout, becoming a seller, and payouts require a verified phone (`users.phone_number IS NOT NULL`), enforced in Server Actions and RLS WITH CHECK.
 
-**Locale × gates (OD-7 / ADR-002).** The middleware negotiates the locale (next-intl) and then normalizes it — stripping any `/en` prefix (Arabic is unprefixed) — **before** evaluating `gateFor()`. Gate verdicts are therefore locale-invariant: `/account` and `/en/account` both resolve to the `buyer` gate, `/admin` and `/en/admin` to `admin`, and so on. Redirect targets (login/blocked/role-mismatch/seller-status) are re-localized to the same locale. Adding locale changes **no** authorization outcome.
+**Locale × gates (OD-7 / ADR-011, see §9 + `ADR.md`).** The middleware negotiates the locale (next-intl) and then normalizes it — stripping any `/en` prefix (Arabic is unprefixed) — **before** evaluating `gateFor()`. Gate verdicts are therefore locale-invariant: `/account` and `/en/account` both resolve to the `buyer` gate, `/admin` and `/en/admin` to `admin`, and so on. Redirect targets (login/blocked/role-mismatch/seller-status) are re-localized to the same locale. Adding locale changes **no** authorization outcome.
 
 ## 5. Storage architecture
 
@@ -62,15 +62,17 @@ Authorization is enforced in the database via RLS (`BETK_ERD.md §3`), not only 
 
 ## 7. Performance & resilience (from C3 §8)
 
-PgBouncer (Supabase pooler) from day 1, TRANSACTION mode for requests / SESSION mode for jobs. Cache homepage endpoint 60s and `rating_aggregates` 5-min (Edge/Redis). All 34 indexes on day 1. Section-level degradation (independent homepage strips). Search safe to ~500K listings on tsvector+GIN; revisit at scale.
+PgBouncer (Supabase pooler) from day 1, TRANSACTION mode for requests / SESSION mode for jobs. Cache homepage endpoint 60s and `rating_aggregates` 5-min (Edge/Redis). All 41 non-constraint indexes live (`BETK_ERD.md §4`; over-provisioned vs the original 34 estimate, none missing). Section-level degradation (independent homepage strips). Search safe to ~500K listings on tsvector+GIN; revisit at scale.
 
 ## 8. Pre-launch architecture conditions (mandatory — C3 §8.5)
 
 1. Address all 5 security risks (§8.2). 2. PgBouncer enabled. 3. `seller_documents` bucket PRIVATE. 4. All pg_cron jobs tested in staging. 5. `notifications` 90-day archive policy scheduled. These are gates in `LAUNCH_CHECKLIST.md`.
 
-## 9. ADR-002 — Internationalization (AR/EN) & theming (OD-7)
+## 9. ADR-011 — Internationalization (AR/EN) & theming (OD-7)
 
-**Status:** Accepted 2026-07-01 (amends scope via OD-7; supersedes the earlier Arabic-only, single-`dir="rtl"` assumption). **Context:** OD-7 makes BETK a bilingual Arabic/English, light/dark app over the existing 56 pages with **no new pages/tables/content columns, no translation service, no new content dependency**.
+> **Canonical registry:** this decision is recorded as **ADR-011** in `docs/02-architecture/ADR.md` (the single ADR registry — `ADR-001..ADR-010` predate OD-7, so ADR-011 is the next free slot; ADR-003 exists and is superseded, not reusable). This section restates the full decision inline for architecture-doc readers; `ADR.md` owns the numbering.
+
+**Status:** Accepted 2026-07-01 (amends scope via OD-7; supersedes the earlier Arabic-only, single-`dir="rtl"` assumption). **Context:** OD-7 makes BETK a bilingual Arabic/English, light/dark app over the existing 59 pages with **no new pages/tables/content columns, no translation service, no new content dependency**.
 
 **Decision.**
 - **Library:** `next-intl` (v4) for the UI shell + `next-themes` for theming. These are the only two dependencies OD-7 adds (presentation-layer only).

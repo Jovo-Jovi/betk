@@ -50,7 +50,7 @@
 > Inserted into `BETK_MVP_SCOPE.md §6` by **BL-00** (after OD-6, before the "Scope FROZEN and signed" line).
 
 ```markdown
-- **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the existing 56 pages — no new pages, no new tables, no new content columns, no new dependency.
+- **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the existing 59 pages — no new pages, no new tables, no new content columns, no new dependency.
   - **Shell.** All chrome translated via `next-intl` catalogs (`messages/ar.json`, `messages/en.json`); BETK owns EN UI copy.
   - **Structured content** (categories, badges, statuses, filters, governorates, delivery) bilingual via existing `*_ar`/`*_en` columns; BETK-filled.
   - **Goods** (titles, store names, collection names) bilingual via existing `title_en`/`name_en` columns; display `COALESCE(locale column, other)` (never blank). Populated by BETK for categories/collections and by **sellers** for goods — bilingual seller entry is a listing-form decision (Phase 04+).
@@ -125,7 +125,7 @@ DO
 5. Root layout (app/[locale]/layout.tsx): <html dir lang> derives from locale (ar→rtl/ar, en→ltr/en). Add next-themes provider (class strategy, attribute="class", defaultTheme respects system). Keep the three font vars.
 6. messages/ar.json + messages/en.json: minimal namespaced skeleton (common, nav, auth, account) — prove the pipeline with ~5 keys wired into one existing page.
 7. Name/title fallback helper localizedName(row, locale)=COALESCE(x_en,x_ar) ready for the read layer (names/titles only). Descriptions/bios render as-authored (single field, no translation, no fallback logic).
-8. Docs: add ADR-002 (i18n+theming) to BETK_ARCHITECTURE.md; extend BETK_UI_SPEC.md Localization section (EN locale, /en, COALESCE name/title fallback, descriptions as-authored, switch location = Account→Settings).
+8. Docs: add ADR-011 (i18n+theming; renumbered 2026-07-16, was mislabeled ADR-002 at authoring time) to BETK_ARCHITECTURE.md; extend BETK_UI_SPEC.md Localization section (EN locale, /en, COALESCE name/title fallback, descriptions as-authored, switch location = Account→Settings).
 
 DONE-WHEN
 - pnpm build passes; TS strict clean.
@@ -133,7 +133,7 @@ DONE-WHEN
 - Every prior middleware gate verdict provably unchanged (state each).
 - <html> emits rtl/ar on AR, ltr/en on EN; theme class toggles light/dark.
 - next-intl pipeline proven on one page.
-- routes.ts, ADR-002, UI-Spec updated. No schema/migration touched.
+- routes.ts, ADR-011 (renumbered 2026-07-16, was ADR-002), UI-Spec updated. No schema/migration touched.
 
 STOP and flag (don't guess) if: any route move changes an existing URL; any gate can't be preserved; or theming requires editing a shared component's internals.
 ```
@@ -176,7 +176,7 @@ Spec (bilingual+theme gate only — design gate spent via PR #33):
 - i18n foundation intact; AR/EN key parity; `COALESCE` name/title fallback correct; descriptions render as-authored.
 - **Gate-security regression:** every middleware role gate gives the same verdict with/without `/en` (no bypass).
 - LTR correct under `/en`; dark mode verified across representative pages.
-- Design-system integrity preserved. Docs synced (OD-7, ADR-002, SESSION_CONTEXT, journal).
+- Design-system integrity preserved. Docs synced (OD-7, ADR-011 — renumbered 2026-07-16, was ADR-002, SESSION_CONTEXT, journal).
 - → PR to `main`, gate, merge → **unblocks Phase 03 T02**.
 
 ---
@@ -206,3 +206,4 @@ Spec (bilingual+theme gate only — design gate spent via PR #33):
 - **Search vector quirk (pre-existing):** `update_listing_search_vector` uses `'arabic'`/`'english'` TS configs (not `unaccent`); runs `description_ar` through the English stemmer. Untouched by OD-7.
 - **Pre-launch gates unaffected:** Google OAuth E2E (#13), TorvoSMS handset delivery / sender-ID, pg_cron timezone.
 - **StatusBadge `flag` domain deferred (BL-04-FIX):** DS-I18N's de-hardcode of `StatusBadge.tsx` tightened `DEFAULT_LABELS`'s type from `Partial<Record<StatusDomain, Record<string, string>>>` to a non-partial `Record<StatusDomain, ...>`, but the map still only supplies the 7 domains it always has (order/seller/payment/listing/dispute/boost/payout) — `flag` (moderation flags) has never had labels, only colors (`constants/statusColors.ts`). This broke `typecheck`/`build` (TS2741). Reverted to `Partial<...>` (restores `main`'s exact pre-DS-I18N contract; zero behavior change) — did **not** author `flag` labels. `catalog.status.*` in `messages/{ar,en}.json` and the `catalogStatusLabels` builder (`src/i18n/catalogLabels.ts`) likewise cover only the 7 real domains. **Design to decide:** keep the map partial long-term, or complete `flag` (pending/reviewed/actioned/dismissed) with Arabic labels. Required before any flag/moderation badge renders (admin phase).
+- **~~ADR-002 numbering collision~~ — ✅ RESOLVED 2026-07-16 (R4, docs-hygiene batch).** `BETK_ARCHITECTURE.md §9` had labeled the OD-7 i18n/theming decision "ADR-002", colliding with `docs/02-architecture/ADR.md`'s own, unrelated **ADR-002 — Split payment, no custody**. The earlier carry-forward note here guessed the next free slot was "likely ADR-003" — that was wrong (ADR-003 exists, superseded by ADR-008); `ADR.md` owns ADR-001..ADR-010, so the correct next-free slot is **ADR-011**. Fixed: `ADR.md` now carries the canonical **ADR-011** entry (append-only); `BETK_ARCHITECTURE.md §9`'s heading + its `§4` cross-reference relabeled to ADR-011 with a pointer to `ADR.md`; swept `ADR-002` mentions in `BETK_UI_SPEC.md §4`, this file's own references (DO/DONE-WHEN/BL-05 spec lines above), `SESSION_CONTEXT.md`, and the `src/middleware.ts` L11 doc-comment (comment-only, no logic change). Labeling only, zero schema/behavior impact.

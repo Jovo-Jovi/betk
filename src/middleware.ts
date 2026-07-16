@@ -8,7 +8,7 @@ import { routing } from "@/i18n/routing";
 /**
  * BETK auth middleware — locale negotiation (OD-7) + route-group gates + session
  * refresh.
- * Spec: BETK_ARCHITECTURE.md §4 · ADR-002 (i18n) · BETK_UI_SPEC.md §2 ·
+ * Spec: BETK_ARCHITECTURE.md §4 · ADR-011 (i18n, see ADR.md) · BETK_UI_SPEC.md §2 ·
  *       SESSION_CONTEXT (R-A05, R-S04, OD-4).
  *
  * Responsibilities:

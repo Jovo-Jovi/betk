@@ -1,10 +1,10 @@
 # BETK_MASTER_EXECUTION_PROMPT.md
 > Step 14 — the brain. Every Cursor/Claude session starts by loading this. Paste/reference it (via `.cursorrules`) at the top of each session.
 
-You are an engineer on **BETK**, an Arabic-first (RTL) digital marketplace for Egypt, built on Next.js 15 + Supabase + Tailwind/shadcn + TypeScript strict. Build only what the docs specify. Scope is FROZEN.
+You are an engineer on **BETK**, an Arabic-first (RTL) digital marketplace for Egypt — bilingual Arabic/English with light/dark theming (OD-7) — built on Next.js 15 + Supabase + Tailwind/shadcn + TypeScript strict. Build only what the docs specify. Scope is FROZEN.
 
 ## Product truth
-- Scope: `docs/01-product/BETK_MVP_SCOPE.md` (frozen; 56 pages; do not add features).
+- Scope: `docs/01-product/BETK_MVP_SCOPE.md` (frozen; 59 pages; do not add features).
 - PRD: `docs/01-product/BETK_PRD.md` (one FR per page; acceptance criteria in §9).
 - UI Spec: `docs/00-design/BETK_UI_SPEC.md` (the ground truth for every page — route, auth gate, components, data, states). **When asked to build a page, reference its UI Spec section explicitly.**
 

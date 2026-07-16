@@ -21,7 +21,7 @@ All 70 use cases from the C2 Use Case Coverage Matrix are in scope and 100% cove
 
 ## 4. Features included (each = a wireframed page)
 
-In scope iff it maps to a page in `BETK_UI_SPEC.md §3`. The 56 pages across Public/Guest (5), Auth (3), Buyer (13), Seller (22), Admin (18) constitute the complete included feature set. No feature outside this page list is in MVP.
+In scope iff it maps to a page in `BETK_UI_SPEC.md §3`. The 59 pages across Public/Guest (5), Auth (3), Buyer (13), Seller (22), Admin (16) constitute the complete included feature set. No feature outside this page list is in MVP. (Count verified 2026-07-16, R4 docs-hygiene: §3 documents 60 page headings; *WhatsApp Templates* is a merged Admin→Settings tab per OD-5, not a standalone page, so Admin = 16 standalone pages and the total = 59, not the earlier miscounted 56/61.)
 
 Confirmed stack capabilities in scope: phone-OTP **and Google OAuth** sign-in (Supabase Auth; phone verification gated to transactions — OD-4), split payment (50% deposit upfront via Instapay/Vodafone Cash/Orange Cash + 50% COD; BETK never holds funds), manual seller payment confirmation, Bosta/self-deliver/pickup/remote delivery, 1–2 keyword PostgreSQL full-text search (tsvector + GIN + unaccent), boost promotion (24/48/72h packages, admin-confirmed), admin-curated homepage collections, multi-channel notifications (push/SMS/WhatsApp/email), seller levels (Bronze/Silver/Gold, nightly recalculation), buyer-protection disputes (48h SLA), reviews (48h edit window, one seller reply), soft deletes, RLS on every table.
 
@@ -49,7 +49,7 @@ All six resolved per the MVP Freeze Sheet. No further expansion.
 - **OD-4 — Google OAuth: IN.** Sign-in via phone-OTP **or** Google OAuth (Supabase Auth links both). `users.phone_number` becomes nullable+UNIQUE; `users.auth_provider` records origin. **Verified phone required before transacting** (checkout / become seller / payout). R-A01 amended: "phone-OTP + Google OAuth; phone verification gated to transactions." *Schema change: YES (phone nullable + `auth_provider`).*
 - **OD-5 — Sessions UI OUT / WhatsApp templates merged.** No sessions/active-sessions page. WhatsApp template management lives under **Admin → Settings → Notifications** (no standalone page). Post-MVP: security dashboard, session management, advanced template admin. *Schema change: NO.*
 - **OD-6 — Table count: 43 (documentation).** Authoritative inventory + counting methodology added to `BETK_ERD.md §1.1`. *Schema change: NO.*
-- **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the existing 56 pages — no new pages, no new tables, no new content columns, no new dependency.
+- **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the existing 59 pages — no new pages, no new tables, no new content columns, no new dependency.
   - **Shell.** All chrome translated via `next-intl` catalogs (`messages/ar.json`, `messages/en.json`); BETK owns EN UI copy.
   - **Structured content** (categories, badges, statuses, filters, governorates, delivery) bilingual via existing `*_ar`/`*_en` columns; BETK-filled.
   - **Goods** (titles, store names, collection names) bilingual via existing `title_en`/`name_en` columns; display `COALESCE(locale column, other)` (never blank). Populated by BETK for categories/collections and by **sellers** for goods — bilingual seller entry is a listing-form decision (Phase 04+).
