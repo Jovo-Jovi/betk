@@ -459,6 +459,54 @@ CREATE TABLE betk.order_status_history (
 -- Prevent updates and deletes on status history
 CREATE RULE no_update_order_history AS ON UPDATE TO betk.order_status_history DO INSTEAD NOTHING;
 CREATE RULE no_delete_order_history AS ON DELETE TO betk.order_status_history DO INSTEAD NOTHING;
+-- ── stock decrement on order confirmation (R-L05/R-L06) ───────────────────────
+-- Fires when an order transitions INTO 'confirmed' (seller confirm, R-L05 — NOT
+-- at checkout). Decrements each ordered listing's tracked stock_qty by the ordered
+-- quantity, and flips an active listing to 'sold_out' when its stock reaches 0
+-- (R-L06). Untracked stock (stock_qty IS NULL — services / made-to-order) is left
+-- unchanged. The listings CHECK (stock_qty >= 0) is the authoritative oversell
+-- guard: a confirm that would drive stock negative raises and rolls back the
+-- confirmation (no clamping). SECURITY DEFINER + pinned search_path so the
+-- system-integrity bookkeeping always runs regardless of the confirming role's RLS
+-- (matches the search_path-pinning security-advisor pattern; trigger functions are
+-- not RPC-exposed, so no SECURITY DEFINER RPC-exposure advisor applies).
+CREATE OR REPLACE FUNCTION betk.decrement_stock_on_confirm()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = betk, public
+AS $$
+BEGIN
+  UPDATE betk.listings AS l
+  SET stock_qty  = l.stock_qty - oi.qty,
+      status     = CASE
+                     WHEN l.stock_qty - oi.qty = 0 AND l.status = 'active'
+                     THEN 'sold_out'::betk.listing_status
+                     ELSE l.status
+                   END,
+      updated_at = NOW()
+  FROM (
+    SELECT listing_id, SUM(quantity)::INTEGER AS qty
+    FROM betk.order_items
+    WHERE order_id = NEW.id
+    GROUP BY listing_id
+  ) AS oi
+  WHERE l.id = oi.listing_id
+    AND l.stock_qty IS NOT NULL;
+  RETURN NEW;
+END;
+$$;
+-- Lock down direct EXECUTE: a SECURITY DEFINER function is EXECUTE-able by PUBLIC
+-- by default, which PostgREST would expose via /rest/v1/rpc (security-advisor
+-- lints 0028/0029). This function is only ever invoked by its trigger, so revoke
+-- the default grant — the trigger fires regardless of role EXECUTE privilege.
+REVOKE EXECUTE ON FUNCTION betk.decrement_stock_on_confirm() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER trg_decrement_stock_on_confirm
+AFTER UPDATE OF status ON betk.orders
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'confirmed')
+EXECUTE FUNCTION betk.decrement_stock_on_confirm();
 ## **Group H: Payments**
 **Split Payment Model**
 deposit = 50% upfront via Instapay / Vodafone Cash / Orange Cash
