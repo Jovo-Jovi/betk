@@ -1165,9 +1165,18 @@ CREATE POLICY boost_pkg_public ON betk.boost_packages FOR SELECT
 **  SQL**
 -- ============================================================
 -- pg_cron scheduled jobs for BETK MVP
--- All times in Cairo timezone (Africa/Cairo = UTC+3)
+-- SCHEDULES ARE UTC. pg_cron evaluates the cluster GUC cron.timezone, which on
+-- this Supabase cluster is UTC/GMT and is NOT settable persistently via SQL
+-- (postmaster-context). The 3 DAILY jobs are therefore stored as UTC-equivalent
+-- expressions of their Cairo intent (R3, 2026-07-16, migration
+-- 20260716130533_reschedule_daily_cron_utc.sql).
+-- Egypt DST: UTC+2 in WINTER (standard), UTC+3 in SUMMER (~Apr-Oct). Each daily
+-- job is anchored on standard time (UTC+2) — exact Cairo intent in winter, +1h
+-- in summer — and verified to stay in the overnight Cairo window in BOTH seasons.
+-- The interval jobs (expire-boosts, dispute-sla-alert, cleanup-otp-tokens) are
+-- timezone-independent.
 -- ============================================================
--- 1. Expire boost listings every 15 minutes
+-- 1. Expire boost listings every 15 minutes (interval; timezone-independent)
 SELECT cron.schedule(
   'expire-boosts',
   '*/15 * * * *',
@@ -1178,10 +1187,11 @@ SELECT cron.schedule(
     AND expires_at < NOW();
   $$
 );
--- 2. Nightly seller level recalculation at 02:00 Cairo
+-- 2. Nightly seller level recalculation.
+--    Intent ~02:00 Cairo. UTC '0 0 * * *' -> WINTER (UTC+2) 02:00 (exact) / SUMMER (UTC+3) 03:00.
 SELECT cron.schedule(
   'recalculate-seller-levels',
-  '0 2 * * *',
+  '0 0 * * *',
   $$
     UPDATE betk.seller_profiles sp
     SET
@@ -1200,10 +1210,12 @@ SELECT cron.schedule(
     WHERE sp.status = 'active';
   $$
 );
--- 3. Nightly analytics snapshot at 00:05 Cairo
+-- 3. Nightly analytics snapshot.
+--    Intent ~00:05 Cairo. UTC '5 22 * * *' -> WINTER (UTC+2) 00:05 (exact) / SUMMER (UTC+3) 01:05.
+--    22:05 UTC is within the same UTC calendar day, so CURRENT_DATE-1 accounting is unchanged.
 SELECT cron.schedule(
   'daily-platform-snapshot',
-  '5 0 * * *',
+  '5 22 * * *',
   $$
     INSERT INTO betk_analytics.platform_snapshots
       (snapshot_date, total_sellers_active, total_buyers,
@@ -1249,10 +1261,11 @@ SELECT cron.schedule(
     AND d.sla_deadline BETWEEN NOW() AND NOW() + INTERVAL '1 hour';
   $$
 );
--- 5. Expire temporary suspensions daily at 03:00 Cairo
+-- 5. Expire temporary suspensions daily.
+--    Intent ~03:00 Cairo. UTC '0 1 * * *' -> WINTER (UTC+2) 03:00 (exact) / SUMMER (UTC+3) 04:00.
 SELECT cron.schedule(
   'lift-temp-suspensions',
-  '0 3 * * *',
+  '0 1 * * *',
   $$
     UPDATE betk.seller_profiles
     SET status = 'active', suspension_ends_at = NULL
