@@ -1,6 +1,6 @@
 # BETK_DESIGN_BRIEF.md
 
-> **STATUS: LOCKED visual source of truth.** This brief is the single, self-contained definition of BETK's visual language: every color token value (light **and** dark), the type/spacing/radius/shadow scales, and the per-component anatomy for the whole component inventory. It is distilled from the expert-authored design reference (CSS/HTML/JS + logo assets, both themes, both directions). **Every value a generator needs is recorded here** — there are no pointers into a working folder. The design reference itself lives in an external repo (see *Living reference*); it is NOT vendored into this repository.
+> **STATUS: LOCKED visual source of truth — BRIEF-RESOLVE complete (2026-07-16).** This brief is the single, self-contained definition of BETK's visual language: every color token value (light **and** dark), the type/spacing/radius/shadow scales, and the per-component anatomy for the whole component inventory. It is distilled from the expert-authored design reference (CSS/HTML/JS + logo assets, both themes, both directions). **Every value a generator needs is recorded here** — there are no pointers into a working folder. The design reference itself lives in an external repo (see *Living reference*); it is NOT vendored into this repository. **All six designer flags from the original DESIGN-SYNC extraction (FLAG-A/C/D/E/F/G) are resolved and folded in below; zero open flag markers remain** — see `§2.0 Resolved design decisions` for the record of each call. (FLAG-B, an internal over-caution on `--secondary`/`-foreground` that the design never actually contested, is likewise closed — see `§2.0`.)
 >
 > **Living reference (external design repo):** `<DESIGN-REPO-URL>` @ `<COMMIT-SHA>`.
 > ⚠️ `<DESIGN-REPO-URL>`/`<COMMIT-SHA>` are **placeholders** — the external design repo has not been published/pinned yet. Fill both when it is. Until then this brief is authoritative on its own; do not treat the placeholder as a live link. (See OPEN ITEMS.)
@@ -14,7 +14,7 @@
 > **Every value comes from this brief. Propose a token, never inline a value. If a value or component is missing, derive it consistently from the design reference (`<DESIGN-REPO-URL>` @ `<SHA>`) or STOP and ask — never invent.**
 
 Corollaries:
-- **Token names are FROZEN.** The 39 CSS-variable token names in §2 are load-bearing (`tailwind.config.ts`, 31 shared components, the DS-I18N string-prop wiring). Never rename or remove one. New needs → an **additive** proposed token following the existing naming convention (§2.4).
+- **Token names are FROZEN.** The 39 original CSS-variable token names in §2 are load-bearing (`tailwind.config.ts`, 31 shared components, the DS-I18N string-prop wiring). Never rename or remove one. New needs → an **additive** proposed token following the existing naming convention (§2.4). As of BRIEF-RESOLVE (2026-07-16), **`--info`/`--info-foreground` (§2.4b) are the first such additive pair**, resolving FLAG-F — bringing the canonical named-token count to **41**. Nothing else was renamed or removed.
 - The design system (`components/ui` + `components/shared`) is owned by **Claude Design**. Cursor **composes + wires data**, never restyles. Extend shadcn via wrappers; never modify base `components/ui/*`.
 - **No emojis in UI.** Every glyph is a clean outline SVG icon (`stroke="currentColor"`, `stroke-width="2"`, 24×24 viewBox). The design reference is emoji-free; keep it that way.
 - **No hover-only affordances** (low-end Egyptian mobile target). Hover elevation/borders are enhancements; every state must be reachable and legible without hover.
@@ -43,7 +43,17 @@ This is per **OD-7** (bilingual AR/EN + light/dark over the frozen 56 pages; no 
 
 HSL values are stored **without** the `hsl()` wrapper so Tailwind composes them as `hsl(var(--token) / <alpha>)`. "main" = the value currently on `main` (`src/app/globals.css`). "design" = the value authored in the design reference. **This task records the mapping only — it does NOT apply values to `globals.css`.**
 
-Legend: **RE-VALUE** = design supplies a new value for this token · **UNCHANGED** = design value equals main · **RETAINED** = design did not re-author it → keep main's value · **FLAG** = conflicting/ambiguous, do not apply without design confirmation.
+Legend: **RE-VALUE** = design supplies a new value for this token · **UNCHANGED** = design value equals main · **RETAINED** = design did not re-author it → keep main's value. (No more **FLAG** rows remain — every ambiguity below was resolved by BRIEF-RESOLVE; see §2.0.)
+
+### 2.0 Resolved design decisions (former FLAG-A…G — closed, BRIEF-RESOLVE 2026-07-16)
+
+- **FLAG-A (canonical `--primary`/`--ring` hue) — RESOLVED: TEAL.** Canonical hue is **teal — `175 60% 24%` (light) / `175 60% 32%` (dark)**. The green `158 64%` literals present in the design source (`a:hover`, `::selection`, form/OTP focus-ring box-shadows, the listing-card hover border) are **stale carryover from the pre-rename palette, not a second brand hue**. Every interactive state derives from `--primary`/`--ring` (teal); no component anatomy or global-base rule cites green anymore (§4, §5.3).
+- **FLAG-B (`--secondary`/`--secondary-foreground`) — CLOSED, not a real conflict.** The design never authored these two tokens at all (no re-value proposed either direction) — there is nothing to reconcile, so this was an over-cautious flag rather than a genuine ambiguity. **RETAINED** at main's existing values, no further decision needed.
+- **FLAG-C (`--card`/`--popover` glass) — RESOLVED: solid HSL tokens; glass is composition, not a token.** `--card`/`--popover` stay **solid HSL fallbacks** (the opaque-of-glass values already recorded in §2.1). The frosted/glass look seen in the design (`rgba(...)` + `backdrop-filter`) is achieved by **composing** `bg-card/80` (Tailwind's opacity utility over the solid `--card` token) with `--card-blur` (12px) at the component level — glass is a per-component composition choice made by Claude Design, never a raw `rgba()` literal and never a second color token. See the token-usage rule in §2.1.
+- **FLAG-D (level-badge gradients) — RESOLVED: solid tokens for MVP; gradient parked.** `--level-{bronze,silver,gold}-bg` and `-ring` **ship as main's existing solid values for MVP** (no re-value) — the design's two-stop gradient backgrounds are **explicitly out of current generation scope**, parked as a **DS-polish carry-forward** for a future pass. This is independent of `-fg`, which IS re-valued — see FLAG-E.
+- **FLAG-E (star / level-fg approximations) — RESOLVED: promoted to canonical exact values.** Every recorded "≈" approximation for `--star` and the three `--level-*-fg` tokens is now the **canonical, exact spec** (§2.2) — no more ranges/hedges. `--warning-text` and `--accent-text` keep their existing exact main values (the per-component literal shades in the design — `.badge-pending`/`.sla-badge.warning`/`.alert-warning` — were minor unintentional drift around the same token, not a re-value; components should reference the token directly, never re-hardcode a nearby shade).
+- **FLAG-F (`processing`/`dispatched` blue) — RESOLVED: new additive tokens `--info` / `--info-foreground`.** The unmapped blue (`210 70%`) used by `.badge-dispatched`/`.badge-processing`/`.alert-info` is now a real, additive, FROZEN-from-now-on token pair — see §2.4b. **Additive only — no existing token renamed.**
+- **FLAG-G (`--radius` base) — RESOLVED: 12px (0.75rem) is canonical.** Main's `0.625rem`/10px base is superseded; `--radius-lg/-md/-sm` cascade off the new base automatically. This is a genuine re-value — **applying it to `tailwind.config.ts`/`globals.css` happens at values-apply time, not in this doc-only pass** (§3.3).
 
 ### 2.1 Core semantic tokens
 
@@ -51,51 +61,57 @@ Legend: **RE-VALUE** = design supplies a new value for this token · **UNCHANGED
 |---|---|---|---|---|---|---|
 | `--background` | 40 33% 98% | 40 33% 6% | **40 25% 98%** | **215 25% 8%** | RE-VALUE | `:root/.dark --background` |
 | `--foreground` | 222 22% 14% | 222 22% 90% | **215 25% 12%** | **40 25% 95%** | RE-VALUE | `--foreground` |
-| `--primary` | 158 64% 32% | 158 64% 68% | **175 60% 24%** | **175 60% 32%** | RE-VALUE ⚠️FLAG-A | `--primary` |
+| `--primary` | 158 64% 32% | 158 64% 68% | **175 60% 24%** | **175 60% 32%** | RE-VALUE — **teal, canonical** (§2.0) | `--primary` |
 | `--primary-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | **0 0% 100%** | RE-VALUE (dark) | `--primary-foreground` |
 | `--accent` | 28 92% 54% | 28 92% 54% | **32 85% 45%** | **32 85% 52%** | RE-VALUE | `--accent` |
 | `--accent-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | *(not re-authored)* | RETAINED (dark) | `--accent-foreground` |
 | `--destructive` | 0 72% 48% | 0 72% 52% | 0 72% 48% | **0 72% 55%** | RE-VALUE (dark) | `--destructive` |
 | `--destructive-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | *(not re-authored)* | RETAINED (dark) | `--destructive-foreground` |
-| `--secondary` | 40 14% 93% | 40 14% 15% | *(not authored)* | *(not authored)* | RETAINED ⚠️FLAG-B | — |
-| `--secondary-foreground` | 222 22% 14% | 222 22% 90% | *(not authored)* | *(not authored)* | RETAINED ⚠️FLAG-B | — |
+| `--secondary` | 40 14% 93% | 40 14% 15% | *(not authored)* | *(not authored)* | RETAINED (§2.0) | — |
+| `--secondary-foreground` | 222 22% 14% | 222 22% 90% | *(not authored)* | *(not authored)* | RETAINED (§2.0) | — |
 | `--muted` | 40 14% 93% | 40 14% 15% | **40 15% 93%** | **215 14% 18%** | RE-VALUE | `--muted` |
 | `--muted-foreground` | 222 10% 42% | 222 10% 65% | **215 15% 45%** | 215 10% 65% | RE-VALUE (light) | `--muted-foreground` |
 | `--success` | 142 70% 38% | 142 70% 62% | 142 70% 38% | **142 70% 48%** | RE-VALUE (dark) | `--success` |
 | `--success-foreground` | 0 0% 100% | 0 0% 4% | *(not authored)* | *(not authored)* | RETAINED | — |
 | `--warning` | 38 92% 50% | 38 92% 50% | 38 92% 50% | **38 92% 55%** | RE-VALUE (dark) | `--warning` |
 | `--warning-foreground` | 222 22% 14% | 222 22% 14% | *(not authored)* | *(not authored)* | RETAINED | — |
-| `--card` | 40 33% 98% | 40 33% 8% | **0 0% 100%** (opaque of `rgba(255,255,255,.7)`) | **222 31% 17%** (opaque of `rgba(30,41,59,.7)`) | RE-VALUE ⚠️FLAG-C | `--card` |
+| `--card` | 40 33% 98% | 40 33% 8% | **0 0% 100%** (solid fallback; §2.0) | **222 31% 17%** (solid fallback; §2.0) | RE-VALUE — **solid, canonical** (§2.0) | `--card` |
 | `--card-foreground` | 222 22% 14% | 222 22% 90% | =`--foreground` | =`--foreground` | UNCHANGED-role | `--card-foreground` |
-| `--popover` | 0 0% 100% | 40 14% 10% | **0 0% 100%** (opaque of `rgba(255,255,255,.85)`) | **222 31% 17%** (opaque of `rgba(30,41,59,.85)`) | RE-VALUE ⚠️FLAG-C | `--popover` |
+| `--popover` | 0 0% 100% | 40 14% 10% | **0 0% 100%** (solid fallback; §2.0) | **222 31% 17%** (solid fallback; §2.0) | RE-VALUE — **solid, canonical** (§2.0) | `--popover` |
 | `--popover-foreground` | 222 22% 14% | 222 22% 90% | =`--foreground` | =`--foreground` | UNCHANGED-role | `--popover-foreground` |
 | `--border` | 40 12% 86% | 40 12% 22% | **40 15% 86%** | **215 15% 20%** | RE-VALUE | `--border` |
 | `--input` | 40 12% 86% | 40 12% 22% | *(uses `--border` value)* | *(uses `--border`)* | RE-VALUE (=border) | forms use `1px solid var(--border)` |
-| `--ring` | 158 64% 32% | 158 64% 68% | **175 60% 24%** | **175 60% 32%** | RE-VALUE ⚠️FLAG-A | `--ring` |
+| `--ring` | 158 64% 32% | 158 64% 68% | **175 60% 24%** | **175 60% 32%** | RE-VALUE — **teal, canonical** (§2.0) | `--ring` |
+
+> **Token-usage rule — glass is composition, not a token (FLAG-C resolution).** `--card`/`--popover` hold the **solid** values above; nothing in `globals.css` is ever a translucent `rgba()`. Where a component needs the frosted/glass treatment the design shows (ListingCard, StoreCard, hero search), compose it at the component level: `bg-card/80` (Tailwind opacity utility on the solid token) + `backdrop-blur: var(--card-blur)` (§2.4). Raw `rgba()` must never appear in generated code.
 
 ### 2.2 Catalog / status-support tokens (Phase-03 kit)
 
-The design reference expresses these as *hardcoded* values inside status/level classes rather than as the frozen token names. Values below are the extracted hardcoded values mapped back onto the frozen token; **FLAG-D** where the design uses a gradient (two-stop) that a single solid HSL token cannot hold.
+The design reference expresses these as *hardcoded* values inside status/level classes rather than as the frozen token names. All entries below are now **canonical exact values** (FLAG-E resolved — no more "≈" hedges); the level `-bg`/`-ring` rows are RETAINED at main's solid values for MVP (FLAG-D resolved — gradients parked, see the note below the table).
 
 | Token | main (light) | main (dark) | design value (light) | Verdict | Source selector |
 |---|---|---|---|---|---|
-| `--warning-text` | 38 92% 32% | 38 92% 62% | **38 92% 32–38%** (`hsl(38,92%,38%)` on `.badge-pending`; `35%` on `.sla-badge.warning`; `32%` on `.alert-warning`) | UNCHANGED≈ ⚠️FLAG-E (multiple shades) | `.badge-pending`, `.sla-badge.warning`, `.alert-warning` |
-| `--accent-text` | 28 92% 40% | 28 92% 62% | **28 92% 40%** (`.badge-suspended`); accent hover `32 85% 38%` | UNCHANGED≈ | `.badge-suspended`, `.btn-accent:hover` |
-| `--star` | 38 92% 50% | 38 92% 55% | **38 95% 52%** (`.star.filled`); bars use `45 90% 50%` | RE-VALUE≈ ⚠️FLAG-E | `.star.filled`, `.rating-bar-fill` |
-| `--level-bronze-bg` | 28 45% 92% | 28 30% 16% | gradient `30 50% 85% → 30 50% 72%` | RETAINED ⚠️FLAG-D | `.level-bronze` |
-| `--level-bronze-fg` | 28 55% 34% | 28 50% 70% | **30 50% 25%** | RE-VALUE≈ | `.level-bronze` |
-| `--level-bronze-ring` | 28 45% 60% | 28 35% 40% | *(none; gradient edge)* | RETAINED ⚠️FLAG-D | — |
-| `--level-silver-bg` | 220 12% 92% | 220 10% 18% | gradient `0 0% 88% → 0 0% 72%` | RETAINED ⚠️FLAG-D | `.level-silver` |
-| `--level-silver-fg` | 220 10% 38% | 220 12% 72% | **0 0% 28%** | RE-VALUE≈ | `.level-silver` |
-| `--level-silver-ring` | 220 10% 65% | 220 10% 45% | *(none)* | RETAINED ⚠️FLAG-D | — |
-| `--level-gold-bg` | 43 80% 90% | 43 40% 16% | gradient `45 90% 80% → 45 90% 55%` | RETAINED ⚠️FLAG-D | `.level-gold` |
-| `--level-gold-fg` | 38 70% 32% | 43 70% 65% | **45 90% 22%** | RE-VALUE≈ | `.level-gold` |
-| `--level-gold-ring` | 43 80% 55% | 43 60% 45% | *(none)* | RETAINED ⚠️FLAG-D | — |
+| `--warning-text` | 38 92% 32% | 38 92% 62% | **38 92% 32%** (canonical — matches main exactly; the design's per-component literals `.badge-pending` 38%/`.sla-badge.warning` 35%/`.alert-warning` 32% were unintentional drift around this one token, not a re-value) | UNCHANGED | `.badge-pending`, `.sla-badge.warning`, `.alert-warning` |
+| `--accent-text` | 28 92% 40% | 28 92% 62% | **28 92% 40%** (canonical, exact match; `.btn-accent:hover`'s `32 85% 38%` is a separate button-hover shade, not this token) | UNCHANGED | `.badge-suspended` |
+| `--star` | 38 92% 50% | 38 92% 55% | **38 95% 52%** (light, canonical, from `.star.filled`) | RE-VALUE (light); dark RETAINED at main's `38 92% 55%` (not re-authored) | `.star.filled` |
+| `--level-bronze-bg` | 28 45% 92% | 28 30% 16% | *(gradient — parked, MVP ships solid; see note)* | RETAINED — solid, MVP (§2.0) | `.level-bronze` |
+| `--level-bronze-fg` | 28 55% 34% | 28 50% 70% | **30 50% 25%** (light, canonical, exact) | RE-VALUE (light); dark RETAINED at main's `28 50% 70%` | `.level-bronze` |
+| `--level-bronze-ring` | 28 45% 60% | 28 35% 40% | *(none; gradient edge — parked)* | RETAINED — solid, MVP (§2.0) | — |
+| `--level-silver-bg` | 220 12% 92% | 220 10% 18% | *(gradient — parked, MVP ships solid; see note)* | RETAINED — solid, MVP (§2.0) | `.level-silver` |
+| `--level-silver-fg` | 220 10% 38% | 220 12% 72% | **0 0% 28%** (light, canonical, exact) | RE-VALUE (light); dark RETAINED at main's `220 12% 72%` | `.level-silver` |
+| `--level-silver-ring` | 220 10% 65% | 220 10% 45% | *(none — parked)* | RETAINED — solid, MVP (§2.0) | — |
+| `--level-gold-bg` | 43 80% 90% | 43 40% 16% | *(gradient — parked, MVP ships solid; see note)* | RETAINED — solid, MVP (§2.0) | `.level-gold` |
+| `--level-gold-fg` | 38 70% 32% | 43 70% 65% | **45 90% 22%** (light, canonical, exact) | RE-VALUE (light); dark RETAINED at main's `43 70% 65%` | `.level-gold` |
+| `--level-gold-ring` | 43 80% 55% | 43 60% 45% | *(none — parked)* | RETAINED — solid, MVP (§2.0) | — |
+
+> **Level-badge gradients — explicitly OUT of current generation scope (FLAG-D resolution).** The design's two-stop gradient backgrounds for bronze/silver/gold (e.g. `linear-gradient(135deg, hsl(30,50%,85%), hsl(30,50%,72%))`) are a **parked DS-polish carry-forward**, not part of the MVP spec. Generate `LevelBadge` with **solid** `--level-*-bg`/`-ring` (main's existing values, unchanged) + the newly-canonical `--level-*-fg` above. Do not generate a gradient background now.
+>
+> **`--star` composition note:** the rating-distribution bar (`.rating-bar-fill`, `45 90% 50%`) is a **deliberate, distinct decorative literal** for that one element — a different gold than the star icon — not a second value for the `--star` token itself.
 
 ### 2.3 Non-token color literals used by the design (record for reference; NOT new tokens)
 
 These appear as one-off hardcoded values in the design and should resolve to the nearest existing token when a component is built (never inlined):
-- **Status "processing/dispatched" blue** `210 70% 40–50%` (`.badge-dispatched`, `.alert-info`) — no blue token exists. → **FLAG-F**: propose nothing yet; render via `--muted`/text until design authorizes a blue, or confirm these enums reuse an existing token.
+- ~~Status "processing/dispatched" blue~~ — **RESOLVED (FLAG-F): no longer a bare literal.** This is now the additive `--info`/`--info-foreground` pair — see §2.4b.
 - **Sold-out / wishlist tint** `hsla(350 80% 60% / .05)` (`.wishlist-btn:hover`) — decorative destructive-adjacent tint; use `--destructive` at low alpha.
 - **Footer** solid `222 22% 12%` bg + `40 14% 70–80%` text — a fixed dark band independent of theme (§5 Footer).
 - **Avatar/store gradients**: `linear-gradient(135deg, primary, accent)` (avatar), `linear-gradient(135deg, 158 40% 85%, 158 50% 70%)` (store cover) — compose from tokens, not literals.
@@ -113,9 +129,20 @@ Recorded as proposals only (this task applies nothing). Layout/effect scales the
 | `--shadow-md` | `0 10px 25px -5px rgba(0,0,0,.05), 0 8px 10px -6px rgba(0,0,0,.05)` | hover/active cards, modals-md |
 | `--shadow-lg` | `0 20px 30px -10px rgba(0,0,0,.06), 0 10px 15px -8px rgba(0,0,0,.04)` | sheets, popovers, toasts |
 | `--shadow-xl` | `0 30px 45px -15px rgba(0,0,0,.08), 0 15px 25px -10px rgba(0,0,0,.06)` | dialogs/modals |
-| `--card-blur` | `12px` (backdrop-filter) | glassmorphic card/listing-card/store-card (see FLAG-C) |
+| `--card-blur` | `12px` (backdrop-filter) | glassmorphic card/listing-card/store-card composition (see the token-usage rule in §2.1) |
 
 > **NOTE:** `main` already ships equivalent shadow *aliases* in `tailwind.config.ts` (`boxShadow.card`/`card-hover`/`dialog`). Two viable paths — (a) keep the Tailwind aliases and re-value them to the design's blur shadows, or (b) promote them to the `--shadow-*` CSS vars above. **Design to choose**; do not apply either here.
+
+### 2.4b Additive semantic tokens — `--info` / `--info-foreground` (FLAG-F resolution)
+
+New, **additive-only** token pair — nothing existing was renamed. Authored from the design's unmapped `processing`/`dispatched` blue (`210 70%`), following the same base+foreground pattern as `--primary`/`--accent`/`--destructive`/`--success`, and the same light→dark lightness-boost logic already used for those cool/saturated hues (a +10 L dark-mode lift, matching `--success`'s light→dark delta):
+
+| Token | Light | Dark | Role / source |
+|---|---|---|---|
+| `--info` | **210 70% 50%** | **210 70% 60%** | Informational status tint + text (exact match to the design's `.badge-dispatched`/`.badge-processing`/`.alert-info` base hue `210 70% 50%`; dark lifted +10 L for legibility, matching `--success`'s light→dark pattern) |
+| `--info-foreground` | **0 0% 100%** | **0 0% 100%** | Text/icon on a **solid** `--info` background (white — same convention as `--primary-foreground`/`--accent-foreground`/`--destructive-foreground`, since `--info` at this L is dark/saturated enough for AA-passing white text) |
+
+**Usage mapping:** `StatusBadge`'s `dispatched`/`processing` enums → `hsl(info/.12)` bg + `--info` fg (same "full-strength base color reads fine as text on its own 12%-alpha tint" pattern already used by `delivered/processed` on `--primary`); `.alert-info` → `hsl(info/.1)` bg + `--info` text + `hsl(info/.2)` border (mirrors the existing success/warning/destructive alert pattern in §5.36).
 
 ---
 
@@ -137,7 +164,7 @@ Recorded as proposals only (this task applies nothing). Layout/effect scales the
 
 ### 3.3 Radius
 `--radius 12px` (base). Scale: `--radius-lg = 12px` (cards, sheets, modals, galleries) · `--radius-md = 10px` (buttons, inputs, badges-on-square, thumbs) · `--radius-sm = 8px` (checkbox, focus inset) · `--radius-full = 9999px` (pills, badges, chips, avatars, toggles, search bars).
-> ⚠️ **FLAG-G — radius mismatch:** design base `--radius` = **12px (0.75rem)**; `main`/`tailwind.config.ts` base `--radius` = **0.625rem (10px)**. RE-VALUE proposed (10px→12px); Tailwind's `lg/md/sm` derive off `--radius`, so this shifts all three. Design to confirm before applying.
+> **FLAG-G RESOLVED — `--radius` = 12px (0.75rem) is canonical.** This supersedes `main`/`tailwind.config.ts`'s current base of `0.625rem` (10px) — a genuine, confirmed re-value. `--radius-lg/-md/-sm` cascade off `--radius` automatically, so this one change shifts all three consistently. **The cascade is intentional and applies at values-apply time** (the future `globals.css`/`tailwind.config.ts` task), **not in this docs-only pass.**
 
 ### 3.4 Shadows (glassmorphic blur set)
 See §2.4 for the four-step `--shadow-sm/md/lg/xl` values. Usage: **sm** = card at rest · **md** = hover/active card, `.modal`(sm), quick-action/category hover · **lg** = auth-card, toast, `.sla`/popovers · **xl** = `.modal` dialog. Elevation is the primary (non-hover-dependent) affordance.
@@ -147,8 +174,8 @@ See §2.4 for the four-step `--shadow-sm/md/lg/xl` values. Usage: **sm** = card 
 ## 4. Global base & focus
 - `box-sizing:border-box`, zeroed margins/padding, `html{font-size:16px; scroll-behavior:smooth}`, `body{font-family:var(--font-body); line-height:1.8; bg:var(--background); color:var(--foreground)}`.
 - **Focus (WCAG AA, keyboard-visible):** `:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }` globally; inputs additionally get `box-shadow: 0 0 0 3px hsl(var(--ring)/.15)` on focus. Focus ring is a **required, non-hover** state on every interactive element.
-- **Selection:** `background: hsl(var(--primary)/.2)` (see FLAG-A re: exact hue).
-- **Links:** color `--primary`, hover darkens (design hover literal `158 64% 24%` — FLAG-A).
+- **Selection:** `background: hsl(var(--primary)/.2)` — canonical teal (§2.0 FLAG-A); the design source's `::selection` literal (`158 64% 32%`) was the same stale carryover and is not applied.
+- **Links:** color `--primary` (teal); hover/focus darken along the same teal hue as `.btn-primary:hover` (light L 24%→18%, dark L 32%→28%) — the design source's `a:hover`/`.dark a:hover` literals (`158 64% 24%`/`158 64% 52%`) were the same stale green carryover (§2.0 FLAG-A), not a second brand hue.
 - **Icons:** outline SVG, 24×24 viewBox, `stroke="currentColor"`, `stroke-width="2"`; sizes 14/16/18/20/22/36 per context. No emojis.
 - **Reduced motion:** all component transitions are decorative (150–300ms, `ease`/`cubic-bezier(.4,0,.2,1)`); honor `prefers-reduced-motion` by dropping transform/animation. *(Not authored in the reference — record as the standing rule; not a per-component spec.)*
 
@@ -172,13 +199,13 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **RTL/LTR:** all padding logical; hairlines full-width. Canonical RTL.
 
 ### 5.3 ListingCard (`.listing-card`)
-- **Anatomy:** block `<a>`, bg `--card` + **backdrop-blur 12px** (glass, FLAG-C), `1px --border`, radius **lg**, `--shadow-sm`. Image `.listing-card-img` **aspect-ratio 4/3** (→ **1/1 on ≤768px**), `object-fit:cover`, `--muted` placeholder. Body `.listing-card-body` padding `--space-3 --space-4`; title font-display 600 `--text-sm`, **2-line clamp**; `.listing-card-store` `--text-xs` muted; footer `.listing-card-footer` flex space-between padding `--space-2 --space-4 --space-3` (price ⇄ wishlist/badge).
+- **Anatomy:** block `<a>`, bg `bg-card/80` (Tailwind opacity utility over the solid `--card` token) + `backdrop-blur: var(--card-blur)` (12px) — glass composition per §2.0/§2.1, never a raw `rgba()` — `1px --border`, radius **lg**, `--shadow-sm`. Image `.listing-card-img` **aspect-ratio 4/3** (→ **1/1 on ≤768px**), `object-fit:cover`, `--muted` placeholder. Body `.listing-card-body` padding `--space-3 --space-4`; title font-display 600 `--text-sm`, **2-line clamp**; `.listing-card-store` `--text-xs` muted; footer `.listing-card-footer` flex space-between padding `--space-2 --space-4 --space-3` (price ⇄ wishlist/badge).
 - **In collection strip:** `min-width 220px`, `max-width 260px`, `scroll-snap-align:start`.
 - **States:** default; **hover** = `--shadow-md` + `translateY(-4px)` + border `hsl(primary/.2)` (enhancement); **skeleton** = image block + 2 text lines + footer line shimmer; **empty** = parent grid shows EmptyState; **error** = parent shows ErrorRetryCard. Composes PriceBlock, WishlistButton, StatusBadge(boost), StockBadge.
 - **RTL/LTR:** image full-width (neutral); footer flips price/action ends automatically. Canonical RTL.
 
 ### 5.4 StoreCard (`.store-card`)
-- **Anatomy:** flex row, `gap --space-3`, padding `--space-4`, `--card`+blur, `1px --border`, radius **lg**, `--shadow-sm`. `.store-avatar` 56×56 circle, `--muted`, `flex-shrink:0`, `object-fit:cover`; text column (name font-display, meta muted, LevelBadge/VerifiedBadge/RatingSummary).
+- **Anatomy:** flex row, `gap --space-3`, padding `--space-4`, `bg-card/80` + `backdrop-blur: var(--card-blur)` (same glass composition as ListingCard, §2.1), `1px --border`, radius **lg**, `--shadow-sm`. `.store-avatar` 56×56 circle, `--muted`, `flex-shrink:0`, `object-fit:cover`; text column (name font-display, meta muted, LevelBadge/VerifiedBadge/RatingSummary).
 - **States:** default; **hover** `--shadow-md` + `translateY(-2px)`; **skeleton** = circle + 2 lines; empty/error at parent.
 - **RTL/LTR:** avatar leads at inline-start (right in RTL, left in LTR) via source order + `gap`. Canonical RTL.
 
@@ -191,7 +218,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
   - cancelled/rejected/banned/removed → `destructive/.12` bg, `--destructive` fg
   - expired/closed/declined → `muted/.8` bg, `--muted-foreground` fg
   - draft → `--muted` bg, muted fg
-  - dispatched/processing → blue `210 70% 50% /.12` bg (FLAG-F)
+  - dispatched/processing → `info/.12` bg, `--info` fg (§2.4b — resolved FLAG-F)
   - suspended → `accent/.15` bg, `accent-text` fg
   - boosted → solid `--accent` bg, `--accent-foreground` fg
   - sold-out → `destructive/.1` bg, `--destructive` fg
@@ -199,7 +226,8 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **States:** static display; no skeleton/empty/error (atomic). Bilingual: label text is a **string prop** (DS-I18N), never hardcoded.
 
 ### 5.6 LevelBadge (`.level-badge`, `.level-{bronze,silver,gold}`)
-- **Anatomy:** `inline-flex`, `gap --space-1`, **700** `--text-xs`, padding `.2rem .65rem`, radius **full**. Metallic **gradient** bg (135deg) + dark same-hue fg — bronze `30 50% 85→72%`/fg `30 50% 25%`; silver `0 0% 88→72%`/fg `0 0% 28%`; gold `45 90% 80→55%`/fg `45 90% 22%`. ⚠️FLAG-D (gradients vs solid `--level-*` tokens).
+- **Anatomy (MVP — FLAG-D resolved):** `inline-flex`, `gap --space-1`, **700** `--text-xs`, padding `.2rem .65rem`, radius **full**. Ships **SOLID** for MVP: `--level-{bronze,silver,gold}-bg` + `-ring` (main's existing values, unchanged) + the canonical `--level-{bronze,silver,gold}-fg` from §2.2 (bronze `30 50% 25%`; silver `0 0% 28%`; gold `45 90% 22%`, all light-authored, dark RETAINED at main).
+- **Parked (out of current scope):** the design's metallic **gradient** treatment (135deg two-stop: bronze `30 50% 85→72%`; silver `0 0% 88→72%`; gold `45 90% 80→55%`) is a DS-polish carry-forward — do not generate it now (§2.2 note).
 - **States:** static; label is a string prop.
 
 ### 5.7 VerifiedBadge (`.verified-badge`)
@@ -246,7 +274,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - `sticky top:0 z-30`, height `--topbar-height`, `--card`, bottom hairline, `padding-inline --space-5`, `.page-title` font-display 700 `--text-lg`.
 
 ### 5.17 StarRating (`.stars`, `.star`) & RatingSummary (`.rating-summary`, `.rating-bars`)
-- **Stars:** `inline-flex gap 2px`, **`direction:ltr`** (ratings read LTR in both locales). Star 16×16; empty `210 10% 80%` (dark `215 15% 28%`); `.filled/.half` → gold `38 95% 52%` (≈`--star`). 
+- **Stars:** `inline-flex gap 2px`, **`direction:ltr`** (ratings read LTR in both locales). Star 16×16; empty `210 10% 80%` (dark `215 15% 28%`); `.filled/.half` → gold `38 95% 52%` (canonical `--star`, light; §2.2 — FLAG-E resolved).
 - **RatingSummary:** flex `gap --space-2`; `.rating-number` font-display 700 `--text-h2`; `.rating-count` `--text-sm` muted. **Distribution bars:** `.rating-bar-row` (label 12px + track + count); track `height 6px` bg `--muted` radius full; fill gold `45 90% 50%`.
 - **States:** default; skeleton = star row + bar shimmer; empty = "no reviews yet" EmptyState. Star count is a plural string prop (bilingual). **LTR-canonical for the star row specifically.**
 
@@ -320,7 +348,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 
 ### 5.36 Progress (`.progress-track`, `.progress-fill`) & Alert (`.alert`)
 - **Progress:** track `height 8px` `--muted` radius full; fill `--primary` (`.accent`/`.success` variants), `width` transition. Used in onboarding/level/payout.
-- **Alert banner:** padding `--space-3 --space-4`, radius **md**, `--text-sm`, flex `gap --space-3` icon+text. `info` blue `210 70%` tint (FLAG-F); `success`/`warning`/`destructive` = token tints + matching text. States: static; dismissible variant optional.
+- **Alert banner:** padding `--space-3 --space-4`, radius **md**, `--text-sm`, flex `gap --space-3` icon+text. `info` → `hsl(info/.1)` bg + `--info` text + `hsl(info/.2)` border (§2.4b — resolved FLAG-F); `success`/`warning`/`destructive` = token tints + matching text. States: static; dismissible variant optional.
 
 ### 5.37 Footer (`.footer`)
 - **Fixed dark band** (theme-independent): bg `222 22% 12%`, text `40 14% 80%`, padding `--space-12 --space-4`. Grid `2fr 1fr 1fr 1fr` (→ `1fr 1fr` ≤768, `1fr` ≤480). Logo font-display **800** `--text-h2` `--primary`; column `h4` white 700; links `40 14% 70%` → `--primary` hover. `.footer-bottom` top hairline + centered `--text-xs` @ .6.
