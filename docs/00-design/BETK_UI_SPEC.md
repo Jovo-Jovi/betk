@@ -8,49 +8,14 @@
 
 ## 1. Design System
 
-The C-documents do not define visual tokens (they stop at the data layer), so the token set below is the proposed BETK design system. It is constrained by three hard requirements that **are** documented: **Arabic-first RTL** (G5, C1 §1.1), a trust-forward marketplace aesthetic (G2), and a low-end Egyptian mobile-network target (C2 §7.3 — connection churn, aggressive caching). Component library and styling are fixed by the task.
+**The visual language is defined in one place: [`BETK_DESIGN_BRIEF.md`](./BETK_DESIGN_BRIEF.md) — the LOCKED, self-contained design source.** All token *values* (all frozen tokens, light **and** dark), the type / spacing / radius / shadow scales, per-component anatomy (with default/skeleton/empty/error states, RTL-canonical + explicit LTR notes), and the logo system live there. **This spec does not duplicate value tables** — it references the brief so there is a single source. When a value or component detail is needed, read the brief; never inline a hex/HSL here.
 
-- **Component library:** shadcn/ui (Radix primitives + Tailwind). All interactive primitives (Dialog, Sheet, DropdownMenu, Tabs, Toast, Command, Form) come from shadcn. RTL is enabled globally via `dir="rtl"` on `<html>` with `lang="ar"`; LTR islands (e.g. Latin handles, BETK refs, tracking numbers) use `dir="ltr"` wrappers.
-- **Styling:** Tailwind CSS (v3.4+), `tailwindcss-rtl` logical-property plugin so `ps-*/pe-*/ms-*/me-*` resolve correctly under RTL. No raw `left/right` utilities in shared components.
+The design system is constrained by three documented requirements: **bilingual Arabic/English** with **Arabic-first RTL as the canonical direction** and EN-LTR mirrored (G5, C1 §1.1; OD-7 — see §4 Localization & theming), a trust-forward marketplace aesthetic (G2), and a low-end Egyptian mobile-network target (C2 §7.3 — connection churn, aggressive caching; no hover-only controls). Everything must be usable in all four AR-RTL / EN-LTR × light / dark contexts.
 
-### Typography tokens
-
-Arabic-capable typefaces are mandatory; Latin fallback is paired.
-
-| Token | Face | Usage |
-|---|---|---|
-| `--font-display` | "Cairo", "IBM Plex Sans Arabic", system-ui | Headings, store names, prices, hero |
-| `--font-body` | "IBM Plex Sans Arabic", "Noto Sans Arabic", system-ui | Body copy, forms, labels |
-| `--font-mono` | "IBM Plex Mono", ui-monospace | BETK refs (`BETK-YYYYMMDD-XXXX`), tracking numbers, transfer references, OTP digits |
-
-Type scale (Tailwind, rem): `display 2.25 / h1 1.875 / h2 1.5 / h3 1.25 / lg 1.125 / base 1 / sm 0.875 / xs 0.75`. Line-height is loosened one step versus Latin defaults (`leading-relaxed` on body) for Arabic legibility.
-
-### Color tokens (HSL, light theme; dark theme mirrors with inverted L)
-
-| Token | Value | Role |
-|---|---|---|
-| `--background` | 40 33% 98% | App canvas (warm off-white) |
-| `--foreground` | 222 22% 14% | Primary text |
-| `--primary` | 158 64% 32% | BETK brand green — CTAs, active nav, verified accents |
-| `--primary-foreground` | 0 0% 100% | Text on primary |
-| `--accent` | 28 92% 54% | Boost/featured highlights, promotional badges |
-| `--accent-foreground` | 0 0% 100% | Text on accent |
-| `--destructive` | 0 72% 48% | Delete, cancel order, ban, dispute-lost |
-| `--destructive-foreground` | 0 0% 100% | Text on destructive |
-| `--muted` | 40 14% 93% | Skeletons, disabled, secondary surfaces |
-| `--muted-foreground` | 222 10% 42% | Secondary/help text, timestamps |
-| `--success` | 142 70% 38% | Confirmed payment, delivered, approved |
-| `--warning` | 38 92% 50% | Pending review, SLA approaching, low stock |
-| `--border` | 40 12% 86% | Hairlines, inputs, card edges |
-| `--ring` | 158 64% 32% | Focus ring (matches primary) |
-
-Status-to-color mapping is centralized (see §4 `StatusBadge`) so the order/seller/dispute/payment enums from C3 §2 render consistently everywhere.
-
-### Border radius, spacing, shadow
-
-- **Radius:** `--radius: 0.625rem` (10px). Cards/sheets `lg` (radius), buttons/inputs `md` (radius − 2px), pills/badges `full`.
-- **Spacing:** 4px base unit; section rhythm on 8/12/16/24. Mobile gutters `px-4`, desktop content max-width `max-w-screen-xl` with `px-6`.
-- **Shadows:** `shadow-sm` for cards at rest, `shadow-md` on hover/active for listing cards, `shadow-lg` for sheets/popovers/dialogs. Elevation is the only hover affordance on touch — no hover-only controls.
+- **Component library:** shadcn/ui (Radix primitives + Tailwind). All interactive primitives (Dialog, Sheet, DropdownMenu, Tabs, Toast, Command, Form) come from shadcn. Direction/lang derive from the `[locale]` layout (`ar → dir="rtl" lang="ar"`, `en → dir="ltr" lang="en"`); LTR islands (Latin handles, BETK refs, tracking numbers, prices, OTP) use `dir="ltr"` wrappers.
+- **Styling:** Tailwind CSS (v3.3+), native logical-property utilities (`ps-*/pe-*/ms-*/me-*/start-*/end-*/rounded-s-*/rounded-e-*`) resolve correctly under both directions — **no `tailwindcss-rtl` plugin, no raw `left/right`** in shared components.
+- **Tokens & scales:** see `BETK_DESIGN_BRIEF.md §2` (color tokens, light + dark; frozen names) and `§3` (type / spacing / radius / shadow). Token names are FROZEN (`tailwind.config.ts` + shared components + DS-I18N wiring depend on them).
+- **Status-to-color mapping** is centralized (see §4 `StatusBadge` and `constants/statusColors.ts`) so the order/seller/dispute/payment enums from C3 §2 render consistently everywhere; the per-enum tints are recorded in `BETK_DESIGN_BRIEF.md §5.5`.
 
 ---
 
@@ -923,6 +888,94 @@ BETK is a **bilingual Arabic/English** app with **light/dark** theming over the 
   - **Transactional/structured fields** (price, stock, condition, dates) → language-neutral/enum.
 - **Switch location.** The language switch (AR ↔ EN) and theme switch (light/dark/system) live in **Account → Settings** (built in BL-03). Switching language keeps the user on the same page in the other locale.
 - **Deferred papercut.** `order_items` snapshots only `listing_title_ar`, so English buyers' order history shows the Arabic title (fixing = a future `_en` column, out of OD-7 scope).
+
+---
+
+## Acceptance matrix — AR-RTL / EN-LTR × light / dark (OD-7)
+
+Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL, en-LTR} × {light, dark}`. Check a cell off (`☑`) only when that screen has shipped and been UI-reviewed in that context (from Phase 03 **T02** onward). **Screen inventory is FROZEN — no screen added or removed here.** Rows are the documented pages of §3, grouped by surface. Legend: `☐` not yet shipped/verified · `☑` shipped + UI-reviewed.
+
+> **Count reconciliation (docs-hygiene FLAG, not a scope change):** §3 documents **60 page headings** (**59 standalone pages** — *WhatsApp Templates* is a merged Admin→Settings tab per OD-5, not a standalone page). The headline figure carried elsewhere is "**56 pages**", and the `MVP_SCOPE §4` parenthetical breakdown `Public(5)/Auth(3)/Buyer(13)/Seller(22)/Admin(18)` sums to 61 — three different numbers. This is a pre-existing numbering inconsistency in the source docs; reconciling the headline is a docs-hygiene follow-up (see the Phase-4 worklist), **not** an add/remove of any screen. The matrix below enumerates exactly the §3 pages.
+
+### Public / Guest (5)
+| Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
+|---|---|---|---|---|
+| Homepage | ☐ | ☐ | ☐ | ☐ |
+| Search & Filter Results | ☐ | ☐ | ☐ | ☐ |
+| Category Browse | ☐ | ☐ | ☐ | ☐ |
+| Listing Detail | ☐ | ☐ | ☐ | ☐ |
+| Public Storefront | ☐ | ☐ | ☐ | ☐ |
+
+### Auth (3)
+| Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
+|---|---|---|---|---|
+| Phone Entry (Login / Register start) | ☐ | ☐ | ☐ | ☐ |
+| OTP Verification | ☐ | ☐ | ☐ | ☐ |
+| Complete Buyer Profile | ☐ | ☐ | ☐ | ☐ |
+
+### Buyer (13)
+| Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
+|---|---|---|---|---|
+| Account / Profile | ☐ | ☐ | ☐ | ☐ |
+| Address Book | ☐ | ☐ | ☐ | ☐ |
+| Wishlist & Saved | ☐ | ☐ | ☐ | ☐ |
+| Followed Sellers | ☐ | ☐ | ☐ | ☐ |
+| Buyer Inbox (Inquiries) | ☐ | ☐ | ☐ | ☐ |
+| Checkout | ☐ | ☐ | ☐ | ☐ |
+| Order Confirmation & Payment Instructions | ☐ | ☐ | ☐ | ☐ |
+| Order History | ☐ | ☐ | ☐ | ☐ |
+| Order Detail / Track Order | ☐ | ☐ | ☐ | ☐ |
+| Leave Review | ☐ | ☐ | ☐ | ☐ |
+| Raise Dispute | ☐ | ☐ | ☐ | ☐ |
+| Dispute Detail / Thread (Buyer) | ☐ | ☐ | ☐ | ☐ |
+| Notifications Center | ☐ | ☐ | ☐ | ☐ |
+
+### Seller (22)
+| Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
+|---|---|---|---|---|
+| Seller Onboarding (5-step) | ☐ | ☐ | ☐ | ☐ |
+| Seller Application Status | ☐ | ☐ | ☐ | ☐ |
+| Seller Dashboard | ☐ | ☐ | ☐ | ☐ |
+| Store Profile Settings | ☐ | ☐ | ☐ | ☐ |
+| Delivery Settings | ☐ | ☐ | ☐ | ☐ |
+| Return Policy Settings | ☐ | ☐ | ☐ | ☐ |
+| Payment Methods Settings | ☐ | ☐ | ☐ | ☐ |
+| Listings Management | ☐ | ☐ | ☐ | ☐ |
+| Create / Edit Listing | ☐ | ☐ | ☐ | ☐ |
+| Stock & Inventory | ☐ | ☐ | ☐ | ☐ |
+| Boost Listing | ☐ | ☐ | ☐ | ☐ |
+| Boost Management / History | ☐ | ☐ | ☐ | ☐ |
+| Seller Inbox (Inquiries) | ☐ | ☐ | ☐ | ☐ |
+| Orders Management (Seller) | ☐ | ☐ | ☐ | ☐ |
+| Order Detail (Seller) | ☐ | ☐ | ☐ | ☐ |
+| Reviews Management (Seller) | ☐ | ☐ | ☐ | ☐ |
+| Earnings | ☐ | ☐ | ☐ | ☐ |
+| Transactions | ☐ | ☐ | ☐ | ☐ |
+| Request Payout | ☐ | ☐ | ☐ | ☐ |
+| Level Progress | ☐ | ☐ | ☐ | ☐ |
+| Seller Analytics | ☐ | ☐ | ☐ | ☐ |
+| Dispute Detail (Seller) | ☐ | ☐ | ☐ | ☐ |
+
+### Admin (17 headings — incl. WhatsApp Templates as a merged tab)
+| Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
+|---|---|---|---|---|
+| Admin Dashboard | ☐ | ☐ | ☐ | ☐ |
+| Seller Approval Queue | ☐ | ☐ | ☐ | ☐ |
+| User & Seller Management | ☐ | ☐ | ☐ | ☐ |
+| Listings Moderation (Admin) | ☐ | ☐ | ☐ | ☐ |
+| Flagged Content Queue | ☐ | ☐ | ☐ | ☐ |
+| Reviews Moderation | ☐ | ☐ | ☐ | ☐ |
+| Categories Management | ☐ | ☐ | ☐ | ☐ |
+| Orders Management (Admin) | ☐ | ☐ | ☐ | ☐ |
+| Disputes Management (Admin) | ☐ | ☐ | ☐ | ☐ |
+| Payments Management (Admin) | ☐ | ☐ | ☐ | ☐ |
+| Payouts Management (Admin) | ☐ | ☐ | ☐ | ☐ |
+| Editorial Collections | ☐ | ☐ | ☐ | ☐ |
+| Notifications Broadcast | ☐ | ☐ | ☐ | ☐ |
+| WhatsApp Templates *(merged tab — Admin → Settings → Notifications; not a standalone page, OD-5)* | ☐ | ☐ | ☐ | ☐ |
+| Admin Settings | ☐ | ☐ | ☐ | ☐ |
+| Moderation Log | ☐ | ☐ | ☐ | ☐ |
+| Boost Approval (Admin) | ☐ | ☐ | ☐ | ☐ |
 
 ---
 
