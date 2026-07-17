@@ -9,7 +9,7 @@ import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "../_providers/ThemeProvider";
 import { SentryProvider } from "../_providers/SentryProvider";
 import { PostHogProvider } from "../_providers/PostHogProvider";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/shared/Toaster";
 
 /**
  * Display font — headings, store names, prices, hero.
