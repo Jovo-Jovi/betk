@@ -11,6 +11,19 @@
     "search": "Search",
     "account": "Account"
   },
+  "chrome": {
+    "searchPlaceholder": "Search BETK…",
+    "notifications": "Notifications",
+    "theme": "Toggle theme",
+    "account": "Account",
+    "nav": {
+      "home": "Home",
+      "search": "Search",
+      "wishlist": "Wishlist",
+      "inbox": "Messages",
+      "account": "Account"
+    }
+  },
   "auth": {
     "loginTitle": "Welcome to BETK",
     "loginSubtitle": "Enter your phone number to receive a verification code",

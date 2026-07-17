@@ -17,8 +17,11 @@
 
 import { useState } from "react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
+import { Home, Search, Heart, MessageSquare, User } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { AppTopbar, MobileBottomNav } from "@/components/shared";
+import type { BottomNavItem } from "@/components/shared/MobileBottomNav";
 import { routes } from "@/constants/routes";
 
 /** Bottom-nav item id → canonical (locale-neutral) route. */
@@ -28,6 +31,15 @@ const NAV_ROUTES: Record<string, string> = {
   wishlist: routes.buyer.wishlist,
   inbox: routes.buyer.inbox,
   account: routes.buyer.account,
+};
+
+/** Bottom-nav icons by id (label text is supplied by next-intl, below). */
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  home: <Home className="size-[22px]" />,
+  search: <Search className="size-[22px]" />,
+  wishlist: <Heart className="size-[22px]" />,
+  inbox: <MessageSquare className="size-[22px]" />,
+  account: <User className="size-[22px]" />,
 };
 
 /** Derive the active nav id from the locale-stripped pathname. */
@@ -45,9 +57,17 @@ export function AppChrome() {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
+  const t = useTranslations("chrome");
 
   const isDark = resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
+
+  // Locale-aware bottom-nav items: default icons + next-intl labels (ar/en).
+  const navItems: BottomNavItem[] = ["home", "search", "wishlist", "inbox", "account"].map((id) => ({
+    id,
+    icon: NAV_ICONS[id],
+    label: t(`nav.${id}`),
+  }));
 
   return (
     <>
@@ -57,6 +77,11 @@ export function AppChrome() {
         onSearchSubmit={(v) =>
           router.push(v ? `${routes.search}?q=${encodeURIComponent(v)}` : routes.search)
         }
+        logoSrc="/logo/beh-64.png"
+        searchPlaceholder={t("searchPlaceholder")}
+        notifLabel={t("notifications")}
+        themeLabel={t("theme")}
+        accountLabel={t("account")}
         isDark={isDark}
         onThemeToggle={() => setTheme(isDark ? "light" : "dark")}
         onLogoClick={() => router.push(routes.home)}
@@ -64,6 +89,7 @@ export function AppChrome() {
         onAvatarClick={() => router.push(routes.buyer.account)}
       />
       <MobileBottomNav
+        items={navItems}
         activeId={activeId}
         onSelect={(id) => {
           const to = NAV_ROUTES[id];

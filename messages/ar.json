@@ -11,6 +11,19 @@
     "search": "بحث",
     "account": "حسابي"
   },
+  "chrome": {
+    "searchPlaceholder": "ابحث في بيتك…",
+    "notifications": "الإشعارات",
+    "theme": "تبديل المظهر",
+    "account": "حسابي",
+    "nav": {
+      "home": "الرئيسية",
+      "search": "بحث",
+      "wishlist": "المفضلة",
+      "inbox": "الرسائل",
+      "account": "حسابي"
+    }
+  },
   "auth": {
     "loginTitle": "أهلاً بك في بيتك",
     "loginSubtitle": "ادخل رقم هاتفك لاستلام كود التحقق",
