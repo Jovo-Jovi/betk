@@ -32,7 +32,7 @@ export interface StoreCardProps {
 
 export function StoreCard({ name, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, className }: StoreCardProps) {
   return (
-    <div className={cn("flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-card", className)}>
+    <div className={cn("flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm", className)}>
       <div
         className="h-16 bg-muted"
         style={cover ? { background: `center/cover no-repeat url(${cover})` } : { background: "linear-gradient(120deg, hsl(var(--primary)/0.18), hsl(var(--accent)/0.14))" }}

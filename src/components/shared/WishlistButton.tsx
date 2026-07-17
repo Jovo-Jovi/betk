@@ -32,7 +32,7 @@ export function WishlistButton({ active = false, onToggle, size = "md", overlay 
       className={cn(
         "inline-flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         PX[size],
-        overlay ? "bg-popover/90 shadow-card" : "border border-border",
+        overlay ? "bg-popover/90 shadow-sm" : "border border-border",
         active ? "text-destructive" : "text-muted-foreground",
         className,
       )}

@@ -12,7 +12,7 @@ import type { PriceType } from "@/constants/enums";
  * in as a prop (Arabic default); title/store are data. Nested strings
  * (price qualifiers, stock, wishlist aria) are handled by the child
  * components' own i18n props — forward them via the pass-through props below
- * if you need to localize them here. Lifts shadow-card → shadow-card-hover.
+ * if you need to localize them here. Lifts shadow-sm → shadow-md (legacy shadow-card aliases retired per brief §3.4).
  * NOTE: swap the <img> for next/image once image domains are configured.
  */
 export interface ListingCardProps {
@@ -42,7 +42,7 @@ export function ListingCard({
   return (
     <div
       onClick={onClick}
-      className={cn("group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card shadow-card transition-shadow hover:shadow-card-hover", className)}
+      className={cn("group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md", className)}
     >
       <div className="relative">
         <div className="flex aspect-square items-center justify-center bg-secondary">
