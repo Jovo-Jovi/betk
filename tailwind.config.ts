@@ -54,6 +54,11 @@ const config: Config = {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        /* ── DS-REGEN additive: informational status (brief §2.4b, FLAG-F) ── */
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
@@ -84,28 +89,36 @@ const config: Config = {
         "level-gold-bg": "hsl(var(--level-gold-bg))",
         "level-gold-fg": "hsl(var(--level-gold-fg))",
         "level-gold-ring": "hsl(var(--level-gold-ring))",
+
+        /* ── DS-REGEN additive: theme-independent footer band (§2.3/§5.37) ── */
+        "footer-bg": "hsl(var(--footer-bg))",
+        "footer-fg": "hsl(var(--footer-fg))",
+        "footer-logo": "hsl(var(--footer-logo))",
       },
 
-      /* ── Border radius — 0.625 rem base (UI Spec §1) ── */
+      /* ── Border radius — 0.75rem/12px base (FLAG-G, brief §3.3) ── */
       borderRadius: {
-        // --radius = 0.625rem (10 px)
-        lg: "var(--radius)",            // cards, sheets
-        md: "calc(var(--radius) - 2px)", // buttons, inputs
-        sm: "calc(var(--radius) - 4px)", // small elements
-        full: "9999px",                  // pills, badges
+        // --radius = 0.75rem (12px) — supersedes main's 0.625rem
+        lg: "var(--radius)",             // 12px — cards, sheets, modals, galleries
+        md: "calc(var(--radius) - 2px)", // 10px — buttons, inputs
+        sm: "calc(var(--radius) - 4px)", // 8px — checkbox, focus insets
+        full: "9999px",                  // pills, badges, avatars, search
       },
 
-      /* ── Type scale (UI Spec §1, rem) ── */
+      /* ── Type scale (brief §3.1, rem) ── */
       fontSize: {
-        // Custom BETK names that extend Tailwind defaults
-        display: ["2.25rem", { lineHeight: "3rem", fontWeight: "700" }],
-        h1:      ["1.875rem", { lineHeight: "2.25rem", fontWeight: "700" }],
-        h2:      ["1.5rem",   { lineHeight: "2rem",    fontWeight: "600" }],
-        h3:      ["1.25rem",  { lineHeight: "1.75rem", fontWeight: "600" }],
+        display: ["2.25rem", { lineHeight: "1.3", fontWeight: "800" }],
+        h1:      ["1.875rem", { lineHeight: "1.3", fontWeight: "700" }],
+        h2:      ["1.5rem",   { lineHeight: "1.3", fontWeight: "700" }],
+        h3:      ["1.25rem",  { lineHeight: "1.3", fontWeight: "600" }],
         // lg, base, sm, xs match Tailwind defaults — no override needed
+        // (Arabic body copy uses leading-loose ≈ 1.8 per §3.1)
       },
 
-      /* ── Font families (CSS vars injected by next/font in layout.tsx) ── */
+      /* ── Font families (CSS vars injected by next/font in layout.tsx) ──
+         Kept VERBATIM from repo main per sign-off 2026-07-17. A corrected
+         fallback set (display→Cairo, body→IBM Plex Sans Arabic, mono→IBM Plex
+         Mono) is PROPOSED in CHANGELOG.md — not applied here. */
       fontFamily: {
         display: ["var(--font-display)", "IBM Plex Sans Arabic", "system-ui", "sans-serif"],
         body:    ["var(--font-body)",    "Noto Sans Arabic",     "system-ui", "sans-serif"],
@@ -113,16 +126,30 @@ const config: Config = {
         sans:    ["var(--font-body)",    "Noto Sans Arabic",     "system-ui", "sans-serif"],
       },
 
-      /* ── Shadows (UI Spec §1) ── */
+      /* ── Shadows — tokenized 4-step scale (brief §3.4) ──
+         REPLACES the legacy card/card-hover/dialog aliases. Migration:
+         shadow-card → shadow-sm · shadow-card-hover → shadow-md ·
+         shadow-dialog → shadow-xl. ui/sonner.tsx (immutable) still names
+         shadow-card, but it is superseded by shared/Toaster.tsx and no
+         longer mounted — do not re-add the alias. */
       boxShadow: {
-        // sm  → cards at rest
-        // md  → hover/active listing cards
-        // lg  → sheets, popovers, dialogs
-        // Tailwind's built-in sm/md/lg shadows are used as-is;
-        // add BETK-specific aliases for semantic clarity
-        card:   "0 1px 3px 0 hsl(222 22% 14% / 0.08), 0 1px 2px -1px hsl(222 22% 14% / 0.06)",
-        "card-hover": "0 4px 6px -1px hsl(222 22% 14% / 0.10), 0 2px 4px -2px hsl(222 22% 14% / 0.08)",
-        dialog: "0 20px 25px -5px hsl(222 22% 14% / 0.12), 0 8px 10px -6px hsl(222 22% 14% / 0.08)",
+        sm: "var(--shadow-sm)",   // cards at rest
+        md: "var(--shadow-md)",   // hover/active lift
+        lg: "var(--shadow-lg)",   // sheets, popovers, toasts
+        xl: "var(--shadow-xl)",   // dialogs
+      },
+
+      /* ── Layout + effect tokens (brief §2.4/§3.2) ── */
+      spacing: {
+        sidebar: "var(--sidebar-width)",       // 260px
+        topbar: "var(--topbar-height)",        // 64px
+        bottomnav: "var(--bottom-nav-height)", // 60px
+      },
+      maxWidth: {
+        container: "var(--container-max)",     // 1280px
+      },
+      backdropBlur: {
+        card: "var(--card-blur)",              // 12px glass surfaces
       },
     },
   },
