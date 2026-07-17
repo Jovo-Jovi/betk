@@ -1,6 +1,8 @@
 /**
- * BETK shared design-system components — Phase 03 catalog barrel.
- * Re-exports so feature code can `import { ListingCard, PriceBlock } from "@/components/shared"`.
+ * BETK shared design-system components — DS-REGEN barrel.
+ * Strict superset of the Phase 03 barrel: every existing export kept verbatim,
+ * net-new §7 components appended below. Feature code keeps importing
+ * `import { ListingCard, PriceBlock } from "@/components/shared"`.
  * Button/Badge/Card/etc. live in components/ui (the immutable shadcn base) — not re-exported here.
  */
 
@@ -60,3 +62,24 @@ export {
   ListingCardSkeleton,
   StoreCardSkeleton,
 } from "./CatalogSkeletons";
+
+// ── DS-REGEN net-new (brief §5/§7) ──────────────────────────
+export { SLABadge } from "./SLABadge";
+export type { SLABadgeProps } from "./SLABadge";
+export { AppTopbar } from "./AppTopbar";
+export type { AppTopbarProps } from "./AppTopbar";
+export { MobileBottomNav } from "./MobileBottomNav";
+export type { MobileBottomNavProps, BottomNavItem } from "./MobileBottomNav";
+export { ConsoleSidebar, SellerSidebar, AdminSidebar } from "./ConsoleSidebar";
+export type { ConsoleSidebarProps, SidebarSection, SidebarItem } from "./ConsoleSidebar";
+export { ConfirmDialog } from "./ConfirmDialog";
+export type { ConfirmDialogProps } from "./ConfirmDialog";
+export { Toaster } from "./Toaster";
+export { MessageThread } from "./MessageThread";
+export type { MessageThreadProps, ThreadMessage } from "./MessageThread";
+export { OrderTimeline } from "./OrderTimeline";
+export type { OrderTimelineProps, TimelineStep } from "./OrderTimeline";
+export { ImageUploader } from "./ImageUploader";
+export type { ImageUploaderProps } from "./ImageUploader";
+export { AddressForm, AddressSelect } from "./AddressForm";
+export type { AddressFormProps, AddressValue, AddressSelectProps, AddressOption } from "./AddressForm";

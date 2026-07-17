@@ -102,7 +102,7 @@ export function FilterSheet({ value = {}, onChange, onApply, onClear, categories
   const TYPES = ["all", "product", "service"] as const;
   const SORTS = ["relevance", "newest", "price_asc", "popular"] as const;
   return (
-    <aside className={cn("flex w-72 flex-col overflow-hidden border border-border bg-card shadow-card", asSheet ? "w-full rounded-t-lg" : "rounded-lg", className)}>
+    <aside className={cn("flex w-72 flex-col overflow-hidden border border-border bg-card shadow-sm", asSheet ? "w-full rounded-t-lg" : "rounded-lg", className)}>
       <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
         <span className="font-display text-base font-bold">{t.title}</span>
         <button type="button" onClick={onClear} className="text-[0.8125rem] font-semibold text-muted-foreground">{t.clear}</button>

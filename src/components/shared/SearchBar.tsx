@@ -25,7 +25,7 @@ export function SearchBar({ value = "", onChange, onSubmit, placeholder = "اب�
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onSubmit?.(value); }}
-      className={cn("flex items-center gap-2 rounded-full border border-input bg-popover px-3.5 shadow-card", H[size], className)}
+      className={cn("flex items-center gap-2 rounded-full border border-input bg-popover px-3.5 shadow-sm", H[size], className)}
     >
       <Search className="size-[19px] shrink-0 text-muted-foreground" />
       <input

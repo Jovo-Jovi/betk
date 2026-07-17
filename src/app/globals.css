@@ -10,116 +10,132 @@
    ────────────────────────────────────────────────────────────────*/
 @layer base {
   :root {
-    /* Canvas & text */
-    --background:            40 33% 98%;
-    --foreground:            222 22% 14%;
+    /* ── Core surfaces & text ── */
+    --background: 40 25% 98%;
+    --foreground: 215 25% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 12%;
 
-    /* Brand green — CTAs, active nav, verified accents */
-    --primary:               158 64% 32%;
-    --primary-foreground:    0 0% 100%;
+    /* ── Brand ── */
+    --primary: 175 60% 24%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 32 85% 45%;
+    --accent-foreground: 0 0% 100%;
+    --secondary: 40 14% 93%;
+    --secondary-foreground: 222 22% 14%;
 
-    /* Boost / featured highlights, promotional badges */
-    --accent:                28 92% 54%;
-    --accent-foreground:     0 0% 100%;
+    /* ── Neutral ── */
+    --muted: 40 15% 93%;
+    --muted-foreground: 215 15% 45%;
+    --border: 40 15% 86%;
+    --input: 40 15% 86%;
+    --ring: 175 60% 24%;
 
-    /* Destructive — delete, cancel, ban, dispute-lost */
-    --destructive:           0 72% 48%;
+    /* ── Semantic status ── */
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 22% 14%;
+    --warning-text: 38 92% 32%;
+    --accent-text: 28 92% 40%;
+    --info: 210 70% 50%;              /* additive — sanctioned 2026-07-17 (brief §2.4b, FLAG-F) */
+    --info-foreground: 0 0% 100%;     /* additive — sanctioned 2026-07-17 */
 
-    /* Secondary / muted — skeletons, disabled, secondary surfaces */
-    --secondary:             40 14% 93%;
-    --secondary-foreground:  222 22% 14%;
-    --muted:                 40 14% 93%;
-    --muted-foreground:      222 10% 42%;
+    /* ── Rating & seller levels ── */
+    --star: 38 95% 52%;
+    --level-bronze-bg: 28 45% 92%;
+    --level-bronze-fg: 30 50% 25%;
+    --level-bronze-ring: 28 45% 60%;
+    --level-silver-bg: 220 12% 92%;
+    --level-silver-fg: 0 0% 28%;
+    --level-silver-ring: 220 10% 65%;
+    --level-gold-bg: 43 80% 90%;
+    --level-gold-fg: 45 90% 22%;
+    --level-gold-ring: 43 80% 55%;
 
-    /* Semantic status */
-    --success:               142 70% 38%;
-    --success-foreground:    0 0% 100%;
-    --warning:               38 92% 50%;
-    --warning-foreground:    222 22% 14%;
+    /* ── Footer band (theme-independent, §2.3/§5.37) ── */
+    --footer-bg: 222 22% 12%;         /* additive — sanctioned 2026-07-17 */
+    --footer-fg: 40 14% 80%;          /* additive — sanctioned 2026-07-17 */
+    --footer-logo: 175 60% 45%;       /* additive — sanctioned 2026-07-17 (footer wordmark) */
 
-    /* Surfaces (shadcn card / popover) — match canvas */
-    --card:                  40 33% 98%;
-    --card-foreground:       222 22% 14%;
-    --popover:               0 0% 100%;
-    --popover-foreground:    222 22% 14%;
+    /* ── Radius (12px base, FLAG-G; 12/10/8 cascade) ── */
+    --radius: 0.75rem;
 
-    /* Structural */
-    --border:                40 12% 86%;
-    --input:                 40 12% 86%;
-    --ring:                  158 64% 32%;
+    /* ── Shadows (tokenized 4-step scale, §3.4 — replaces legacy card/card-hover/dialog aliases) ── */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.02), 0 1px 2px rgba(0,0,0,.04);          /* additive — sanctioned 2026-07-17 */
+    --shadow-md: 0 10px 25px -5px rgba(0,0,0,.05), 0 8px 10px -6px rgba(0,0,0,.05);   /* additive — sanctioned 2026-07-17 */
+    --shadow-lg: 0 20px 30px -10px rgba(0,0,0,.06), 0 10px 15px -8px rgba(0,0,0,.04); /* additive — sanctioned 2026-07-17 */
+    --shadow-xl: 0 30px 45px -15px rgba(0,0,0,.08), 0 15px 25px -10px rgba(0,0,0,.06);/* additive — sanctioned 2026-07-17 */
 
-    /* Border radius base — 0.625 rem (10 px) per spec */
-    --radius: 0.625rem;
+    /* ── Layout & effects (§2.4/§3.2) ── */
+    --container-max: 1280px;          /* additive — sanctioned 2026-07-17 */
+    --sidebar-width: 260px;           /* additive — sanctioned 2026-07-17 */
+    --topbar-height: 64px;            /* additive — sanctioned 2026-07-17 */
+    --bottom-nav-height: 60px;        /* additive — sanctioned 2026-07-17 */
+    --card-blur: 12px;                /* additive — sanctioned 2026-07-17 (glass surfaces) */
 
-    /* Typography — loaded in layout.tsx via next/font */
+    /* Typography — loaded in layout.tsx via next/font (frozen token names; not part of the DS-REGEN color patch) */
     --font-display: var(--font-cairo), "IBM Plex Sans Arabic", system-ui, sans-serif;
     --font-body:    var(--font-ibm-plex-sans-arabic), "Noto Sans Arabic", system-ui, sans-serif;
     --font-mono:    var(--font-ibm-plex-mono), ui-monospace, monospace;
-
-    /* Catalog (Phase 03 design-catalog kit) — contrast-corrected status text, rating star, seller-level metallics */
-    --warning-text:      38 92% 32%;   /* warning text on warning/15 tint */
-    --accent-text:       28 92% 40%;   /* accent text on accent/15 tint */
-    --star:              38 92% 50%;   /* rating star gold */
-
-    --level-bronze-bg:   28 45% 92%;
-    --level-bronze-fg:   28 55% 34%;
-    --level-bronze-ring: 28 45% 60%;
-    --level-silver-bg:   220 12% 92%;
-    --level-silver-fg:   220 10% 38%;
-    --level-silver-ring: 220 10% 65%;
-    --level-gold-bg:     43 80% 90%;
-    --level-gold-fg:     38 70% 32%;
-    --level-gold-ring:   43 80% 55%;
   }
 
   .dark {
-    /* Inverted-L dark palette — same H/S, mirrored lightness */
-    --background:            40 33% 6%;
-    --foreground:            222 22% 90%;
+    /* ── Core surfaces & text ── */
+    --background: 215 25% 8%;
+    --foreground: 40 25% 95%;
+    --card: 222 31% 17%;
+    --card-foreground: 40 25% 95%;
+    --popover: 222 31% 17%;
+    --popover-foreground: 40 25% 95%;
 
-    --primary:               158 64% 68%;
-    --primary-foreground:    0 0% 4%;
+    /* ── Brand ── */
+    --primary: 175 60% 32%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 32 85% 52%;
+    --accent-foreground: 0 0% 4%;
+    --secondary: 40 14% 15%;
+    --secondary-foreground: 222 22% 90%;
 
-    --accent:                28 92% 54%;
-    --accent-foreground:     0 0% 4%;
+    /* ── Neutral ── */
+    --muted: 215 14% 18%;
+    --muted-foreground: 215 10% 65%;
+    --border: 215 15% 20%;
+    --input: 215 15% 20%;
+    --ring: 175 60% 32%;
 
-    --destructive:           0 72% 52%;
+    /* ── Semantic status ── */
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 4%;
+    --success: 142 70% 48%;
+    --success-foreground: 0 0% 4%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 22% 14%;
+    --warning-text: 38 92% 62%;
+    --accent-text: 28 92% 62%;
+    --info: 210 70% 60%;              /* additive — sanctioned 2026-07-17 */
+    --info-foreground: 0 0% 100%;     /* additive — sanctioned 2026-07-17 */
 
-    --secondary:             40 14% 15%;
-    --secondary-foreground:  222 22% 90%;
-    --muted:                 40 14% 15%;
-    --muted-foreground:      222 10% 65%;
-
-    --success:               142 70% 62%;
-    --success-foreground:    0 0% 4%;
-    --warning:               38 92% 50%;
-    --warning-foreground:    222 22% 14%;
-
-    --card:                  40 33% 8%;
-    --card-foreground:       222 22% 90%;
-    --popover:               40 14% 10%;
-    --popover-foreground:    222 22% 90%;
-
-    --border:                40 12% 22%;
-    --input:                 40 12% 22%;
-    --ring:                  158 64% 68%;
-
-    /* Catalog (Phase 03 design-catalog kit) */
-    --warning-text:      38 92% 62%;
-    --accent-text:       28 92% 62%;
-    --star:              38 92% 55%;
-
-    --level-bronze-bg:   28 30% 16%;
-    --level-bronze-fg:   28 50% 70%;
+    /* ── Rating & seller levels ── */
+    --star: 38 92% 55%;
+    --level-bronze-bg: 28 30% 16%;
+    --level-bronze-fg: 28 50% 70%;
     --level-bronze-ring: 28 35% 40%;
-    --level-silver-bg:   220 10% 18%;
-    --level-silver-fg:   220 12% 72%;
+    --level-silver-bg: 220 10% 18%;
+    --level-silver-fg: 220 12% 72%;
     --level-silver-ring: 220 10% 45%;
-    --level-gold-bg:     43 40% 16%;
-    --level-gold-fg:     43 70% 65%;
-    --level-gold-ring:   43 60% 45%;
+    --level-gold-bg: 43 40% 16%;
+    --level-gold-fg: 43 70% 65%;
+    --level-gold-ring: 43 60% 45%;
+
+    /* ── Footer band (identical both themes — theme-independent) ── */
+    --footer-bg: 222 22% 12%;         /* additive — sanctioned 2026-07-17 */
+    --footer-fg: 40 14% 80%;          /* additive — sanctioned 2026-07-17 */
+    --footer-logo: 175 60% 45%;       /* additive — sanctioned 2026-07-17 */
   }
 }
 
