@@ -32,12 +32,19 @@ export interface AppTopbarProps {
   themeLabel?: string;
   accountLabel?: string;
   className?: string;
+  /** CD-DELTA-1 (§5.13 amendment, signed off 2026-07-18): language toggle. */
+  /** Current locale — the button shows the OTHER locale's glyph ("EN" when "ar", "ع" when "en"). Default "ar". */
+  lang?: "ar" | "en";
+  /** aria-label for the language toggle. Default "تغيير اللغة". */
+  langLabel?: string;
+  onLanguageToggle?: () => void;
 }
 
 export function AppTopbar({
   searchValue = "", onSearchChange, onSearchSubmit, searchPlaceholder = "ابحث في بيتك…", showSearch = true,
   logoSrc = "/logo/beh.png", notifCount = 0, onNotifClick, avatar, onAvatarClick, isDark = false, onThemeToggle, onLogoClick,
   notifLabel = "الإشعارات", themeLabel = "تبديل المظهر", accountLabel = "حسابي", className,
+  lang = "ar", langLabel = "تغيير اللغة", onLanguageToggle,
 }: AppTopbarProps) {
   return (
     <header className={cn("sticky top-0 z-50 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-card px-4 shadow-sm", className)}>
@@ -55,6 +62,9 @@ export function AppTopbar({
         </form>
       )}
       <div className="ms-auto flex items-center gap-2">
+        <button type="button" onClick={onLanguageToggle} aria-label={langLabel} className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="text-[13px] font-bold leading-none">{lang === "ar" ? "EN" : "ع"}</span>
+        </button>
         <button type="button" onClick={onThemeToggle} aria-label={themeLabel} className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {isDark ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
         </button>

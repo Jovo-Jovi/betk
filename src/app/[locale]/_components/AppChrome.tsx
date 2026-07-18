@@ -17,9 +17,10 @@
 
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Home, Search, Heart, MessageSquare, User } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
+import type { AppLocale } from "@/i18n/routing";
 import { AppTopbar, MobileBottomNav } from "@/components/shared";
 import type { BottomNavItem } from "@/components/shared/MobileBottomNav";
 import { routes } from "@/constants/routes";
@@ -55,12 +56,14 @@ function activeIdFromPath(pathname: string): string {
 export function AppChrome() {
   const pathname = usePathname();
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const t = useTranslations("chrome");
 
   const isDark = resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
+  const otherLocale: AppLocale = locale === "ar" ? "en" : "ar";
 
   // Locale-aware bottom-nav items: default icons + next-intl labels (ar/en).
   const navItems: BottomNavItem[] = ["home", "search", "wishlist", "inbox", "account"].map((id) => ({
@@ -84,6 +87,9 @@ export function AppChrome() {
         accountLabel={t("account")}
         isDark={isDark}
         onThemeToggle={() => setTheme(isDark ? "light" : "dark")}
+        lang={locale}
+        langLabel={t("language")}
+        onLanguageToggle={() => router.replace(pathname, { locale: otherLocale })}
         onLogoClick={() => router.push(routes.home)}
         onNotifClick={() => router.push(routes.buyer.notifications)}
         onAvatarClick={() => router.push(routes.buyer.account)}
