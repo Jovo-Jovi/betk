@@ -94,15 +94,52 @@ pnpm typecheck + lint clean. Close-out → commit.
 - **Model:** Sonnet · **Skill:** skill-nextjs-engineer, skill-ui-engineer · **Source:** FR-PUB-1, UI_SPEC Homepage
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T02 — Homepage at / (RSC, public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T02 — Homepage (RSC, public,
+bilingual + themed per the pack header). Branch feature/phase-03-catalog cut from
+current origin/main after git fetch.
 
-Compose the Claude-Design components (T00): CategoryGrid; CollectionStrip (one per live collection, ordered homepage_position); ListingCard grids for New Arrivals + Featured/Boosted; StoreCard row for featured stores. Wire getHomepageData() (T01). Hero/search bar composes SearchBar (links to /search).
-- Section-level degradation: each strip renders independently; a failed strip shows its own inline ErrorRetryCard; the page never hard-fails. Per-strip loading skeletons from T00. Progressive render as each strip resolves.
-- Empty states: no live collections → fall back to pure New Arrivals grid; zero active listings platform-wide → "BETK is just getting started" panel + Become-a-Seller CTA.
-- Guest write-actions (wishlist on a card) → /auth/login?returnUrl. Render WishlistButton; route guests to login (toggle wiring is T06; here it's the entry/redirect only).
-- Cache homepage strips 60s; rating_aggregates 5-min (per ARCHITECTURE).
+ROUTE (repo-state expansion): the homepage is src/app/[locale]/(public)/page.tsx —
+currently the BL-01-FIX stub (return null). Replace its body; do NOT recreate
+chrome — AppChrome (AppTopbar + MobileBottomNav) + Footer already wrap this route
+via the (public) layout. Do not touch layout.tsx unless a Suspense boundary needs
+adjusting; report any layout diff.
 
-Compose only — do not restyle. If a needed component/state is missing, STOP and flag to Claude Design. pnpm typecheck + lint clean. Close-out → commit.
+COMPOSE (Claude-Design components — compose only, never restyle; missing
+component/state → STOP and flag):
+- Hero per BETK_DESIGN_BRIEF.md §5.31: page-level section composing SearchBar
+  (submits/links to /search via @/i18n/navigation). The §5.31 gradient values
+  (175 60% 20% → 175 45% 10%, dark deepened) are the ONLY sanctioned literals;
+  everything else tokens. Copy via a new home.* namespace in messages/{ar,en}.json
+  (both locales, report parity count).
+- CategoryGrid from getCategoryTree() — names via localizedName COALESCE.
+- CollectionStrip per live collection (homepage_position order), dir from locale
+  server-side; collection names COALESCE.
+- ListingCard grids: New Arrivals + Featured/Boosted from getHomepageData();
+  titles COALESCE; labels via src/i18n/catalogLabels.ts builders.
+- FEATURED STORES (pack↔T01 mismatch — resolve, don't invent): the canonical
+  prompt lists a StoreCard row, but getHomepageData() (T01) returns no store
+  strip. CONFIRM against BETK_UI_SPEC.md §3 Homepage: if a featured-stores row
+  is specced WITH a pinned selection rule, add a read-only anon query following
+  T01 conventions and STATE the rule + its source; if the selection rule is not
+  pinned in the docs, OMIT the row and flag it — do not invent one.
+
+BEHAVIOR:
+- Section-level degradation: each strip independent; failed strip → its own
+  ErrorRetryCard (already wired to i18n); page never hard-fails. Per-strip
+  skeletons; progressive render.
+- Empty: no live collections → New Arrivals only; zero active listings
+  platform-wide → "getting started" panel + Become-a-Seller CTA (both locales,
+  keyed) routing to seller onboarding (guest → login returnUrl, locale-preserving).
+- WishlistButton renders; guest click → /auth/login?returnUrl (locale-preserving
+  via the middleware pattern) — toggle wiring is T06, entry/redirect only here.
+- Caching: strips 60s TTL; rating_aggregates 5-min (per ARCHITECTURE).
+- generateMetadata via getTranslations, both locales.
+
+VERIFY: pnpm typecheck · lint · 3 guards · unit · build (both locales prerender).
+Runtime smoke: / and /en render hero + categories + strips inside real chrome,
+correct dir/lang; a strip with no data degrades not crashes; dark class intact.
+No new RLS policies, no service-role, no ui/* or shared/* edits (git diff proof).
+Close-out → SESSION_CONTEXT + journal → commit + push. HOLD PR for verdict.
 ```
 - **Files:** `src/app/(public)/page.tsx`, `src/features/discovery/components/*` (composition only).
 - **Done when:** `/` renders collections/categories/new-arrivals/boosted from real data; section-level degradation works; empty/loading/error states present; guest wishlist routes to login. No restyle.

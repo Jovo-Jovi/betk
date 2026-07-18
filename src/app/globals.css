@@ -79,6 +79,12 @@
     --bottom-nav-height: 60px;        /* additive — sanctioned 2026-07-17 */
     --card-blur: 12px;                /* additive — sanctioned 2026-07-17 (glass surfaces) */
 
+    /* ── Hero gradient (brief §5.31 — homepage Hero) ──
+       These two literals are the ONLY sanctioned hardcoded color values for
+       the Hero (Phase 03 / T02); every other Hero color is an existing token. */
+    --hero-gradient-from: 175 60% 20%;  /* additive — sanctioned 2026-07-18 (brief §5.31) */
+    --hero-gradient-to: 175 45% 10%;    /* additive — sanctioned 2026-07-18 (brief §5.31) */
+
     /* Typography — loaded in layout.tsx via next/font (frozen token names; not part of the DS-REGEN color patch) */
     --font-display: var(--font-cairo), "IBM Plex Sans Arabic", system-ui, sans-serif;
     --font-body:    var(--font-ibm-plex-sans-arabic), "Noto Sans Arabic", system-ui, sans-serif;
@@ -138,6 +144,12 @@
     --footer-fg: 0 0% 100%;           /* re-valued 2026-07-18 (CD-DELTA-1-FIX) — HEADING color on band (was 40 14% 80%) */
     --footer-fg-muted: 40 14% 70%;    /* additive — sanctioned 2026-07-18 — default link/body color on band */
     --footer-logo: 175 60% 45%;       /* additive — sanctioned 2026-07-17 */
+
+    /* ── Hero gradient, dark-deepened (brief §5.31 says "dark deepened" but
+       does not pin exact stops) — lightness reduced ~8pts vs :root as the
+       "deepened" reading; flagged in Phase 03 T02 close-out, not pinned doc. */
+    --hero-gradient-from: 175 60% 12%;  /* additive — sanctioned 2026-07-18 (brief §5.31, dark) */
+    --hero-gradient-to: 175 45% 6%;     /* additive — sanctioned 2026-07-18 (brief §5.31, dark) */
   }
 }
 
