@@ -348,5 +348,22 @@
       "gettingStartedMessage": "There are no listings on the platform yet — be the first to showcase your products or services!",
       "becomeSeller": "Open your store on BETK"
     }
+  },
+  "search": {
+    "metaTitle": "Search — BETK",
+    "metaDescription": "Search BETK's products and services and filter by category, type, governorate and price.",
+    "resultsFor": "Results for “{query}”",
+    "allResults": "All listings",
+    "featuredResults": "Featured results",
+    "emptyWithQuery": "No results for “{query}”",
+    "emptyGeneric": "No matching results",
+    "emptyHint": "Try adjusting your filters or changing your search terms.",
+    "clearFilters": "Clear all filters",
+    "filtersButton": "Filters",
+    "sortLabel": "Sort by",
+    "prev": "Previous",
+    "next": "Next",
+    "pageLabel": "Page {page}",
+    "error": "Search results couldn't load."
   }
 }

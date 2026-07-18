@@ -54,6 +54,31 @@ export interface ListingPage {
   nextCursor: string | null;
 }
 
+/* ── searchListings (/search — T03) ─────────────────────────────────────── */
+
+/**
+ * A search hit = a listing card plus whether it carries an active boost.
+ * `isBoosted` drives both the ListingCard boost ribbon and the R-B04
+ * boosted-above-organic ordering (boosted hits are returned first).
+ */
+export interface SearchListingItem extends ListingSummary {
+  isBoosted: boolean;
+}
+
+/**
+ * One page of search results. Offset-paginated (see searchListings.ts for why
+ * keyset isn't used across the boosted/organic tiers). `total` is the full
+ * matching count (boosted + organic); `hasMore` reflects whether a further
+ * page exists.
+ */
+export interface SearchResultPage {
+  items: SearchListingItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}
+
 /* ── getCategoryTree ────────────────────────────────────────────────────── */
 
 export interface CategoryNode {

@@ -348,5 +348,22 @@
       "gettingStartedMessage": "لا توجد إعلانات على المنصة حتى الآن — كن أول من يعرض منتجاته أو خدماته!",
       "becomeSeller": "افتح متجرك على بيتك"
     }
+  },
+  "search": {
+    "metaTitle": "البحث — بيتك",
+    "metaDescription": "ابحث في منتجات وخدمات بيتك وصفّها حسب الفئة والنوع والمحافظة والسعر.",
+    "resultsFor": "نتائج البحث عن «{query}»",
+    "allResults": "كل النتائج",
+    "featuredResults": "نتائج مميّزة",
+    "emptyWithQuery": "لا توجد نتائج لـ «{query}»",
+    "emptyGeneric": "لا توجد نتائج مطابقة",
+    "emptyHint": "جرّب تعديل الفلاتر أو تغيير كلمات البحث.",
+    "clearFilters": "مسح كل الفلاتر",
+    "filtersButton": "الفلاتر",
+    "sortLabel": "الترتيب",
+    "prev": "السابق",
+    "next": "التالي",
+    "pageLabel": "صفحة {page}",
+    "error": "تعذّر تحميل نتائج البحث."
   }
 }

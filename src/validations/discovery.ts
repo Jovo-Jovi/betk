@@ -35,6 +35,59 @@ export type GetActiveListingsParams = z.input<typeof getActiveListingsParamsSche
 export const listingIdSchema = z.string().uuid();
 export const storeSlugSchema = z.string().trim().min(1).max(80);
 
+/* ── Search (/search) — Phase 03 / T03 (FR-PUB-2) ──────────────────────────
+ * Params are sourced from PUBLIC, locale-neutral URL search params (same URL
+ * shape under /en). Everything arrives as a string (or absent), so each field
+ * is preprocessed empty→undefined and coerced before validation. Invalid
+ * params never throw at the page — `safeParse` + defaults degrade to "no
+ * filter" rather than 500 (a tampered/stale shareable URL must still render).
+ */
+
+/** "" / null → undefined, so `.optional()`/`.default()` engage cleanly. */
+const emptyToUndefined = (v: unknown): unknown =>
+  v === "" || v === null ? undefined : v;
+
+/** Sort modes offered by the sort control (BETK_UI_SPEC §Search). */
+export const searchSortSchema = z.enum(["relevance", "newest", "price", "popularity"]);
+export type SearchSort = z.infer<typeof searchSortSchema>;
+
+/** Listing-type filter (product|service); absent = both. */
+export const searchListingTypeSchema = z.enum(["product", "service"]);
+export type SearchListingType = z.infer<typeof searchListingTypeSchema>;
+
+export const searchListingsParamsSchema = z.object({
+  /** 1–2 keyword full-text query over listings.search_vector (C2). */
+  q: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(100).optional()),
+  category: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  type: z.preprocess(emptyToUndefined, searchListingTypeSchema.optional()),
+  /** stores.governorate slug (e.g. "cairo"). */
+  governorate: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(50).optional()),
+  /** stores.city free-text (exact match). */
+  city: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(100).optional()),
+  priceMin: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
+  priceMax: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
+  sort: z.preprocess(emptyToUndefined, searchSortSchema.default("relevance")),
+  page: z.preprocess(emptyToUndefined, z.coerce.number().int().min(1).default(1)),
+});
+export type SearchListingsParams = z.input<typeof searchListingsParamsSchema>;
+export type SearchListingsParsedParams = z.infer<typeof searchListingsParamsSchema>;
+
+/**
+ * Pick the text-search config from the query's script. The
+ * `update_listing_search_vector` trigger builds the vector with the `'arabic'`
+ * config for `title_ar` (weight A) and the `'english'` config for
+ * `title_en`/`description_ar` (weights B/C) — NOT `unaccent` (verified live,
+ * OD-7 §7 carry). The `'arabic'` config's normaliser folds Arabic diacritics,
+ * so an Arabic query matches diacritic and non-diacritic titles both ways
+ * WITHOUT unaccent; the `'english'` snowball stemmer is what matches the
+ * English-stemmed lexemes. A single `websearch_to_tsquery` call takes ONE
+ * config, so we route by script: any Arabic codepoint → 'arabic', else
+ * 'english'. (BETK is Arabic-first; title_ar is the primary/weight-A field.)
+ */
+export function pickTsConfig(query: string): "arabic" | "english" {
+  return /[\u0600-\u06FF]/.test(query) ? "arabic" : "english";
+}
+
 /**
  * Encode a keyset cursor for the next page.
  */

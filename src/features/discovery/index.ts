@@ -18,6 +18,8 @@ export { getCategoryTree } from "./queries/getCategoryTree";
 export { getHomepageData } from "./queries/getHomepageData";
 export { getListingById } from "./queries/getListingById";
 export { getStoreBySlug } from "./queries/getStoreBySlug";
+// T03 — search & filter (/search).
+export { searchListings } from "./queries/searchListings";
 
 export type {
   CategoryNode,
@@ -31,6 +33,8 @@ export type {
   ListingReviewPhoto,
   ListingSeller,
   ListingSummary,
+  SearchListingItem,
+  SearchResultPage,
   StoreDetail,
   StoreRatingSummary,
   StoreSummary,
@@ -41,5 +45,16 @@ export {
   listingSortSchema,
   listingIdSchema,
   storeSlugSchema,
+  searchListingsParamsSchema,
+  searchSortSchema,
+  searchListingTypeSchema,
+  pickTsConfig,
 } from "@/validations/discovery";
-export type { GetActiveListingsParams, ListingSort } from "@/validations/discovery";
+export type {
+  GetActiveListingsParams,
+  ListingSort,
+  SearchListingsParams,
+  SearchListingsParsedParams,
+  SearchSort,
+  SearchListingType,
+} from "@/validations/discovery";
