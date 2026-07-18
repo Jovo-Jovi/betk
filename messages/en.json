@@ -322,5 +322,31 @@
     "seller": {
       "responseTime": "{hours, plural, =0 {Responds in under an hour} one {Responds within # hour} other {Responds within # hours}}"
     }
+  },
+  "home": {
+    "metaTitle": "BETK — Egypt's Creator Marketplace",
+    "metaDescription": "Browse authentic products and services from trusted Egyptian sellers on BETK.",
+    "hero": {
+      "title": "Discover Egypt's creative makers",
+      "subtitle": "Authentic products and services from trusted sellers across every governorate",
+      "searchPlaceholder": "Search for a product or service…"
+    },
+    "categories": {
+      "title": "Browse Categories"
+    },
+    "newArrivals": {
+      "title": "New Arrivals"
+    },
+    "boosted": {
+      "title": "Featured"
+    },
+    "error": {
+      "message": "This section couldn't load."
+    },
+    "empty": {
+      "gettingStartedTitle": "BETK is just getting started",
+      "gettingStartedMessage": "There are no listings on the platform yet — be the first to showcase your products or services!",
+      "becomeSeller": "Open your store on BETK"
+    }
   }
 }
