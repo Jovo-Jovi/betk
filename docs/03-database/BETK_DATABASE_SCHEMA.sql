@@ -1085,15 +1085,61 @@ CREATE POLICY cat_public ON betk.categories FOR SELECT
   USING (is_active = TRUE OR betk.is_admin());
 CREATE POLICY cat_admin ON betk.categories FOR ALL
   USING (betk.is_admin());
--- LISTINGS: public read active; seller manages own
+-- LISTINGS: public read active + sold_out; seller manages own
+-- REG-25 (migration 20260718230302): sold_out kept publicly visible for the
+-- listing-detail restock CTA (FR-PUB-4/R-N06). Browse grids stay active-only
+-- via the query layer, NOT RLS. draft/paused/removed/soft-deleted stay hidden.
 CREATE POLICY listings_public ON betk.listings FOR SELECT
   USING (
-    (status = 'active' AND deleted_at IS NULL)
+    (status IN ('active', 'sold_out') AND deleted_at IS NULL)
     OR store_id = betk.my_store_id()
     OR betk.is_admin()
   );
 CREATE POLICY listings_seller ON betk.listings FOR ALL
   USING (store_id = betk.my_store_id() OR betk.is_admin());
+-- CATALOG PUBLIC-READ CHILD POLICIES (T01-FIX, migration 20260630232657;
+-- backfilled here for source parity). Each follows a publicly-visible parent.
+-- REG-25 (migration 20260718230302) amended listing_images_public /
+-- listing_tags_public to track the parent's active+sold_out set so a sold_out
+-- detail page still renders its gallery + tag chips. review_photos_public
+-- (via visible review), collection_listings_public (via live collection), and
+-- rating_aggregates_public (public aggregate) do NOT reference listing status.
+CREATE POLICY listing_images_public ON betk.listing_images FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.listings l
+      WHERE l.id = listing_images.listing_id
+        AND l.status IN ('active', 'sold_out')
+        AND l.deleted_at IS NULL
+    )
+  );
+CREATE POLICY listing_tags_public ON betk.listing_tags FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.listings l
+      WHERE l.id = listing_tags.listing_id
+        AND l.status IN ('active', 'sold_out')
+        AND l.deleted_at IS NULL
+    )
+  );
+CREATE POLICY review_photos_public ON betk.review_photos FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.reviews r
+      WHERE r.id = review_photos.review_id
+        AND r.is_visible = TRUE
+    )
+  );
+CREATE POLICY collection_listings_public ON betk.collection_listings FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.collections c
+      WHERE c.id = collection_listings.collection_id
+        AND c.status = 'live'
+    )
+  );
+CREATE POLICY rating_aggregates_public ON betk.rating_aggregates FOR SELECT
+  USING (TRUE);
 -- WISHLISTS: own buyer only
 CREATE POLICY wishlist_own ON betk.wishlists FOR ALL
   USING (buyer_id = auth.uid() OR betk.is_admin());

@@ -16,28 +16,24 @@
  *
  * `getListingById(id)` already resolves to `null` for: a malformed
  * (non-UUID) id (guarded here via `listingIdSchema.safeParse` before even
- * querying), a missing id, a soft-deleted listing (R-L10), a non-'active'
- * listing (draft/paused/removed — `listings_public` RLS), AND a suspended
- * store's listing (T04 STEP 0 — the query's own `if (!store) return null`
- * guard, re-verified by this task's own integration test). All of these
- * hard-404 identically — no existence leak, same convention as
- * `getCategoryBySlug`/`getStoreBySlug`.
+ * querying), a missing id, a soft-deleted listing (R-L10), a hidden-status
+ * listing (draft/paused/removed — NOT in the `listings_public` set), AND a
+ * suspended store's listing (T04 STEP 0 — the query's own
+ * `if (!store) return null` guard, re-verified by this task's own integration
+ * test). All of these hard-404 identically — no existence leak, same
+ * convention as `getCategoryBySlug`/`getStoreBySlug`.
  *
- * ── FINDING (live-verified, NOT fixed here — no new policy in this task's
- * scope) ── `listings_public` RLS's `status='active'` clause ALSO hides a
- * listing once its status enum flips to `sold_out` (R2's now-live
- * `decrement_stock_on_confirm` trigger does exactly this at `stock_qty=0`),
- * even though FR-PUB-4/R-N06 explicitly require a sold-out listing to STAY
- * publicly visible with a "notify me" CTA. See
- * `tests/integration/discovery.listing.test.ts` for the live reproduction
- * (recorded as a FINDING, not a FAIL — this page cannot fix an RLS policy).
- * Flagged in SESSION_CONTEXT/journal for a dedicated review task. This
- * page's OWN sold-out UI (below) still renders correctly for every listing
- * RLS actually lets it see — i.e. any listing whose `status` is still
- * 'active' but whose `stock_qty` reads 0, which today is the only
- * anon-visible path to a genuine sold-out STATE (the enum flip and the
- * stock decrement happen together, in the same trigger transaction) — see
- * `listingStockDisplay.ts`.
+ * ── REG-25 (RESOLVED, migration 20260718230302) ── `listings_public` now
+ * exposes `status IN ('active','sold_out')`, so a genuinely `sold_out`
+ * listing (reached via R2's `decrement_stock_on_confirm` trigger at
+ * `stock_qty=0`) STAYS publicly visible here with the R-N06 restock CTA
+ * (FR-PUB-4). The catalog child policies `listing_images_public` /
+ * `listing_tags_public` were amended verbatim-consistent, so the gallery and
+ * tag chips render for a sold_out detail page too. The sold-out UI below fires
+ * off `isListingSoldOut` (status enum authoritative, `stock_qty<=0` the
+ * coupled path) — see `listingStockDisplay.ts`. sold_out is DETAIL-ONLY:
+ * browse grids (homepage/search/category/storefront) keep `status='active'`
+ * per BETK_UI_SPEC.md L73/85/97/121.
  *
  * `view_count` (FR-PUB-4) — CONFIRMED no increment mechanism exists: no
  * trigger/function in `BETK_DATABASE_SCHEMA.sql` touches `view_count`

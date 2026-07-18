@@ -7,10 +7,14 @@
  * missing, soft-deleted (`deleted_at`), or RLS-denied row (R-L10) — the page
  * (T05) 404s on null.
  *
- * `listings_public` RLS only exposes `status='active' AND deleted_at IS NULL`
- * to non-owners. A `sold_out`/`paused`/`draft`/`removed` listing therefore
- * ALSO resolves to `null` here today — see the FINDING below, this is flagged
- * for review, not patched with a policy in T01.
+ * `listings_public` RLS (REG-25, migration 20260718230302) exposes
+ * `status IN ('active','sold_out') AND deleted_at IS NULL` to non-owners, so a
+ * genuinely `sold_out` listing resolves HERE (the detail page keeps it visible
+ * with the R-N06 restock CTA — FR-PUB-4). This query intentionally applies NO
+ * status filter of its own, so widening the policy is the ONLY change needed to
+ * surface sold_out on detail; browse queries keep their explicit
+ * `.eq(status,'active')` so sold_out never enters a grid. `draft`/`paused`/
+ * `removed` (not in the policy set) and soft-deleted rows still resolve `null`.
  *
  * NOTE — `view_count` increment (FR-PUB-4) is intentionally NOT done here.
  * T01 is a read-only query layer ("NO writes"); T05 (listing detail page)

@@ -16,17 +16,18 @@
  *     number; the page additionally suppresses the exact stock count — see
  *     tests/unit/listingStockDisplay.unit.test.ts for that pure-logic proof)
  *   - sold-out state reachable via `stock_qty=0` while `status` stays
- *     'active' (the only anon-visible path to R-N06's restock CTA today)
+ *     'active' (an anon-visible path to R-N06's restock CTA)
  *   - getMoreFromStore rail: same-store active listings, excluding the
  *     current one, excluding other stores/soft-deleted
  *
- * Plus a NEW FINDING (verified live, NOT fixed — no new policy is in this
- * task's scope): a listing whose `status` enum is literally `sold_out`
- * (reachable via the now-live `decrement_stock_on_confirm` trigger, R2)
- * resolves to `null` here too, because `listings_public` RLS only exposes
- * `status='active'` rows to anon. This contradicts FR-PUB-4/R-N06's explicit
- * requirement that a sold-out listing stay publicly visible. See the test
- * below and the page.tsx header comment for the full writeup.
+ * REG-25 (RESOLVED, migration 20260718230302 — this task): `listings_public`
+ * now exposes `status IN ('active','sold_out')`, and the child policies
+ * `listing_images_public`/`listing_tags_public` were amended to match. So a
+ * genuinely `sold_out` listing (reachable via the live
+ * `decrement_stock_on_confirm` trigger, R2) STAYS visible on the DETAIL page
+ * with its gallery + tags (FR-PUB-4/R-N06), while remaining ABSENT from every
+ * browse grid (the query layer keeps `status='active'`). draft/paused/removed
+ * stay hidden everywhere. The tests below assert BOTH directions.
  */
 
 import { randomUUID } from "node:crypto";
@@ -89,7 +90,10 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     suspendedStoreListing: "", // active listing, SUSPENDED store — R-S07 re-verify
     quoteOnlyListing: "", // price_type = quote_only
     stockZeroActiveListing: "", // status stays 'active', stock_qty = 0 (the reachable sold-out state)
-    soldOutStatusListing: "", // status enum = 'sold_out' — the FINDING
+    soldOutStatusListing: "", // status enum = 'sold_out' — REG-25: now visible on DETAIL, absent from BROWSE
+    draftListing: "", // status = 'draft' — hidden everywhere
+    pausedListing: "", // status = 'paused' — hidden everywhere
+    removedListing: "", // status = 'removed' — hidden everywhere
   };
   let orderId = "";
   let reviewId = "";
@@ -216,10 +220,14 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
       low_stock_threshold: 3,
     });
     ids.stockZeroActiveListing = await seedListing({ ...base, title_ar: `منتج نفد مخزونه ${RUN}`, stock_qty: 0 });
-    // FINDING fixture — direct insert with status='sold_out' (bypasses the
+    // REG-25 fixture — direct insert with status='sold_out' (bypasses the
     // order-confirm trigger; a real order-confirm flow would reach this same
     // state — R2's decrement_stock_on_confirm trigger, now live).
     ids.soldOutStatusListing = await seedListing({ ...base, title_ar: `منتج بحالة نفاد رسمية ${RUN}`, status: "sold_out", stock_qty: 0 });
+    // Hidden-status fixtures — must stay invisible on BOTH detail and browse.
+    ids.draftListing = await seedListing({ ...base, title_ar: `منتج مسودة ${RUN}`, status: "draft" });
+    ids.pausedListing = await seedListing({ ...base, title_ar: `منتج متوقف ${RUN}`, status: "paused" });
+    ids.removedListing = await seedListing({ ...base, title_ar: `منتج مُزال ${RUN}`, status: "removed" });
 
     // ── listing_images + listing_tags on the full listing ──
     await svc().from("listing_images").insert([
@@ -229,6 +237,15 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     await svc().from("listing_tags").insert([
       { listing_id: ids.fullListing, tag: "هدايا" },
       { listing_id: ids.fullListing, tag: "يدوي" },
+    ] as never);
+
+    // REG-25 child-policy proof: the sold_out listing carries its OWN image +
+    // tag so the "sold_out detail renders gallery/tags" assertion is real.
+    await svc().from("listing_images").insert([
+      { listing_id: ids.soldOutStatusListing, url: `https://cdn.betk.test/t05-so-${RUN}-0.jpg`, sort_order: 0 },
+    ] as never);
+    await svc().from("listing_tags").insert([
+      { listing_id: ids.soldOutStatusListing, tag: "نفد" },
     ] as never);
 
     // ── a confirmed order + a visible review (with a photo + seller reply) on the full listing's store ──
@@ -355,18 +372,53 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     expect(detail?.stockQty).toBe(0);
   });
 
-  it("FINDING: a listing whose status enum is 'sold_out' resolves to null — listings_public RLS hides it, contradicting FR-PUB-4/R-N06 (NOT fixed here, no new policy)", async () => {
+  it("REG-25: a status='sold_out' listing IS anon-visible on DETAIL, with its images + tags intact (child-policy proof)", async () => {
     const { getListingById } = await import("@/features/discovery");
     const detail = await getListingById(ids.soldOutStatusListing, anon);
 
     record(
-      detail === null ? "FINDING" : "PASS",
-      "listings_public RLS vs FR-PUB-4/R-N06 sold_out visibility",
-      detail === null
-        ? "status='sold_out' listing resolves to null for anon — listings_public RLS only allows status='active'; a genuinely sold-out listing (reachable via the live decrement_stock_on_confirm trigger, R2) would 404 on the public listing page, contradicting the documented requirement that it stay visible with a restock CTA. Flagged for a dedicated review/fix task (new policy needed) — NOT fixed in T05 (no new policies allowed in this task)."
-        : "UNEXPECTED: resolved non-null — the finding no longer reproduces",
+      detail !== null ? "PASS" : "FAIL",
+      "REG-25 listings_public sold_out DETAIL visibility (FR-PUB-4/R-N06)",
+      detail !== null
+        ? "status='sold_out' listing resolves for anon — the migration-20260718230302 widening (status IN active,sold_out) keeps it publicly visible with the restock CTA path; gallery + tag chips render (child policies amended verbatim-consistent)."
+        : "UNEXPECTED: resolved null — the sold_out detail regression is back",
     );
-    expect(detail).toBeNull();
+
+    expect(detail).not.toBeNull();
+    expect(detail?.status).toBe("sold_out");
+    // Child-policy proof: listing_images_public / listing_tags_public now track
+    // the parent's active+sold_out set, so these are NON-empty for sold_out.
+    expect(detail?.images.length).toBe(1);
+    expect(detail?.tags).toContain("نفد");
+  });
+
+  it("REG-25 (both-direction): a sold_out listing is ABSENT from the browse grid even though it's visible on detail", async () => {
+    const { getActiveListings } = await import("@/features/discovery");
+    // Store-scoped browse (the storefront Listings tab shape) over the active store.
+    const page = await getActiveListings({ store: activeStoreId }, anon);
+    const gridIds = page.items.map((i) => i.id);
+
+    // sold_out is detail-only — the query's explicit .eq(status,'active') keeps
+    // it out of every grid (BETK_UI_SPEC.md L73/85/97/121).
+    expect(gridIds).not.toContain(ids.soldOutStatusListing);
+    // ...while a genuinely active listing on the same store DOES appear.
+    expect(gridIds).toContain(ids.fullListing);
+  });
+
+  it("REG-25 regression: draft / paused / removed listings stay hidden on BOTH detail and browse", async () => {
+    const { getListingById, getActiveListings } = await import("@/features/discovery");
+
+    // Detail: each hidden status resolves null (page 404s).
+    expect(await getListingById(ids.draftListing, anon)).toBeNull();
+    expect(await getListingById(ids.pausedListing, anon)).toBeNull();
+    expect(await getListingById(ids.removedListing, anon)).toBeNull();
+
+    // Browse: none of them appear in the store's active grid.
+    const page = await getActiveListings({ store: activeStoreId }, anon);
+    const gridIds = page.items.map((i) => i.id);
+    expect(gridIds).not.toContain(ids.draftListing);
+    expect(gridIds).not.toContain(ids.pausedListing);
+    expect(gridIds).not.toContain(ids.removedListing);
   });
 
   it("getMoreFromStore: returns the sibling active listing from the same store, excluding the current one", async () => {

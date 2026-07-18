@@ -15,6 +15,7 @@ import {
 function listing(overrides: Partial<ListingForStockDisplay> = {}): ListingForStockDisplay {
   return {
     type: "product",
+    status: "active",
     priceType: "fixed",
     stockQty: 10,
     lowStockThreshold: 3,
@@ -62,6 +63,17 @@ describe("deriveStockDisplayProps", () => {
       deriveStockDisplayProps(listing({ priceType: "quote_only", type: "service" })),
     ).toEqual({ isService: true });
   });
+
+  it("REG-25: a sold_out-status product resolves to the sold_out state (enum is authoritative)", () => {
+    // stock_qty coupled to 0 by the trigger — passes the number through.
+    expect(deriveStockDisplayProps(listing({ status: "sold_out", stockQty: 0 }))).toEqual({
+      stockQty: 0,
+    });
+    // status='sold_out' with untracked stock still reads sold_out via the state prop.
+    expect(deriveStockDisplayProps(listing({ status: "sold_out", stockQty: null }))).toEqual({
+      state: "sold_out",
+    });
+  });
 });
 
 describe("isListingSoldOut", () => {
@@ -84,5 +96,15 @@ describe("isListingSoldOut", () => {
 
   it("false when there is remaining stock", () => {
     expect(isListingSoldOut(listing({ stockQty: 5 }))).toBe(false);
+  });
+
+  it("REG-25: true for a sold_out-status product even if stock_qty still reads > 0 (enum authoritative)", () => {
+    expect(isListingSoldOut(listing({ status: "sold_out", stockQty: 7 }))).toBe(true);
+  });
+
+  it("REG-25: a service is never sold_out even when its status enum is sold_out", () => {
+    expect(isListingSoldOut(listing({ type: "service", status: "sold_out", stockQty: 0 }))).toBe(
+      false,
+    );
   });
 });

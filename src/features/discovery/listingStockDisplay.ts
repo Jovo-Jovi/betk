@@ -19,7 +19,7 @@ import type { ListingDetail } from "./types";
 
 export type ListingForStockDisplay = Pick<
   ListingDetail,
-  "type" | "priceType" | "stockQty" | "lowStockThreshold" | "isMadeToOrder"
+  "type" | "status" | "priceType" | "stockQty" | "lowStockThreshold" | "isMadeToOrder"
 >;
 
 export interface StockDisplayProps {
@@ -35,8 +35,17 @@ export function deriveStockDisplayProps(listing: ListingForStockDisplay): StockD
   if (listing.type === "service") return { isService: true };
   if (listing.isMadeToOrder) return { isMadeToOrder: true };
 
-  const outOfStock = typeof listing.stockQty === "number" && listing.stockQty <= 0;
-  if (outOfStock) return { stockQty: listing.stockQty };
+  // REG-25: a genuinely `sold_out`-status listing (now publicly visible on the
+  // detail page) reads out-of-stock even if `stock_qty` were non-zero. The
+  // enum is the source of truth; `stock_qty<=0` is the coupled reachable path.
+  const outOfStock =
+    listing.status === "sold_out" ||
+    (typeof listing.stockQty === "number" && listing.stockQty <= 0);
+  if (outOfStock) {
+    return typeof listing.stockQty === "number"
+      ? { stockQty: listing.stockQty }
+      : { state: "sold_out" };
+  }
 
   if (listing.priceType === "quote_only") {
     // Never reveal the exact remaining count for a negotiated-price listing.
@@ -48,8 +57,12 @@ export function deriveStockDisplayProps(listing: ListingForStockDisplay): StockD
 
 /** True when the R-N06 "notify me" restock CTA should replace the inquiry CTA. */
 export function isListingSoldOut(
-  listing: Pick<ListingDetail, "type" | "isMadeToOrder" | "stockQty">,
+  listing: Pick<ListingDetail, "type" | "status" | "isMadeToOrder" | "stockQty">,
 ): boolean {
-  if (listing.type === "service" || listing.isMadeToOrder) return false;
+  if (listing.type === "service") return false;
+  // REG-25: the `sold_out` enum is authoritative; `stock_qty<=0` is the coupled
+  // reachable path (the decrement_stock_on_confirm trigger sets both together).
+  if (listing.status === "sold_out") return true;
+  if (listing.isMadeToOrder) return false;
   return typeof listing.stockQty === "number" && listing.stockQty <= 0;
 }
