@@ -14,7 +14,7 @@
 > **Every value comes from this brief. Propose a token, never inline a value. If a value or component is missing, derive it consistently from the design reference (`<DESIGN-REPO-URL>` @ `<SHA>`) or STOP and ask — never invent.**
 
 Corollaries:
-- **Token names are FROZEN.** The 39 original CSS-variable token names in §2 are load-bearing (`tailwind.config.ts`, 31 shared components, the DS-I18N string-prop wiring). Never rename or remove one. New needs → an **additive** proposed token following the existing naming convention (§2.4). As of BRIEF-RESOLVE (2026-07-16), **`--info`/`--info-foreground` (§2.4b) are the first such additive pair**, resolving FLAG-F — bringing the canonical named-token count to **41**. Nothing else was renamed or removed.
+- **Token names are FROZEN.** The 39 original CSS-variable token names in §2 are load-bearing (`tailwind.config.ts`, 31 shared components, the DS-I18N string-prop wiring). Never rename or remove one. New needs → an **additive** proposed token following the existing naming convention (§2.4). As of BRIEF-RESOLVE (2026-07-16), **`--info`/`--info-foreground` (§2.4b) are the first such additive pair**, resolving FLAG-F. **Named-color-token count (addendum — sanctioned 2026-07-18, closing the DS-GATE L1 doc-nit that the headline over-counted vs a strict leaf enumeration): 41, itemized per section so the number can't drift again — 35 canonical (§2.1's 23 + §2.2's 12) + 2 additive `--info`/`--info-foreground` (§2.4b) + 4 additive footer-band tokens `--footer-bg`/`-fg`/`-fg-muted`/`-logo` (§2.3) = 41.** Nothing else was renamed or removed.
 - The design system (`components/ui` + `components/shared`) is owned by **Claude Design**. Cursor **composes + wires data**, never restyles. Extend shadcn via wrappers; never modify base `components/ui/*`.
 - **No emojis in UI.** Every glyph is a clean outline SVG icon (`stroke="currentColor"`, `stroke-width="2"`, 24×24 viewBox). The design reference is emoji-free; keep it that way.
 - **No hover-only affordances** (low-end Egyptian mobile target). Hover elevation/borders are enhancements; every state must be reachable and legible without hover.
@@ -113,7 +113,16 @@ The design reference expresses these as *hardcoded* values inside status/level c
 These appear as one-off hardcoded values in the design and should resolve to the nearest existing token when a component is built (never inlined):
 - ~~Status "processing/dispatched" blue~~ — **RESOLVED (FLAG-F): no longer a bare literal.** This is now the additive `--info`/`--info-foreground` pair — see §2.4b.
 - **Sold-out / wishlist tint** `hsla(350 80% 60% / .05)` (`.wishlist-btn:hover`) — decorative destructive-adjacent tint; use `--destructive` at low alpha.
-- **Footer** solid `222 22% 12%` bg + `40 14% 70–80%` text — a fixed dark band independent of theme (§5 Footer).
+- ~~**Footer** solid `222 22% 12%` bg + `40 14% 70–80%` text~~ — **RESOLVED (addendum — sanctioned 2026-07-18, CD-DELTA-1/-FIX): no longer bare literals.** The theme-independent dark band (§5.37) is now four real, additive, FROZEN-from-now-on tokens (identical value both `:root`/`.dark`) — counted in the §0 headline tally:
+
+  | Token | Value (both themes) | Role |
+  |---|---|---|
+  | `--footer-bg` | `222 22% 12%` | band background |
+  | `--footer-fg` | `0 0% 100%` | heading / logo-wordmark color (re-valued 2026-07-18, CD-DELTA-1-FIX; was `40 14% 80%` at DS-REGEN emit) |
+  | `--footer-fg-muted` | `40 14% 70%` | default link/body color (additive, sanctioned 2026-07-18) |
+  | `--footer-logo` | `175 60% 45%` | wordmark + link-hover color (additive, sanctioned 2026-07-17) |
+
+  Link hover swaps `--footer-fg-muted`→`--footer-logo`; the `.footer-bottom` divider composes `hsl(var(--footer-fg)/0.1)` — a composition, not a fifth token (§2.1 token-usage rule). Values above match `src/app/globals.css` exactly (verified byte-for-byte during BRIEF-SYNC).
 - **Avatar/store gradients**: `linear-gradient(135deg, primary, accent)` (avatar), `linear-gradient(135deg, 158 40% 85%, 158 50% 70%)` (store cover) — compose from tokens, not literals.
 
 ### 2.4 PROPOSED NEW tokens (additive — do not exist on main; follow naming convention)
@@ -156,8 +165,9 @@ New, **additive-only** token pair — nothing existing was renamed. Authored fro
 - **Weights loaded:** Cairo 400/600/700/800 · IBM Plex Sans Arabic 300/400/500/600/700 · IBM Plex Mono 400/500/600.
 - **Type scale (rem):** `--text-display 2.25` · `--text-h1 1.875` · `--text-h2 1.5` · `--text-h3 1.25` · `--text-lg 1.125` · `--text-base 1` · `--text-sm .875` · `--text-xs .75`.
 - **Line-height:** body **1.8** (loosened for Arabic legibility); headings **1.3**; messages/accordion body **1.7–1.8**.
-- **Heading weights:** display **800**; h1–h6 **700**; card/section titles 600–700.
+- **Heading weights:** display **800**; h1–h2 **700**; **h3 600** (card/section titles 600–700).
 - **Mobile clamp (≤768px):** display → `1.75rem`, h1 → `1.5rem`, h2 → `1.25rem`.
+- **Cross-check vs merged `tailwind.config.ts` `fontSize` (addendum — sanctioned 2026-07-18, BRIEF-SYNC):** sizes + line-heights are byte-identical to this scale (`display` `2.25rem`/`1.3`, `h1` `1.875rem`/`1.3`, `h2` `1.5rem`/`1.3`, `h3` `1.25rem`/`1.3`; `lg/base/sm/xs` fall through to Tailwind defaults, per the config's own comment — matching this scale's values exactly). **One genuine mismatch found and corrected above:** the config bakes `fontWeight:"600"` into the `h3` entry, not `700` — the "h1–h6 **700**" line was over-broad; fixed to "h1–h2 700; h3 600" to match the merged code exactly (zero code changed — every real `text-h3` usage in §5 already pairs it with an explicit `font-bold`/`font-extrabold` override, so no visual regression, just a doc correction).
 
 ### 3.2 Spacing (4px base)
 `--space-1 .25rem` · `-2 .5rem` · `-3 .75rem` · `-4 1rem` · `-5 1.25rem` · `-6 1.5rem` · `-8 2rem` · `-10 2.5rem` · `-12 3rem` · `-16 4rem`. Container max-width **1280px**, gutters `--space-4` (mobile) → `--space-6` (≥1024px). Always express as logical utilities (`ps/pe/ms/me/px/py`), never `pl/pr/ml/mr`.
@@ -258,6 +268,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 
 ### 5.13 Topbar (`.topbar`) — public + buyer
 - **Anatomy:** `sticky top:0 z-50`, height **`--topbar-height` (64px)**, bg `--card`, bottom hairline, `--shadow-sm`, `padding-inline --space-4`, `gap --space-3`. `.logo` font-display **800** `--text-h3` `--primary` (uses the ب mark statically per §6). `.search-bar` flex-1 `max-width 560px` with search icon at **`inset-inline-start .75rem`**, input radius **full**, bg `--muted`. `.topbar-actions` flex `gap --space-2`. `.notif-btn` 40×40 circle + `.notif-dot` at `inset-inline-end 8px`. `.avatar-btn` 36×36 gradient (primary→accent) ring. `.topbar-theme-btn` 36×36 (light/dark toggle).
+- **`.topbar-lang-btn` (addendum — sanctioned 2026-07-18, CD-DELTA-1):** 36×36, same construction as `.topbar-theme-btn` (circle, `1px --border`, muted icon color, focus-visible ring) — shows the **other** locale's glyph as its label: `"EN"` when the current locale is `ar`, `"ع"` when `en` (never the current locale's own glyph). Label/aria-label + the toggle action are both **string/callback props** (DS-I18N — no hardcoded locale copy in the component); Cursor wires the callback to the app's locale-preserving route-replace mechanism (same pattern as the Settings language switcher, §BL-03).
 - **Mobile (≤768px):** `.search-bar` hidden (search moves to bottom-nav / dedicated page).
 - **RTL/LTR:** **logo at inline-start (right in RTL), account/actions cluster at inline-end (left in RTL)** — mirrors automatically. Canonical RTL.
 
@@ -351,7 +362,8 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **Alert banner:** padding `--space-3 --space-4`, radius **md**, `--text-sm`, flex `gap --space-3` icon+text. `info` → `hsl(info/.1)` bg + `--info` text + `hsl(info/.2)` border (§2.4b — resolved FLAG-F); `success`/`warning`/`destructive` = token tints + matching text. States: static; dismissible variant optional.
 
 ### 5.37 Footer (`.footer`)
-- **Fixed dark band** (theme-independent): bg `222 22% 12%`, text `40 14% 80%`, padding `--space-12 --space-4`. Grid `2fr 1fr 1fr 1fr` (→ `1fr 1fr` ≤768, `1fr` ≤480). Logo font-display **800** `--text-h2` `--primary`; column `h4` white 700; links `40 14% 70%` → `--primary` hover. `.footer-bottom` top hairline + centered `--text-xs` @ .6.
+- **Fixed dark band** (theme-independent, identical `:root`/`.dark`): bg `--footer-bg` (`222 22% 12%`), padding `--space-12 --space-4`. Grid `2fr 1fr 1fr 1fr` (→ `1fr 1fr` ≤768, `1fr` ≤480). Logo font-display **800** `--text-h2` `--footer-logo` (`175 60% 45%` — additive, both themes; §2.3).
+- **Text hierarchy (addendum — sanctioned 2026-07-18, CD-DELTA-1-FIX, closing a ZERO-raw-color-literal pass):** column `h4` headings + the logo wordmark → `--footer-fg` (bright heading color, re-valued `0 0% 100%` — was `40 14% 80%` at DS-REGEN emit, corrected because the original value read as body-text weight on a solid dark band, not a heading). **Default link/body color** → the new additive `--footer-fg-muted` (`40 14% 70%`, both themes — see §2.3). **Link hover** → `--footer-logo`. `.footer-bottom` top hairline is composed as `hsl(var(--footer-fg)/0.1)` (StoreCard divider-composition precedent, §2.1 token-usage rule — not a new token) + centered `--text-xs` @ .6 opacity in `--footer-fg-muted`.
 - RTL: grid + text mirror via logical flow. Canonical RTL.
 
 ### 5.38 Supporting primitives (recorded, lower-detail)
@@ -415,9 +427,23 @@ This is the **only** authored animation information. **No trigger, duration, eas
 
 Anatomy above defines **shape, not API.** Components keep their existing props and **DS-I18N string-prop contracts** (labels/plural strings passed in, Arabic defaults preserved, never hardcoded). The 21-component shared kit (16 DS-I18N-refactored + 5 unchanged) is the contract; do not change signatures.
 
-ListingCard · StoreCard · PriceBlock · **StatusBadge** (one enum→color map; keys in `constants/statusColors.ts`; `flag` domain stays label-less) · StarRating · RatingSummary · LevelBadge · VerifiedBadge · MessageThread · ImageUploader · OrderTimeline · AddressForm/AddressSelect · FilterSheet · FilterChips · SLABadge · StockBadge · CategoryGrid · CollectionStrip · ImageGallery · SellerMiniCard · SearchBar · WishlistButton · FollowButton · EmptyState · SkeletonGrid/SkeletonTable · ErrorRetryCard · ConfirmDialog · Toaster · AppTopbar/MobileBottomNav · SellerSidebar/AdminSidebar. Every one renders its **empty / loading / error** states, not just the happy path, and is usable in all four AR-RTL / EN-LTR × light/dark contexts.
+ListingCard · StoreCard · PriceBlock · **StatusBadge** (one enum→color map; keys in `constants/statusColors.ts`; `flag` domain stays label-less) · StarRating · RatingSummary · LevelBadge · VerifiedBadge · MessageThread · ImageUploader · OrderTimeline · AddressForm/AddressSelect · FilterSheet · FilterChips · SLABadge · StockBadge · CategoryGrid · CollectionStrip · ImageGallery · SellerMiniCard · SearchBar · WishlistButton · FollowButton · EmptyState · SkeletonGrid/SkeletonTable · ErrorRetryCard · ConfirmDialog · Toaster · AppTopbar/MobileBottomNav · **Footer** (addendum — sanctioned 2026-07-18, CD-DELTA-1: authored in §5.37 but omitted from this inventory at DS-REGEN emit time) · SellerSidebar/AdminSidebar. Every one renders its **empty / loading / error** states, not just the happy path, and is usable in all four AR-RTL / EN-LTR × light/dark contexts.
 
 ---
 
 ## 8. Hand-off contract
 Claude Design owns the **visual contract** of `components/ui` + `components/shared`. Cursor composes those into feature pages and wires data (Server Actions / queries) **without changing their visual contract**. Generated UI returns via branch → PR → UI-reviewer gate (`.cursor/rules/91-review-ui.mdc`). Token names frozen; values applied to `globals.css` in a **separate** task after this brief is reviewed. `.fig`: none — wireframes are textual (`BETK_UI_SPEC.md §3`).
+
+---
+
+## 9. OPEN ITEMS (addendum — sanctioned 2026-07-18, BRIEF-SYNC; referenced from §0's intro line since inception, created here)
+
+Standing, brief-wide open items carried across DS-REGEN/CD-DELTA-1 that are **designer/product decisions, not invented here.** Nothing in this section is applied to code.
+
+**(i) PROPOSED font-fallback stack — not applied, designer decision pending.** `tailwind.config.ts`'s `fontFamily` is held **VERBATIM** from pre-DS-REGEN `main` (sign-off 2026-07-17). A corrected fallback set — `display`→**Cairo**, `body`→**IBM Plex Sans Arabic**, `mono`→**IBM Plex Mono** (i.e. naming the actual loaded font as the first explicit fallback, matching this brief's own §3.1 family declarations and the `--font-display/body/mono` CSS-var chains in `globals.css`) — was proposed in the DS-REGEN handoff package's CHANGELOG (a transient, never-committed artifact — deleted with the rest of `docs/handoff/`, per the standing "hand-off folders are not vendored" pattern; not re-creatable verbatim here). **Not applied** — Design to confirm intent before any `tailwind.config.ts` `fontFamily` edit.
+
+**(ii) Footer link targets vs the frozen §3 page inventory — 4 columns unrouted, not invented.** The `Footer` component's default columns include **Categories / Stores / Help center / Contact us**, none of which has a corresponding standalone page in the frozen `BETK_UI_SPEC.md §3` inventory (no public categories/stores directory, no help/contact page). Landed with `href` unset for those four — the component's own contract already renders an unset `href` as non-navigating (`e.preventDefault()`) — rather than inventing a route. Open for a future Design/product decision (add the pages, or repoint the links).
+
+**(iii) REG-23 — design-repo remote + pinned SHA still a placeholder.** The brief's own living-reference pointer (intro, above) — `<DESIGN-REPO-URL>` @ `<COMMIT-SHA>` — remains unresolved; no real design-repo URL/SHA exists anywhere in this workspace (checked BRIEF-RESOLVE, re-confirmed BRIEF-SYNC). Tracked as **REG-23** in `SESSION_CONTEXT.md`'s consolidated issue register — asked, not invented; still open, not blocking (this brief is self-contained and authoritative on its own until filled).
+
+**(iv) LOGO-SYNC — unchanged, still open.** The logo system remains **IN PROGRESS** exactly as recorded in §6: authored ب mark + بيتك letter-objects (landed as PNG rasters), animation = intent note only, no SVG/favicon/variants/wordmark-lockup/clear-space rules. See §6.5 OPEN LOGO ITEMS — nothing in this BRIEF-SYNC pass changes that status.
