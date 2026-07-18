@@ -16,6 +16,7 @@
     "notifications": "الإشعارات",
     "theme": "تبديل المظهر",
     "account": "حسابي",
+    "language": "تغيير اللغة",
     "nav": {
       "home": "الرئيسية",
       "search": "بحث",
@@ -23,6 +24,34 @@
       "inbox": "الرسائل",
       "account": "حسابي"
     }
+  },
+  "footer": {
+    "tagline": "سوق بيتك — منصة الاقتصاد الإبداعي المصري.",
+    "columns": {
+      "market": {
+        "title": "السوق",
+        "links": {
+          "categories": "التصنيفات",
+          "stores": "المتاجر",
+          "featured": "العروض المميزة"
+        }
+      },
+      "sellers": {
+        "title": "للبائعين",
+        "links": {
+          "openStore": "افتح متجرك",
+          "sellerConsole": "لوحة البائع"
+        }
+      },
+      "help": {
+        "title": "المساعدة",
+        "links": {
+          "helpCenter": "مركز المساعدة",
+          "contact": "تواصل معنا"
+        }
+      }
+    },
+    "copyright": "© 2026 بيتك"
   },
   "auth": {
     "loginTitle": "أهلاً بك في بيتك",

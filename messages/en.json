@@ -16,6 +16,7 @@
     "notifications": "Notifications",
     "theme": "Toggle theme",
     "account": "Account",
+    "language": "Change language",
     "nav": {
       "home": "Home",
       "search": "Search",
@@ -23,6 +24,34 @@
       "inbox": "Messages",
       "account": "Account"
     }
+  },
+  "footer": {
+    "tagline": "BETK — Egypt's creative-economy marketplace.",
+    "columns": {
+      "market": {
+        "title": "Market",
+        "links": {
+          "categories": "Categories",
+          "stores": "Stores",
+          "featured": "Featured deals"
+        }
+      },
+      "sellers": {
+        "title": "For sellers",
+        "links": {
+          "openStore": "Open your store",
+          "sellerConsole": "Seller console"
+        }
+      },
+      "help": {
+        "title": "Help",
+        "links": {
+          "helpCenter": "Help center",
+          "contact": "Contact us"
+        }
+      }
+    },
+    "copyright": "© 2026 BETK"
   },
   "auth": {
     "loginTitle": "Welcome to BETK",
