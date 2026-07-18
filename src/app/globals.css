@@ -59,7 +59,8 @@
 
     /* ── Footer band (theme-independent, §2.3/§5.37) ── */
     --footer-bg: 222 22% 12%;         /* additive — sanctioned 2026-07-17 */
-    --footer-fg: 40 14% 80%;          /* additive — sanctioned 2026-07-17 */
+    --footer-fg: 0 0% 100%;           /* re-valued 2026-07-18 (CD-DELTA-1-FIX) — HEADING color on band (was 40 14% 80%) */
+    --footer-fg-muted: 40 14% 70%;    /* additive — sanctioned 2026-07-18 — default link/body color on band */
     --footer-logo: 175 60% 45%;       /* additive — sanctioned 2026-07-17 (footer wordmark) */
 
     /* ── Radius (12px base, FLAG-G; 12/10/8 cascade) ── */
@@ -134,7 +135,8 @@
 
     /* ── Footer band (identical both themes — theme-independent) ── */
     --footer-bg: 222 22% 12%;         /* additive — sanctioned 2026-07-17 */
-    --footer-fg: 40 14% 80%;          /* additive — sanctioned 2026-07-17 */
+    --footer-fg: 0 0% 100%;           /* re-valued 2026-07-18 (CD-DELTA-1-FIX) — HEADING color on band (was 40 14% 80%) */
+    --footer-fg-muted: 40 14% 70%;    /* additive — sanctioned 2026-07-18 — default link/body color on band */
     --footer-logo: 175 60% 45%;       /* additive — sanctioned 2026-07-17 */
   }
 }

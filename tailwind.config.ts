@@ -93,6 +93,7 @@ const config: Config = {
         /* ── DS-REGEN additive: theme-independent footer band (§2.3/§5.37) ── */
         "footer-bg": "hsl(var(--footer-bg))",
         "footer-fg": "hsl(var(--footer-fg))",
+        "footer-fg-muted": "hsl(var(--footer-fg-muted))",
         "footer-logo": "hsl(var(--footer-logo))",
       },
 
