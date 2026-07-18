@@ -150,19 +150,54 @@ Close-out → SESSION_CONTEXT + journal → commit + push. HOLD PR for verdict.
 - **Model:** **Opus** (search-ranking correctness + Arabic unaccent + R-B04 = the phase's hardest logic) · **Skill:** skill-supabase-engineer, skill-nextjs-engineer · **Source:** FR-PUB-2, R-B04, ARCHITECTURE §search
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T03 — Search & filter at /search (public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T03 — Search & filter at /search
+(public, bilingual + themed). Branch feature/phase-03-catalog (continue, git pull first).
 
-Search query (anon client, public RLS):
-- Full-text over listings.search_vector (tsvector/GIN, unaccent for Arabic) — 1–2 keyword query. CONFIRM the search_vector trigger + unaccent are live (Phase 01 T05/T14); if search_vector is unpopulated or unaccent missing, STOP and flag — do NOT rebuild the trigger here.
-- Filters (all from URL params, preserved in URL): category (self-ref tree), type (product|service), governorate, city (from stores), price_min/price_max, sort (relevance|newest|price|popularity).
-- Boosted ranking (R-B04): active-boost listings rank above organic within the relevant result set. CONFIRM the exact R-B04 rule against PRD/ERD before implementing; do NOT invent a ranking weight. STATE the rule you implemented in the close-out.
-- status='active' AND deleted_at IS NULL always enforced.
+ROUTE: src/app/[locale]/(public)/search/page.tsx. Chrome comes from the (public)
+layout — do not touch it.
 
-Page: compose SearchBar, FilterSheet/sidebar (category tree, type, governorate, city, price, sort), FilterChips (active filters), ListingCard grid, sort dropdown, pagination/infinite scroll, boosted-results banner. Empty: "no results" preserving query+filters in URL. Error: "Search temporarily unavailable" retry, query+filters retained in URL.
+QUERY (src/features/discovery/queries/searchListings.ts, T01 conventions: anon/
+injectable DiscoveryClient, typed returns, Zod-validated params, NO service-role,
+NO new policies):
+- Full-text over listings.search_vector; status='active' AND deleted_at IS NULL
+  always enforced.
+- KNOWN REPO FACT (OD-7 §7 carry): update_listing_search_vector uses 'arabic'/
+  'english' TS configs, NOT unaccent, and runs description_ar through the English
+  stemmer. Do not assume the pack's "unaccent" line holds. VERIFY live behavior:
+  seed a listing whose title contains Arabic WITH diacritics, query WITHOUT them
+  (and inverse). If matching fails, STOP and flag — the fix is a DB-classed
+  trigger/migration task for separate review, NOT an in-task rebuild. STATE the
+  observed behavior either way.
+- Filters from URL params, preserved in URL (shareable): category, type
+  (product|service), governorate, city, price_min/price_max, sort
+  (relevance|newest|price|popularity). Params locale-neutral (same URL shape
+  under /en).
+- R-B04 boosted ranking: CONFIRM the exact rule against BETK_PRD.md / BETK_ERD.md
+  before implementing (active-boost listings above organic within the relevant
+  result set — but the precise scope/tiebreak must come from the docs). Do NOT
+  invent a weight. STATE the rule + its doc citation in the close-out. If the
+  docs do not pin it, STOP and flag.
+- Pagination: follow T01's keyset-cursor convention where the sort permits;
+  STATE the approach per sort mode (relevance keyset is non-trivial — if you
+  fall back to offset for relevance, say so and why).
 
-Compose only. pnpm typecheck + lint clean.
-Integration test: keyword matches an active listing; soft-deleted/suspended excluded; a boosted listing ranks above an organic match (R-B04); an Arabic query with/without diacritics matches (unaccent). STATE the R-B04 rule implemented.
-Close-out → commit.
+PAGE: compose SearchBar (initial query from URL), FilterSheet (mobile) / inline
+panel (desktop), FilterChips (active filters, removable), ListingCard grid,
+sort control, pagination, boosted-results treatment per the shared kit. All
+copy via a search.* namespace in messages/{ar,en}.json (report parity count);
+titles/names COALESCE; labels via catalogLabels builders. generateMetadata both
+locales. Empty: "no results" preserving query+filters in URL. Error: retry
+preserving query+filters. Guest wishlist → login returnUrl (locale-preserving).
+
+TESTS (integration, staging, seeded + cleaned per T01 pattern): keyword matches
+active listing; soft-deleted/suspended excluded; boosted ranks above organic
+(R-B04 as documented); the Arabic diacritics probe above; filter combination
+narrows correctly.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build (both locales). Runtime
+smoke: /search?q=… and /en/search?q=… render results/empty correctly in chrome.
+No ui/* or shared/* edits (diff proof). Close-out → SESSION_CONTEXT + journal →
+commit + push. HOLD for verdict.
 ```
 - **Files:** `src/app/(public)/search/page.tsx`, `src/features/discovery/queries/searchListings.ts`, components (composition).
 - **Done when:** keyword search over `search_vector` with Arabic unaccent; all filters from URL; R-B04 boosted-above-organic proven by test; soft-deleted/suspended excluded; states present. **R-B04 rule documented, not invented.**
