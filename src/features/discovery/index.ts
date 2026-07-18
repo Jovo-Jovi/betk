@@ -20,9 +20,13 @@ export { getListingById } from "./queries/getListingById";
 export { getStoreBySlug } from "./queries/getStoreBySlug";
 // T03 — search & filter (/search).
 export { searchListings } from "./queries/searchListings";
+// T04 — category browse (/category/[slug]).
+export { getCategoryBySlug } from "./queries/getCategoryBySlug";
 
 export type {
+  CategoryDetail,
   CategoryNode,
+  CategorySummary,
   HomepageCollection,
   HomepageData,
   HomepageStrip,
@@ -45,6 +49,7 @@ export {
   listingSortSchema,
   listingIdSchema,
   storeSlugSchema,
+  categorySlugSchema,
   searchListingsParamsSchema,
   searchSortSchema,
   searchListingTypeSchema,

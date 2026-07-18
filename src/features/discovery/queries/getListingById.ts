@@ -16,6 +16,20 @@
  * T01 is a read-only query layer ("NO writes"); T05 (listing detail page)
  * owns confirming + implementing the increment mechanism.
  *
+ * ── R-S07 check (Phase 03 / T04 STEP 0) — VERIFIED, NOT a leak, NOT fixed ──
+ * Unlike `getActiveListings`/`getHomepageData` (which needed a `stores!inner`
+ * fix, see `_shared.ts`), this query's own `LISTING_DETAIL_SELECT` uses a
+ * plain (non-inner) `stores(...)` embed, but the code below ALREADY guards
+ * against a suspended store: `asSingle(row.stores)` resolves to `null` when
+ * the store fails `stores_public` RLS, and the very next line
+ * (`if (!store) return null`) turns that into the same 404-triggering `null`
+ * this function already returns for a missing/soft-deleted listing (R-L10).
+ * VERIFIED LIVE (staging, seeded+cleaned): `getListingById` on an active
+ * listing whose store is `suspended` resolves to `null` — same as
+ * `getStoreBySlug`'s own R-S07 handling. So there is no leak here to fix;
+ * this is a confirmation for T05 (which owns `/listing/[id]`), not a
+ * flagged defect — see `tests/integration/discovery.category.test.ts`.
+ *
  * Runs under the cookie/anon server client.
  */
 

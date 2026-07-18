@@ -365,5 +365,16 @@
     "next": "التالي",
     "pageLabel": "صفحة {page}",
     "error": "تعذّر تحميل نتائج البحث."
+  },
+  "category": {
+    "metaTitleFallback": "الفئة — بيتك",
+    "metaTitle": "{name} — بيتك",
+    "metaDescription": "تصفح إعلانات فعالة في فئة {name} على بيتك.",
+    "error": "تعذّر تحميل إعلانات هذه الفئة.",
+    "loadMore": "تحميل المزيد",
+    "empty": {
+      "message": "لا توجد إعلانات فعالة في {name} حتى الآن",
+      "backToParent": "الرجوع إلى {name}"
+    }
   }
 }

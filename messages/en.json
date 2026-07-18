@@ -365,5 +365,16 @@
     "next": "Next",
     "pageLabel": "Page {page}",
     "error": "Search results couldn't load."
+  },
+  "category": {
+    "metaTitleFallback": "Category — BETK",
+    "metaTitle": "{name} — BETK",
+    "metaDescription": "Browse active listings in {name} on BETK.",
+    "error": "This category's listings couldn't load.",
+    "loadMore": "Load more",
+    "empty": {
+      "message": "No active listings in {name} yet",
+      "backToParent": "Back to {name}"
+    }
   }
 }

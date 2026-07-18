@@ -34,6 +34,7 @@ export type GetActiveListingsParams = z.input<typeof getActiveListingsParamsSche
 
 export const listingIdSchema = z.string().uuid();
 export const storeSlugSchema = z.string().trim().min(1).max(80);
+export const categorySlugSchema = z.string().trim().min(1).max(80);
 
 /* ── Search (/search) — Phase 03 / T03 (FR-PUB-2) ──────────────────────────
  * Params are sourced from PUBLIC, locale-neutral URL search params (same URL

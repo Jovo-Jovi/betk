@@ -1,11 +1,27 @@
 /**
- * getActiveListings — public listing grid query. Phase 03 / T01 (FR-PUB-1/3).
+ * getActiveListings — public listing grid query. Phase 03 / T01 (FR-PUB-1/3),
+ * category filter updated at T04.
  *
  * `status='active' AND deleted_at IS NULL` (the ONLY rows `listings_public`
  * RLS exposes to anon/non-owner readers — BETK_DATABASE_SCHEMA.sql), keyset
  * cursor-paginated on `created_at` (default) or `view_count` (sort="popular"),
  * optionally filtered to a category. Runs under the cookie/anon server client
  * — NEVER the service-role client (no RLS bypass for a public surface).
+ *
+ * ── Category filter (T04, BETK_UI_SPEC.md §3 Category Browse, line 97) ─────
+ * "listings where `category_id` OR `subcategory_id` matches" the resolved
+ * category — NOT a recursive descendant-subtree traversal. The schema only
+ * carries two listing-side category levels (`category_id` top-level,
+ * required; `subcategory_id` one level below, optional), so a single
+ * `category_id.eq.X,subcategory_id.eq.X` OR-predicate already satisfies the
+ * spec exactly, whether the resolved category (by slug, T04) is itself a
+ * top-level category or a subcategory — no recursion needed.
+ *
+ * ── Suspended-store exclusion (R-S07, T04 STEP 0) ──────────────────────────
+ * The `stores` embed in `LISTING_SUMMARY_SELECT` (`_shared.ts`) is forced to
+ * `stores!inner(...)`, so a listing whose store fails `stores_public` RLS
+ * (suspended) is dropped from the result set entirely, not just shown with a
+ * null store. See `_shared.ts`'s header for the full R-S07 fix rationale.
  *
  * See `_shared.ts` for the RLS finding on `listing_images`/`rating_aggregates`
  * (no SELECT policy → hero image / store rating come back null, not an error).
@@ -31,9 +47,10 @@ import {
 } from "./_shared";
 
 /**
- * @param params  category (UUID, top-level `listings.category_id`), sort
- *                ("newest" default | "popular"), and an opaque cursor from a
- *                previous page's `nextCursor`.
+ * @param params  category (UUID; matches a listing's `category_id` OR
+ *                `subcategory_id` — see the file header), sort ("newest"
+ *                default | "popular"), and an opaque cursor from a previous
+ *                page's `nextCursor`.
  * @param client  Supabase client override (integration tests inject a plain
  *                anon client; RSC callers omit this and get the cookie client).
  */
@@ -53,7 +70,7 @@ export async function getActiveListings(
     .is("deleted_at", null);
 
   if (parsed.category) {
-    query = query.eq("category_id", parsed.category);
+    query = query.or(`category_id.eq.${parsed.category},subcategory_id.eq.${parsed.category}`);
   }
   if (cursor) {
     query = query.or(listingCursorPredicate(parsed.sort, cursor));

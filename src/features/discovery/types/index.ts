@@ -91,6 +91,26 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+/* ── getCategoryBySlug (/category/[slug] — T04) ─────────────────────────── */
+
+export interface CategorySummary {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string | null;
+  iconUrl: string | null;
+}
+
+/**
+ * A resolved category page: the category itself + its (active) parent, if
+ * any, for the empty-state "back to parent" link + breadcrumb, and its
+ * (active) direct children for the subcategory chips.
+ */
+export interface CategoryDetail extends CategorySummary {
+  parent: CategorySummary | null;
+  children: CategorySummary[];
+}
+
 /* ── getHomepageData ────────────────────────────────────────────────────── */
 
 export interface HomepageCollection {

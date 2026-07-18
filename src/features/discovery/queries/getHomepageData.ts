@@ -10,6 +10,13 @@
  * `collection_listings` RLS finding — the collections strip will currently
  * resolve to `{ status: "ok", data: [] }` (zero rows, not an error) on every
  * live collection until that table's missing SELECT policy is addressed.
+ *
+ * ── R-S07 fix (Phase 03 / T04 STEP 0) ────────────────────────────────────────
+ * All three strips (collections, new arrivals, boosted) select listings via
+ * `LISTING_SUMMARY_SELECT` — its `stores!inner(...)` embed (see `_shared.ts`)
+ * now excludes a listing whose owning store is suspended, closing an R-S07
+ * leak verified live on this exact function before the fix (an active listing
+ * under a `suspended` store surfaced in `newArrivals` and `boosted`).
  */
 
 import { createClient } from "@/lib/supabase/server";

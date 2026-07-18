@@ -208,12 +208,50 @@ commit + push. HOLD for verdict.
 - **Model:** Sonnet · **Skill:** skill-nextjs-engineer, skill-ui-engineer · **Source:** FR-PUB-3, UI_SPEC Category
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T04 — Category browse at /category/[slug] (public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T04 — Category browse at
+/category/[slug] (public, bilingual + themed). Branch feature/phase-03-catalog
+(continue; git pull first).
 
-RSC: resolve category by slug (getCategoryTree() or a by-slug query). is_active=false OR unknown slug → 404 (notFound()). Render subcategory chips (children), then a ListingCard grid of active listings in that category. CONFIRM against UI Spec whether the grid includes descendant categories or only the exact category — do NOT assume; state which. Reuse getActiveListings({category}).
-Empty: "No active listings in {category} yet" + link to parent + homepage.
+STEP 0 — R-S07 consistency check (flagged expansion, justified by the T03 finding
+that searchListings required stores!inner to exclude suspended stores):
+- CONFIRM against BETK_PRD.md / BETK_ERD.md that a suspended store's listings are
+  excluded from public catalog surfaces (R-S07's intent). Cite the line.
+- PROBE live (staging, seeded + cleaned per T01 pattern): does getActiveListings
+  return an active listing whose store is suspended? Does getHomepageData?
+- If the leak is confirmed: fix the T01 queries (getActiveListings +
+  getHomepageData strips) with the same stores!inner pattern T03 used —
+  query-layer only, no RLS change — + a regression test per query. STATE the fix.
+- getListingById (suspended store's listing detail): do NOT fix here — verify and
+  FLAG the observed behavior for T05, which owns that page.
 
-Compose only. pnpm typecheck + lint clean. Integration test: active category renders listings; inactive/unknown → 404. Close-out → commit.
+TASK — RSC at src/app/[locale]/(public)/category/[slug]/page.tsx (chrome from
+the (public) layout, untouched):
+- Resolve category by slug. is_active=false OR unknown slug → notFound() (hard 404).
+- Subcategory chips from the category's children (names via localizedName
+  COALESCE), linking to their category pages via @/i18n/navigation.
+- ListingCard grid via getActiveListings({category}) (post-step-0 version) with
+  the T01 cursor pagination; titles COALESCE; labels via catalogLabels builders;
+  guest wishlist → login returnUrl (locale-preserving, T02 pattern).
+- DESCENDANT-INCLUSION: CONFIRM against BETK_UI_SPEC.md §3 Category whether the
+  grid includes descendant-category listings or exact-category only — do NOT
+  assume; STATE which + the citation. If the spec doesn't pin it, implement
+  exact-category and flag.
+- Empty: "no active listings in {name} yet" + links to parent category (if any)
+  + homepage — keyed copy both locales. Error: ErrorRetryCard.
+- Copy via a category.* (or consistent) namespace in messages/{ar,en}.json —
+  report parity count. generateMetadata via getTranslations, category name
+  COALESCE'd into the title, both locales.
+
+TESTS (integration, staging, seeded + cleaned): active category renders its
+listings; inactive slug → 404; unknown slug → 404; subcategory chips assemble;
++ the step-0 regression tests if the fix landed.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build (both locales). Runtime
+smoke: /category/<seeded-slug> and /en/category/<seeded-slug> render grid/empty
+in chrome, correct dir/lang; unknown slug hard-404s both locales.
+No ui/* or shared/* edits (diff proof). No new policies, no service-role.
+Close-out → SESSION_CONTEXT + journal → commit + push. HOLD for verdict — no PR,
+main stays untouched until the T07 gate.
 ```
 - **Files:** `src/app/(public)/category/[slug]/page.tsx`, components (composition).
 - **Done when:** category page renders by slug; inactive/unknown → 404; subcategory chips; empty state. **Descendant-inclusion confirmed against spec, not assumed.**
