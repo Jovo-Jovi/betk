@@ -6,6 +6,8 @@ import { Heart } from "lucide-react";
  * WishlistButton — heart toggle for saving a listing. i18n: the aria-labels
  * for both states come in as props (Arabic defaults). `overlay` is the
  * frosted pill over a card hero (top-end). Route guests to /auth/login on tap.
+ * CD-DELTA-2: onClick calls stopPropagation() + preventDefault() internally, so a
+ * toggle tap never bubbles to a wrapping card link/onClick. Signature unchanged.
  */
 export interface WishlistButtonProps {
   active?: boolean;
@@ -28,7 +30,11 @@ export function WishlistButton({ active = false, onToggle, size = "md", overlay 
       type="button"
       aria-pressed={active}
       aria-label={active ? removeLabel : addLabel}
-      onClick={() => onToggle?.(!active)}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onToggle?.(!active);
+      }}
       className={cn(
         "inline-flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         PX[size],

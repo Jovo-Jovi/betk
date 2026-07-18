@@ -48,9 +48,10 @@ import {
 
 /**
  * @param params  category (UUID; matches a listing's `category_id` OR
- *                `subcategory_id` — see the file header), sort ("newest"
- *                default | "popular"), and an opaque cursor from a previous
- *                page's `nextCursor`.
+ *                `subcategory_id` — see the file header), store (UUID; scopes
+ *                the grid to a single store's listings — storefront Listings
+ *                tab, T06), sort ("newest" default | "popular"), and an opaque
+ *                cursor from a previous page's `nextCursor`.
  * @param client  Supabase client override (integration tests inject a plain
  *                anon client; RSC callers omit this and get the cookie client).
  */
@@ -71,6 +72,9 @@ export async function getActiveListings(
 
   if (parsed.category) {
     query = query.or(`category_id.eq.${parsed.category},subcategory_id.eq.${parsed.category}`);
+  }
+  if (parsed.store) {
+    query = query.eq("store_id", parsed.store);
   }
   if (cursor) {
     query = query.or(listingCursorPredicate(parsed.sort, cursor));

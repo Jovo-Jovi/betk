@@ -27,6 +27,8 @@ export type ListingCursor = z.infer<typeof listingCursorSchema>;
 
 export const getActiveListingsParamsSchema = z.object({
   category: z.string().uuid().optional(),
+  /** Scope the grid to a single store (storefront Listings tab, T06). */
+  store: z.string().uuid().optional(),
   sort: listingSortSchema.default("newest"),
   cursor: z.string().min(1).optional(),
 });
@@ -35,6 +37,33 @@ export type GetActiveListingsParams = z.input<typeof getActiveListingsParamsSche
 export const listingIdSchema = z.string().uuid();
 export const storeSlugSchema = z.string().trim().min(1).max(80);
 export const categorySlugSchema = z.string().trim().min(1).max(80);
+
+/* ── Wishlist / follow Server Action inputs (Phase 03 / T06) ────────────────
+ * The two auth-gated write actions validate their single id argument with Zod
+ * before any DB call (CI check-zod-coverage). The authenticated buyer_id is
+ * ALWAYS read from the live GoTrue session inside the action — never accepted
+ * from the client — so only the target id needs validating here.
+ */
+export const toggleWishlistInputSchema = z.object({
+  listingId: z.string().uuid(),
+});
+export type ToggleWishlistInput = z.infer<typeof toggleWishlistInputSchema>;
+
+export const toggleFollowInputSchema = z.object({
+  storeId: z.string().uuid(),
+});
+export type ToggleFollowInput = z.infer<typeof toggleFollowInputSchema>;
+
+/**
+ * Shared discriminated result for both discovery toggle actions
+ * (`toggleWishlist` / `toggleFollow`). Lives here (not in a `"use server"`
+ * action file, which may only export async functions) so both actions and
+ * their client consumers can import it. `active` = the NEW state (for optimistic
+ * UI reconciliation); `reason: "unauthenticated"` → client routes to login.
+ */
+export type ToggleResult =
+  | { ok: true; active: boolean }
+  | { ok: false; reason: "unauthenticated" | "invalid" | "error" };
 
 /* ── Search (/search) — Phase 03 / T03 (FR-PUB-2) ──────────────────────────
  * Params are sourced from PUBLIC, locale-neutral URL search params (same URL

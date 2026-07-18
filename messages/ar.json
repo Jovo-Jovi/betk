@@ -384,6 +384,10 @@
     "tagsTitle": "الوسوم",
     "descriptionTitle": "الوصف",
     "moreFromStore": "المزيد من هذا المتجر",
+    "wishlist": {
+      "add": "أضف للمفضلة",
+      "remove": "إزالة من المفضلة"
+    },
     "cta": {
       "inquiry": "استفسر الآن",
       "notifyMe": "أعلمني عند التوفر",
@@ -396,6 +400,53 @@
       "buyerLabel": "مشتري",
       "sellerReplyLabel": "رد البائع",
       "empty": "لا توجد تقييمات لهذا المتجر حتى الآن"
+    }
+  },
+  "store": {
+    "metaTitleFallback": "المتجر — بيتك",
+    "metaTitle": "{name} — بيتك",
+    "metaDescription": "تصفح منتجات وخدمات {name} على بيتك.",
+    "tabs": {
+      "listings": "المنتجات",
+      "reviews": "التقييمات",
+      "about": "عن المتجر"
+    },
+    "listingsEmpty": "لا توجد منتجات فعالة في هذا المتجر حتى الآن",
+    "loadMore": "تحميل المزيد",
+    "error": "تعذّر تحميل منتجات المتجر.",
+    "reviews": {
+      "empty": "لا توجد تقييمات لهذا المتجر حتى الآن",
+      "buyerLabel": "مشتري",
+      "sellerReplyLabel": "رد البائع"
+    },
+    "returnPolicy": {
+      "title": "سياسة الاسترجاع",
+      "empty": "لم يحدد المتجر سياسة استرجاع."
+    },
+    "about": {
+      "paymentTitle": "طرق الدفع",
+      "paymentEmpty": "لم يحدد المتجر طرق دفع.",
+      "deliveryTitle": "خيارات التوصيل",
+      "deliveryEmpty": "لم يحدد المتجر خيارات توصيل.",
+      "payment": {
+        "instapay": "إنستاباي",
+        "vodafoneCash": "فودافون كاش",
+        "orangeCash": "أورنج كاش",
+        "cod": "الدفع عند الاستلام"
+      },
+      "delivery": {
+        "modesTitle": "أنماط التوصيل",
+        "modes": {
+          "delivery": "توصيل",
+          "pickup": "استلام من المتجر",
+          "remote": "خدمة عن بُعد"
+        },
+        "deliveryDays": "مدة التوصيل: {min}–{max} يوم",
+        "deliveryFee": "رسوم التوصيل: {fee} ج.م",
+        "freeThreshold": "توصيل مجاني للطلبات فوق {amount} ج.م",
+        "pickupGovernorate": "الاستلام من: {governorate}",
+        "shipsNationwide": "التوصيل لكل المحافظات"
+      }
     }
   }
 }

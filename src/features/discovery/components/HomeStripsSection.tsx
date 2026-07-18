@@ -37,7 +37,18 @@ import { ListingCardLink } from "./ListingCardLink";
 import { StripErrorCard } from "./StripErrorCard";
 import { EmptyGettingStarted } from "./EmptyGettingStarted";
 
-function toCardProps(listing: ListingSummary, locale: AppLocale, boostLabel: string, boosted?: boolean) {
+interface WishlistLabels {
+  addLabel: string;
+  removeLabel: string;
+}
+
+function toCardProps(
+  listing: ListingSummary,
+  locale: AppLocale,
+  boostLabel: string,
+  wishlistLabels: WishlistLabels,
+  boosted?: boolean,
+) {
   return {
     id: listing.id,
     title: localizedName({ ar: listing.titleAr, en: listing.titleEn }, locale),
@@ -49,6 +60,8 @@ function toCardProps(listing: ListingSummary, locale: AppLocale, boostLabel: str
     reviews: listing.store?.rating?.totalReviews ?? null,
     boosted,
     boostLabel,
+    wishlistAddLabel: wishlistLabels.addLabel,
+    wishlistRemoveLabel: wishlistLabels.removeLabel,
     stockQty: listing.stockQty,
     isMadeToOrder: listing.isMadeToOrder,
     isService: listing.type === "service",
@@ -59,17 +72,19 @@ function ListingGrid({
   listings,
   locale,
   boostLabel,
+  wishlistLabels,
   boosted,
 }: {
   listings: ListingSummary[];
   locale: AppLocale;
   boostLabel: string;
+  wishlistLabels: WishlistLabels;
   boosted?: boolean;
 }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
       {listings.map((listing) => (
-        <ListingCardLink key={listing.id} {...toCardProps(listing, locale, boostLabel, boosted)} />
+        <ListingCardLink key={listing.id} {...toCardProps(listing, locale, boostLabel, wishlistLabels, boosted)} />
       ))}
     </div>
   );
@@ -79,10 +94,12 @@ function CollectionsStrips({
   collections,
   locale,
   boostLabel,
+  wishlistLabels,
 }: {
   collections: HomepageCollection[];
   locale: AppLocale;
   boostLabel: string;
+  wishlistLabels: WishlistLabels;
 }) {
   const dir = catalogCollectionDir(locale);
   return (
@@ -97,7 +114,7 @@ function CollectionsStrips({
             itemWidth={200}
           >
             {collection.listings.map((listing) => (
-              <ListingCardLink key={listing.id} {...toCardProps(listing, locale, boostLabel)} />
+              <ListingCardLink key={listing.id} {...toCardProps(listing, locale, boostLabel, wishlistLabels)} />
             ))}
           </CollectionStrip>
         ))}
@@ -109,8 +126,10 @@ export async function HomeStripsSection() {
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
   const catalogT = await getTranslations("catalog");
+  const tListing = await getTranslations("listing");
   const locale = (await getLocale()) as AppLocale;
   const boostLabel = catalogListingBoostLabel(catalogT);
+  const wishlistLabels = { addLabel: tListing("wishlist.add"), removeLabel: tListing("wishlist.remove") };
 
   const data = await getHomepageData(createAnonClient());
 
@@ -132,7 +151,7 @@ export async function HomeStripsSection() {
         <StripErrorCard message={t("error.message")} retryLabel={tCommon("retry")} compact />
       )}
       {data.collections.status === "ok" && (
-        <CollectionsStrips collections={data.collections.data ?? []} locale={locale} boostLabel={boostLabel} />
+        <CollectionsStrips collections={data.collections.data ?? []} locale={locale} boostLabel={boostLabel} wishlistLabels={wishlistLabels} />
       )}
 
       <section className="flex flex-col gap-3">
@@ -141,7 +160,7 @@ export async function HomeStripsSection() {
           <StripErrorCard message={t("error.message")} retryLabel={tCommon("retry")} compact />
         )}
         {data.newArrivals.status === "ok" && (
-          <ListingGrid listings={data.newArrivals.data ?? []} locale={locale} boostLabel={boostLabel} />
+          <ListingGrid listings={data.newArrivals.data ?? []} locale={locale} boostLabel={boostLabel} wishlistLabels={wishlistLabels} />
         )}
       </section>
 
@@ -151,7 +170,7 @@ export async function HomeStripsSection() {
       {data.boosted.status === "ok" && (data.boosted.data?.length ?? 0) > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-h2 text-foreground">{t("boosted.title")}</h2>
-          <ListingGrid listings={data.boosted.data ?? []} locale={locale} boostLabel={boostLabel} boosted />
+          <ListingGrid listings={data.boosted.data ?? []} locale={locale} boostLabel={boostLabel} wishlistLabels={wishlistLabels} boosted />
         </section>
       )}
     </div>

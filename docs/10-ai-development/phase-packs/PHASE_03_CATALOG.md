@@ -315,18 +315,60 @@ push. HOLD for verdict — no PR until the T07 gate.
 - **Model:** **Opus** (the 2 auth-gated writes touch RLS + the `store_follows` uniqueness/23505 path) · **Skill:** skill-security-reviewer, skill-nextjs-engineer · **Source:** FR-PUB-5, R-S07, UI_SPEC Storefront
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T06 — Storefront at /store/[slug] + the wishlist & follow Server Actions.
+Read SESSION_CONTEXT.md, then execute Phase 03 / T06 — Storefront /store/[slug]
++ the wishlist & follow Server Actions + CD-DELTA-2 land. Branch
+feature/phase-03-catalog (continue; git pull first). Binding rules hold: no
+loading.tsx wrapping notFound()-capable routes; compose-only.
 
-Storefront RSC via getStoreBySlug(slug): suspended (R-S07) / unknown slug → 404. Compose: cover+avatar; name ar/en; bio; verified + level badges; RatingSummary (avg+count+distribution); avg response; FollowButton; governorate/city; return-policy accordion; tabs Listings (filterable grid) / Reviews / About (payment & delivery from JSONB).
+A. CD-DELTA-2 LAND (docs/handoff/cd-delta-2/): land WishlistButton.tsx (internal
+stopPropagation/preventDefault, props byte-identical), ListingCard.tsx (additive
+wishlistAddLabel?/wishlistRemoveLabel?, defaults preserved), ImageGallery.tsx
+("use client" line 1, zero other bytes). Diff each vs main — additive/stated
+deltas ONLY, anything else → STOP. Then REMOVE the two workarounds: the T02
+ref-flag in ListingCardLink (dead code once stopPropagation is internal) and
+T05's ImageGallery client wrapper (consume the component directly). Add
+listing.wishlist.add/.remove keys BOTH locales; thread the label props through
+every ListingCard composition site (homepage grids, search grid, category grid,
+T05 rail). Delete docs/handoff/cd-delta-2/ after.
 
-Two auth-gated Server Actions (Zod-validated, authenticated cookie client — public RLS + ownership):
-- toggleWishlist(listingId): insert/delete wishlists for auth.uid(). The UI routes guests to login, but the action MUST also reject unauthenticated calls. wishlists has the wishlist_own policy (self INSERT/DELETE, hard-delete allowed) — verify the insert/delete works as the authenticated user; if unexpectedly default-denied, STOP and flag (do not add a policy).
-- toggleFollow(storeId): insert/delete store_follows, UNIQUE(buyer_id,store_id) — catch the unique-violation (23505) at write time; idempotent toggle; never duplicate. store_follows self-scope policy (self INSERT/DELETE, hard-delete allowed) — same verify + STOP-and-flag rule.
+B. STOREFRONT — RSC at src/app/[locale]/(public)/store/[slug]/page.tsx via
+getStoreBySlug: suspended/unknown → notFound(), hard 404 by status code, both
+locales (R-S07, no existence leak). Compose: cover+avatar · name COALESCE · bio
+as-authored · VerifiedBadge + LevelBadge · RatingSummary (avg/count/distribution)
+· avg response · FollowButton · governorate/city · return-policy accordion ·
+tabs Listings (grid of the store's active listings, cursor-paginated) / Reviews
+(visible, photos + replies) / About (payment_methods + delivery_options via the
+typed JSONB helpers — and note REG-14: StoreDeliveryOptions.modes vs the
+store-side enum is owned by Phase 04/07; render defensively, unknown modes
+degrade gracefully, do not "fix" the shape). store.* namespace both locales
+(report parity); generateMetadata with COALESCE'd name.
 
-Wire WishlistButton (cards + detail) and FollowButton (storefront) to these actions; reflect current membership + follower count.
-Compose only otherwise. pnpm typecheck + lint clean (zod-coverage covers both actions).
-Integration test: follow then unfollow (idempotent, no dup via 23505); wishlist add/remove; unauthenticated action rejected; suspended store → 404. Report whether wishlists/store_follows insert/delete worked under their existing policies (expected: yes).
-Close-out → commit.
+C. TWO SERVER ACTIONS (src/features/discovery/actions/, Zod-validated,
+authenticated cookie client, RLS self-scope is the authz boundary — NO
+service-role, NO new policies, NO requireVerifiedPhone [wishlist/follow are not
+OD-4 transactions]):
+- toggleWishlist(listingId): insert/delete wishlists for auth.uid() under
+  wishlist_own; return the new state for optimistic UI reconciliation.
+- toggleFollow(storeId): insert/delete store_follows under its self-scope
+  policy; handle the 23505 unique race as idempotent success (already-followed
+  → treat as followed, no error surface), per the T07-auth 23505 precedent.
+- Guests: actions reject unauthenticated → client routes to login returnUrl
+  (locale-preserving). Authed renders show REAL current state (read own rows
+  under self-scope RLS) — storefront FollowButton and, where cheap, wishlist
+  state on the detail page; state reads stay in the query layer.
+- Sentry feature tag + PostHog events per the established action pattern.
+
+TESTS (integration, staging, seeded + cleaned): toggle on→off→on round-trip
+each action · cross-user isolation (B cannot see/delete A's rows) · double-
+follow 23505 path → idempotent success · suspended/unknown slug → 404 ·
+guest rejection. check-zod-coverage must pass with the 2 new action files.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build (both locales). Runtime
+smoke: /store/<seeded-slug> + /en/... render tabs in chrome; wishlist click on a
+card no longer navigates (stopPropagation proof); unknown slug hard-404 both
+locales. git diff -- src/components/ui EMPTY; src/components/shared diff =
+EXACTLY the three CD-DELTA-2 files. Close-out → SESSION_CONTEXT (+ register:
+REG-25/26/27/28 recorded) + journal → commit + push. HOLD — no PR until T07.
 ```
 - **Files:** `src/app/(public)/store/[slug]/page.tsx`, `src/features/discovery/actions/{toggleWishlist,toggleFollow}.ts`, components (composition).
 - **Done when:** storefront renders; suspended → 404; wishlist + follow toggle for authed users, reject guests, 23505-safe; membership + count reflected. Any unexpected default-deny surfaced, not patched.

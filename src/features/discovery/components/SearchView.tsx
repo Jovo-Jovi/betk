@@ -118,8 +118,10 @@ export function SearchView({
   const t = useTranslations("search");
   const tCommon = useTranslations("common");
   const catalogT = useTranslations("catalog");
+  const tListing = useTranslations("listing");
 
   const boostLabel = catalogListingBoostLabel(catalogT);
+  const wishlistLabels = { addLabel: tListing("wishlist.add"), removeLabel: tListing("wishlist.remove") };
   const searchBarLabels = catalogSearchBarLabels(catalogT);
   const filterSheetLabels = catalogFilterSheetLabels(catalogT, total);
   const filterChipsLabels = catalogFilterChipsLabels(catalogT);
@@ -339,6 +341,8 @@ export function SearchView({
                     reviews={item.store?.rating?.totalReviews ?? null}
                     boosted={item.isBoosted}
                     boostLabel={boostLabel}
+                    wishlistAddLabel={wishlistLabels.addLabel}
+                    wishlistRemoveLabel={wishlistLabels.removeLabel}
                     stockQty={item.stockQty}
                     isMadeToOrder={item.isMadeToOrder}
                     isService={item.type === "service"}

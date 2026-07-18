@@ -7,24 +7,21 @@
  *
  * - Card click → /listing/[id].
  * - Wishlist heart click → ALWAYS routes to /auth/login?returnUrl=/listing/[id]
- *   (locale-preserving via `@/i18n/navigation`). The real toggle mutation is
- *   T06 (`toggleWishlist` Server Action) — T02 is entry/redirect only, so
- *   every click (guest or authed) goes to login for now, per the T02 scope.
+ *   (locale-preserving via `@/i18n/navigation`). The real toggle mutation for
+ *   grid cards is out of T06's scope (T06 wires the storefront FollowButton +
+ *   the detail-page wishlist state); catalog-grid hearts stay entry/redirect
+ *   only, so every click (guest or authed) goes to login for now.
  *
- * Two shared-kit gaps found while wiring this, NOT fixed here (compose-only —
- * flagged to Claude Design instead of editing components/shared):
- *   1. `ListingCardProps` has no pass-through for WishlistButton's
- *      `addLabel`/`removeLabel` (only `boostLabel` is exposed), so the
- *      wishlist heart's aria-label stays Arabic-only even under `/en` — a
- *      bilingual gap in ListingCard itself, out of T02's reach.
- *   2. WishlistButton's internal onClick doesn't call `e.stopPropagation()`,
- *      so a heart click also bubbles to ListingCard's own `onClick` (both are
- *      plain DOM handlers on nested elements). Worked around below with a
- *      same-tick ref flag (`skipNavigate`) rather than editing the shared
- *      components — recommend Claude Design add `stopPropagation()` there.
+ * CD-DELTA-2 (T06): the two shared-kit gaps T02 worked around here are now
+ * fixed at the source and consumed directly:
+ *   1. `WishlistButton` calls `stopPropagation()`/`preventDefault()` internally,
+ *      so a heart click no longer bubbles to the card's `onClick` — the
+ *      same-tick `skipNavigate` ref flag is DELETED (dead code).
+ *   2. `ListingCard` now forwards `wishlistAddLabel`/`wishlistRemoveLabel` to
+ *      the heart, so the aria-label localizes under `/en`; threaded through
+ *      from the catalog message catalog by every composition site.
  */
 
-import { useRef } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { routes } from "@/constants/routes";
 import { ListingCard } from "@/components/shared";
@@ -41,6 +38,8 @@ export interface ListingCardLinkProps {
   reviews?: number | null;
   boosted?: boolean;
   boostLabel: string;
+  wishlistAddLabel: string;
+  wishlistRemoveLabel: string;
   stockQty?: number | null;
   isMadeToOrder?: boolean;
   isService?: boolean;
@@ -58,13 +57,14 @@ export function ListingCardLink({
   reviews,
   boosted,
   boostLabel,
+  wishlistAddLabel,
+  wishlistRemoveLabel,
   stockQty,
   isMadeToOrder,
   isService,
   className,
 }: ListingCardLinkProps) {
   const router = useRouter();
-  const skipNavigate = useRef(false);
 
   return (
     <ListingCard
@@ -78,19 +78,16 @@ export function ListingCardLink({
       boosted={boosted}
       boostLabel={boostLabel}
       saved={false}
+      wishlistAddLabel={wishlistAddLabel}
+      wishlistRemoveLabel={wishlistRemoveLabel}
       stockQty={stockQty}
       isMadeToOrder={isMadeToOrder}
       isService={isService}
       className={className}
       onClick={() => {
-        if (skipNavigate.current) {
-          skipNavigate.current = false;
-          return;
-        }
         router.push(routes.listing(id));
       }}
       onToggleSave={() => {
-        skipNavigate.current = true;
         router.push(`${routes.auth.login}?returnUrl=${encodeURIComponent(routes.listing(id))}`);
       }}
     />

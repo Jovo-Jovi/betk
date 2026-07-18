@@ -53,12 +53,11 @@
  * with the rest of the discovery read layer; `revalidate` keeps this
  * ISR-cacheable per id.
  *
- * FINDING (live-verified via runtime smoke, NOT fixed in `shared/*`) —
- * `ImageGallery` is rendered via `ListingImageGallery`
- * (`features/discovery/components/`), a thin `"use client"` wrapper: see
- * that file's header for the full writeup of the shared-kit gap it works
- * around (a missing `"use client"` directive on `ImageGallery.tsx` itself,
- * which crashed this — its first-ever real page — at request time).
+ * CD-DELTA-2 (T06): `ImageGallery` is now consumed DIRECTLY from
+ * `@/components/shared` — the T05 `ListingImageGallery` client wrapper (which
+ * re-established the client boundary the shared component was missing) is
+ * DELETED now that `ImageGallery.tsx` carries its own `"use client"`
+ * directive at the source.
  */
 
 import type { Metadata } from "next";
@@ -76,7 +75,6 @@ import {
   catalogStockLabels,
   catalogStockRemainingLabel,
   catalogRatingReviewsLabel,
-  catalogWishlistLabels,
   catalogSellerResponseLabel,
   catalogListingBoostLabel,
 } from "@/i18n/catalogLabels";
@@ -87,10 +85,10 @@ import {
   RatingSummary,
   StarRating,
   SkeletonGrid,
+  ImageGallery,
 } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { ListingActionButtons } from "@/features/discovery/components/ListingActionButtons";
-import { ListingImageGallery } from "@/features/discovery/components/ListingImageGallery";
 import { MoreFromStoreRail } from "@/features/discovery/components/MoreFromStoreRail";
 import { deriveStockDisplayProps, isListingSoldOut } from "@/features/discovery/listingStockDisplay";
 
@@ -162,7 +160,7 @@ export default async function ListingDetailPage({
   const stockProps = deriveStockDisplayProps(listing);
   const priceLabels = catalogPriceLabels(catalogT);
   const stockLabels = catalogStockLabels(catalogT);
-  const wishlistLabels = catalogWishlistLabels(catalogT);
+  const wishlistLabels = { addLabel: t("wishlist.add"), removeLabel: t("wishlist.remove") };
   const boostLabel = catalogListingBoostLabel(catalogT);
   const remainingLabel =
     typeof stockProps.stockQty === "number" && stockProps.stockQty > 0
@@ -180,7 +178,7 @@ export default async function ListingDetailPage({
   return (
     <div className="mx-auto flex w-full max-w-container flex-col gap-8 px-4 py-6">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,480px)_1fr]">
-              <ListingImageGallery images={listing.images.map((img) => img.url)} alt={title} />
+              <ImageGallery images={listing.images.map((img) => img.url)} alt={title} />
 
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -314,6 +312,8 @@ export default async function ListingDetailPage({
           locale={locale}
           title={t("moreFromStore")}
           boostLabel={boostLabel}
+          wishlistAddLabel={wishlistLabels.addLabel}
+          wishlistRemoveLabel={wishlistLabels.removeLabel}
         />
       </Suspense>
     </div>

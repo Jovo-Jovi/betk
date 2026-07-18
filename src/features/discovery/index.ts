@@ -24,6 +24,10 @@ export { searchListings } from "./queries/searchListings";
 export { getCategoryBySlug } from "./queries/getCategoryBySlug";
 // T05 — listing detail (/listing/[id]).
 export { getMoreFromStore } from "./queries/getMoreFromStore";
+// T06 — storefront (/store/[slug]): follow-state read + the 2 auth-gated writes.
+export { getStoreFollowState } from "./queries/getStoreFollowState";
+export { toggleWishlist } from "./actions/toggleWishlist";
+export { toggleFollow } from "./actions/toggleFollow";
 
 export type {
   CategoryDetail,
@@ -55,6 +59,8 @@ export {
   searchListingsParamsSchema,
   searchSortSchema,
   searchListingTypeSchema,
+  toggleWishlistInputSchema,
+  toggleFollowInputSchema,
   pickTsConfig,
 } from "@/validations/discovery";
 export type {
@@ -64,4 +70,7 @@ export type {
   SearchListingsParsedParams,
   SearchSort,
   SearchListingType,
+  ToggleWishlistInput,
+  ToggleFollowInput,
+  ToggleResult,
 } from "@/validations/discovery";

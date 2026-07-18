@@ -24,6 +24,8 @@ export interface MoreFromStoreRailProps {
   locale: AppLocale;
   title: string;
   boostLabel: string;
+  wishlistAddLabel: string;
+  wishlistRemoveLabel: string;
 }
 
 export async function MoreFromStoreRail({
@@ -32,6 +34,8 @@ export async function MoreFromStoreRail({
   locale,
   title,
   boostLabel,
+  wishlistAddLabel,
+  wishlistRemoveLabel,
 }: MoreFromStoreRailProps) {
   let items: ListingSummary[] = [];
   try {
@@ -61,6 +65,8 @@ export async function MoreFromStoreRail({
             rating={listing.store?.rating?.averageRating ?? null}
             reviews={listing.store?.rating?.totalReviews ?? null}
             boostLabel={boostLabel}
+            wishlistAddLabel={wishlistAddLabel}
+            wishlistRemoveLabel={wishlistRemoveLabel}
             stockQty={listing.stockQty}
             isMadeToOrder={listing.isMadeToOrder}
             isService={listing.type === "service"}

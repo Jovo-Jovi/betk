@@ -1068,6 +1068,18 @@ CREATE POLICY stores_public ON betk.stores FOR SELECT
   USING (status = 'active' OR seller_id = auth.uid() OR betk.is_admin());
 CREATE POLICY stores_manage ON betk.stores FOR UPDATE
   USING (seller_id = auth.uid() OR betk.is_admin());
+-- STORE_FOLLOWS: self-scope (ERD §3 line 45). Originally SPECCED but the
+-- CREATE POLICY statements were omitted from this SQL contract (table left
+-- RLS-enabled + zero policies → default-deny); restored additively by
+-- migration 20260718153021_store_follows_self_scope_rls.sql (Phase 03 / T06,
+-- REG-29 — 2nd instance of the open-issue-#14 class). No UPDATE policy (ERD
+-- pins UPDATE = "—"; a follow row is toggled by insert/delete, never updated).
+CREATE POLICY sf_select_self ON betk.store_follows FOR SELECT
+  USING (buyer_id = auth.uid() OR betk.is_admin());
+CREATE POLICY sf_insert_self ON betk.store_follows FOR INSERT
+  WITH CHECK (buyer_id = auth.uid());
+CREATE POLICY sf_delete_self ON betk.store_follows FOR DELETE
+  USING (buyer_id = auth.uid());
 -- CATEGORIES: public read
 CREATE POLICY cat_public ON betk.categories FOR SELECT
   USING (is_active = TRUE OR betk.is_admin());

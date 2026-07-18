@@ -76,6 +76,7 @@ export default async function CategoryPage({
   const t = await getTranslations("category");
   const tCommon = await getTranslations("common");
   const catalogT = await getTranslations("catalog");
+  const tListing = await getTranslations("listing");
 
   const supabase = createAnonClient();
 
@@ -87,6 +88,7 @@ export default async function CategoryPage({
 
   const name = localizedName({ ar: category.nameAr, en: category.nameEn }, locale);
   const boostLabel = catalogListingBoostLabel(catalogT);
+  const wishlistLabels = { addLabel: tListing("wishlist.add"), removeLabel: tListing("wishlist.remove") };
   const cursor = first(sp.cursor);
 
   let page: ListingPage = { items: [], nextCursor: null };
@@ -157,6 +159,8 @@ export default async function CategoryPage({
                 rating={listing.store?.rating?.averageRating ?? null}
                 reviews={listing.store?.rating?.totalReviews ?? null}
                 boostLabel={boostLabel}
+                wishlistAddLabel={wishlistLabels.addLabel}
+                wishlistRemoveLabel={wishlistLabels.removeLabel}
                 stockQty={listing.stockQty}
                 isMadeToOrder={listing.isMadeToOrder}
                 isService={listing.type === "service"}
