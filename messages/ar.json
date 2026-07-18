@@ -376,5 +376,26 @@
       "message": "لا توجد إعلانات فعالة في {name} حتى الآن",
       "backToParent": "الرجوع إلى {name}"
     }
+  },
+  "listing": {
+    "metaTitleFallback": "الإعلان — بيتك",
+    "metaTitle": "{title} — بيتك",
+    "metaDescription": "تفاصيل {title} على بيتك.",
+    "tagsTitle": "الوسوم",
+    "descriptionTitle": "الوصف",
+    "moreFromStore": "المزيد من هذا المتجر",
+    "cta": {
+      "inquiry": "استفسر الآن",
+      "notifyMe": "أعلمني عند التوفر",
+      "share": "مشاركة عبر واتساب"
+    },
+    "shareText": "{title} على بيتك:",
+    "reviews": {
+      "title": "تقييمات المتجر",
+      "subtitle": "هذه التقييمات تعكس تجربة المتجر بشكل عام، وليست خاصة بهذا الإعلان فقط",
+      "buyerLabel": "مشتري",
+      "sellerReplyLabel": "رد البائع",
+      "empty": "لا توجد تقييمات لهذا المتجر حتى الآن"
+    }
   }
 }

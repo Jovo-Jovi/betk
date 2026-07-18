@@ -262,13 +262,49 @@ main stays untouched until the T07 gate.
 - **Model:** Sonnet · **Skill:** skill-nextjs-engineer, skill-ui-engineer · **Source:** FR-PUB-4, UI_SPEC Listing Detail
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T05 — Listing detail at /listing/[id] (public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T05 — Listing detail at
+/listing/[id] (public, bilingual + themed). Branch feature/phase-03-catalog
+(continue; git pull first).
 
-RSC via getListingById(id): missing/soft-deleted/removed → 404 (R-L10). Compose: ImageGallery (≤5, hero first); title ar/en; PriceBlock (price_type fixed/per_hour/starting_from/quote_only — quote_only hides quantity/price); StockBadge (product/service/made-to-order/sold_out); tag chips; SellerMiniCard (avatar/name/level/rating/avg response); RatingSummary + recent visible reviews with photos + seller replies; "more from this store" rail (hide if none).
-- view_count increment per FR-PUB-4: CONFIRM the mechanism against ERD (which path writes view_count). If incrementing requires a write the anon client can't do under RLS, FLAG it — do NOT add a policy or silently force service-role. STATE how you implemented it.
-- Auth-gated CTAs (render here, wire in T06): WishlistButton; sold_out → "Notify me when back" (restock_alerts, R-N06) — guest → login redirect. InquiryButton + share (WhatsApp deep-link) present as entry points only (inquiry composer submit is a later phase).
+BINDING RULE (T04 finding): do NOT add loading.tsx at any segment wrapping this
+route — it re-creates the soft-200 404 trap. Loading = in-page Suspense with the
+kit skeletons only.
 
-Compose only. pnpm typecheck + lint clean. Integration test: active listing renders; soft-deleted → 404; quote_only hides price/quantity; sold_out swaps CTA. STATE the view_count approach. Close-out → commit.
+RSC at src/app/[locale]/(public)/listing/[id]/page.tsx via getListingById(id):
+- null (missing/soft-deleted/removed) → notFound(), hard 404 both locales (R-L10).
+- SUSPENDED-STORE ruling (T04 verified): a suspended store's listing resolves
+  null via the stores_public null-guard → 404. Add an integration test proving it
+  (seed suspended store + active listing → getListingById null + page 404).
+- Compose: ImageGallery (≤5, hero sort_order=0 first) · title via COALESCE ·
+  PriceBlock (all four price_type variants; quote_only hides quantity/price) ·
+  StockBadge (product/service/made-to-order/sold_out) · tag chips ·
+  SellerMiniCard (avatar/name/level/rating/avg response) · RatingSummary +
+  recent visible reviews with photos + seller replies — REPO FACT (T01): reviews
+  are STORE-scoped, not listing-scoped; render as the store's reviews, labeled
+  accordingly (keyed copy) · "more from this store" rail (active listings, hide
+  if none) — rail queries respect the T04 stores!inner convention if any new
+  fragment is added.
+- view_count (FR-PUB-4): CONFIRM the write mechanism against BETK_ERD.md. Anon
+  cannot UPDATE listings under RLS. If no mechanism is pinned in the docs, FLAG
+  and ship without incrementing — do NOT add a policy, do NOT silently
+  service-role. STATE what you found + did.
+- CTAs (entry points only, wiring is T06+): WishlistButton (guest → login
+  returnUrl, locale-preserving, T02 pattern); sold_out → "notify me" restock
+  CTA (R-N06, guest → login); InquiryButton + WhatsApp share link present as
+  entry points (composer is a later phase).
+- Copy via listing.* namespace both locales (report parity); generateMetadata
+  via getTranslations with the COALESCE'd title, both locales.
+
+TESTS (integration, staging, seeded + cleaned): active listing renders full
+data · soft-deleted → null/404 · suspended-store listing → null/404 ·
+quote_only hides price/qty · sold_out swaps CTA.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build. Runtime smoke:
+/listing/<seeded-id> + /en/listing/<seeded-id> render in chrome (correct
+dir/lang); unknown id hard-404s BOTH locales (status code checked, not just
+content — the T04 trap). No ui/* or shared/* edits (diff proof). No new
+policies, no service-role. Close-out → SESSION_CONTEXT + journal → commit +
+push. HOLD for verdict — no PR until the T07 gate.
 ```
 - **Files:** `src/app/(public)/listing/[id]/page.tsx`, components (composition).
 - **Done when:** detail renders full data; 404 on removed; price_type + stock variants correct; auth-gated CTAs route guests to login. **view_count mechanism confirmed/flagged, not improvised.**

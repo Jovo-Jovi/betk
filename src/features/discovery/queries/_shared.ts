@@ -61,6 +61,8 @@ export const LISTINGS_PAGE_SIZE = 24;
 export const HOMEPAGE_STRIP_LIMIT = 12;
 /** Recent visible reviews shown on a listing/storefront page (not paginated in T01). */
 export const RECENT_REVIEWS_LIMIT = 10;
+/** "More from this store" rail on the listing detail page (T05). */
+export const MORE_FROM_STORE_LIMIT = 8;
 
 /**
  * Minimal client shape every discovery query depends on (`.schema("betk")`).

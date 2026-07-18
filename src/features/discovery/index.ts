@@ -22,6 +22,8 @@ export { getStoreBySlug } from "./queries/getStoreBySlug";
 export { searchListings } from "./queries/searchListings";
 // T04 — category browse (/category/[slug]).
 export { getCategoryBySlug } from "./queries/getCategoryBySlug";
+// T05 — listing detail (/listing/[id]).
+export { getMoreFromStore } from "./queries/getMoreFromStore";
 
 export type {
   CategoryDetail,

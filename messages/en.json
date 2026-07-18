@@ -376,5 +376,26 @@
       "message": "No active listings in {name} yet",
       "backToParent": "Back to {name}"
     }
+  },
+  "listing": {
+    "metaTitleFallback": "Listing — BETK",
+    "metaTitle": "{title} — BETK",
+    "metaDescription": "Details for {title} on BETK.",
+    "tagsTitle": "Tags",
+    "descriptionTitle": "Description",
+    "moreFromStore": "More from this store",
+    "cta": {
+      "inquiry": "Inquire now",
+      "notifyMe": "Notify me when back",
+      "share": "Share on WhatsApp"
+    },
+    "shareText": "{title} on BETK:",
+    "reviews": {
+      "title": "Store reviews",
+      "subtitle": "These reviews reflect the store's overall experience, not just this listing",
+      "buyerLabel": "Buyer",
+      "sellerReplyLabel": "Seller reply",
+      "empty": "This store has no reviews yet"
+    }
   }
 }
