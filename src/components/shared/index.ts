@@ -83,3 +83,7 @@ export { ImageUploader } from "./ImageUploader";
 export type { ImageUploaderProps } from "./ImageUploader";
 export { AddressForm, AddressSelect } from "./AddressForm";
 export type { AddressFormProps, AddressValue, AddressSelectProps, AddressOption } from "./AddressForm";
+
+// ── CD-DELTA-1 (signed off 2026-07-18) ──────────────────────
+export { Footer } from "./Footer";
+export type { FooterProps, FooterColumn, FooterLink } from "./Footer";
