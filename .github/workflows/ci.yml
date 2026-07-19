@@ -164,6 +164,10 @@ jobs:
       - name: Guard — no hardcoded Arabic (BL-02 scope)
         run: node scripts/check-no-hardcoded-arabic.mjs
 
+      # Guard D (OD-7 / REG-27): AR/EN message-catalog leaf-key parity
+      - name: Guard — i18n catalog parity (AR/EN)
+        run: node scripts/check-i18n-parity.mjs
+
   # ─── Stage 5: types-drift ─────────────────────────────────────────────────
   # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
   # Fails LOUDLY if either is absent — a silent skip would allow stale types to merge.

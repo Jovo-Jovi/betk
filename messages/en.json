@@ -6,6 +6,11 @@
     "backToHome": "Back to home",
     "or": "or"
   },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you’re looking for doesn’t exist or has moved.",
+    "backHome": "Back to home"
+  },
   "nav": {
     "home": "Home",
     "search": "Search",
