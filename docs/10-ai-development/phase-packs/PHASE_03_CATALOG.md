@@ -52,6 +52,25 @@
 
 ---
 
+## Results tracker (FINAL — T07 gate, 2026-07-19, Opus 4.8)
+
+| Task | Scope | Status | Evidence |
+|---|---|---|---|
+| T00 | Claude-Design catalog components (`components/shared`) | ✅ PASS | Shipped in Claude Design; composed by T02–T06 (compose-only held, no `components/ui/*` edits). |
+| T01 | Public read query layer (queries + types) | ✅ PASS | `lib/queries/*` live; consumed by all public pages; typecheck green. |
+| T02 | Homepage `/` | ✅ PASS | Runtime smoke on populated DB: hero + CategoryGrid + populated CollectionStrip + New Arrivals + Boosted grid; section-level degradation + empty states; guest-wishlist redirect. |
+| T03 | Search `/search` (tsvector + Arabic unaccent + R-B04) | ✅ PASS | Keyword + filters-in-URL; R-B04 boosted-above-organic cited + visible; deleted/suspended exclusions; all states. |
+| T04 | Category `/category/[slug]` | ✅ PASS | Slug resolve + 404; chips; inclusion-rule (cat OR subcat) cited; R-S07 suspended-store fix live. |
+| T05 | Listing detail `/listing/[id]` | ✅ PASS | R-L10 404s; price_type ×4; stock variants; store-scoped reviews; CTAs; `view_count` increment flagged (REG-26). |
+| T06 | Storefront `/store/[slug]` + wishlist/follow actions | ✅ PASS | R-S07; tabs; toggles; 23505 dup-safe; cross-user isolation; guest rejection → login redirect. |
+| REG-25 | sold_out detail-only (browse-excluded, detail-included both dir) | ✅ CLOSED | Runtime smoke: sold_out listing renders WITH images + restock CTA, absent from all browse surfaces (AR + EN). |
+| REG-29 | (listings_public + 2 children carry `IN ('active','sold_out')`) | ✅ CLOSED | `pg_policies` live-verified; migration ledger 20/20. |
+| T07 | Exit verification + consolidated PR | ✅ THIS GATE | DoD sweep + populated-render smoke (zero residue) + DB live-state + full CI + PR. |
+
+**Carry-forwards (survive Phase 03 close):** relevance-sort fallback (RPC, post-MVP); featured-stores homepage row omitted (unpinned "featured" rule — product decision, not a defect); footer links unrouted (target pages ship later phases); **REG-26** popularity sort static until a `view_count` write mechanism is specced; interactive dark-flip → pre-launch Playwright pass.
+
+---
+
 ## T00 — Claude-Design handoff (DS gate)
 - **Surface:** **Claude Design** (NOT Cursor) · **Source:** `00-design/BETK_DESIGN_BRIEF.md`, `BETK_UI_SPEC.md` §1 + Homepage/Search/Listing/Storefront, BETK_CODEBASE_ARCHITECTURE §Design-system ownership, `phase-packs/PHASE_DS_DESIGN_SYSTEM.md`
 - **Deliverable:** the catalog shared components in `components/shared`, RTL-first, **token-only** (UI Spec §1 CSS vars — no hardcoded colors), extending shadcn (never editing `components/ui/*`), with **all states** (default / loading-skeleton / empty / error) per UI Spec:
@@ -208,12 +227,50 @@ commit + push. HOLD for verdict.
 - **Model:** Sonnet · **Skill:** skill-nextjs-engineer, skill-ui-engineer · **Source:** FR-PUB-3, UI_SPEC Category
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T04 — Category browse at /category/[slug] (public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T04 — Category browse at
+/category/[slug] (public, bilingual + themed). Branch feature/phase-03-catalog
+(continue; git pull first).
 
-RSC: resolve category by slug (getCategoryTree() or a by-slug query). is_active=false OR unknown slug → 404 (notFound()). Render subcategory chips (children), then a ListingCard grid of active listings in that category. CONFIRM against UI Spec whether the grid includes descendant categories or only the exact category — do NOT assume; state which. Reuse getActiveListings({category}).
-Empty: "No active listings in {category} yet" + link to parent + homepage.
+STEP 0 — R-S07 consistency check (flagged expansion, justified by the T03 finding
+that searchListings required stores!inner to exclude suspended stores):
+- CONFIRM against BETK_PRD.md / BETK_ERD.md that a suspended store's listings are
+  excluded from public catalog surfaces (R-S07's intent). Cite the line.
+- PROBE live (staging, seeded + cleaned per T01 pattern): does getActiveListings
+  return an active listing whose store is suspended? Does getHomepageData?
+- If the leak is confirmed: fix the T01 queries (getActiveListings +
+  getHomepageData strips) with the same stores!inner pattern T03 used —
+  query-layer only, no RLS change — + a regression test per query. STATE the fix.
+- getListingById (suspended store's listing detail): do NOT fix here — verify and
+  FLAG the observed behavior for T05, which owns that page.
 
-Compose only. pnpm typecheck + lint clean. Integration test: active category renders listings; inactive/unknown → 404. Close-out → commit.
+TASK — RSC at src/app/[locale]/(public)/category/[slug]/page.tsx (chrome from
+the (public) layout, untouched):
+- Resolve category by slug. is_active=false OR unknown slug → notFound() (hard 404).
+- Subcategory chips from the category's children (names via localizedName
+  COALESCE), linking to their category pages via @/i18n/navigation.
+- ListingCard grid via getActiveListings({category}) (post-step-0 version) with
+  the T01 cursor pagination; titles COALESCE; labels via catalogLabels builders;
+  guest wishlist → login returnUrl (locale-preserving, T02 pattern).
+- DESCENDANT-INCLUSION: CONFIRM against BETK_UI_SPEC.md §3 Category whether the
+  grid includes descendant-category listings or exact-category only — do NOT
+  assume; STATE which + the citation. If the spec doesn't pin it, implement
+  exact-category and flag.
+- Empty: "no active listings in {name} yet" + links to parent category (if any)
+  + homepage — keyed copy both locales. Error: ErrorRetryCard.
+- Copy via a category.* (or consistent) namespace in messages/{ar,en}.json —
+  report parity count. generateMetadata via getTranslations, category name
+  COALESCE'd into the title, both locales.
+
+TESTS (integration, staging, seeded + cleaned): active category renders its
+listings; inactive slug → 404; unknown slug → 404; subcategory chips assemble;
++ the step-0 regression tests if the fix landed.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build (both locales). Runtime
+smoke: /category/<seeded-slug> and /en/category/<seeded-slug> render grid/empty
+in chrome, correct dir/lang; unknown slug hard-404s both locales.
+No ui/* or shared/* edits (diff proof). No new policies, no service-role.
+Close-out → SESSION_CONTEXT + journal → commit + push. HOLD for verdict — no PR,
+main stays untouched until the T07 gate.
 ```
 - **Files:** `src/app/(public)/category/[slug]/page.tsx`, components (composition).
 - **Done when:** category page renders by slug; inactive/unknown → 404; subcategory chips; empty state. **Descendant-inclusion confirmed against spec, not assumed.**
@@ -224,13 +281,49 @@ Compose only. pnpm typecheck + lint clean. Integration test: active category ren
 - **Model:** Sonnet · **Skill:** skill-nextjs-engineer, skill-ui-engineer · **Source:** FR-PUB-4, UI_SPEC Listing Detail
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T05 — Listing detail at /listing/[id] (public).
+Read SESSION_CONTEXT.md, then execute Phase 03 / T05 — Listing detail at
+/listing/[id] (public, bilingual + themed). Branch feature/phase-03-catalog
+(continue; git pull first).
 
-RSC via getListingById(id): missing/soft-deleted/removed → 404 (R-L10). Compose: ImageGallery (≤5, hero first); title ar/en; PriceBlock (price_type fixed/per_hour/starting_from/quote_only — quote_only hides quantity/price); StockBadge (product/service/made-to-order/sold_out); tag chips; SellerMiniCard (avatar/name/level/rating/avg response); RatingSummary + recent visible reviews with photos + seller replies; "more from this store" rail (hide if none).
-- view_count increment per FR-PUB-4: CONFIRM the mechanism against ERD (which path writes view_count). If incrementing requires a write the anon client can't do under RLS, FLAG it — do NOT add a policy or silently force service-role. STATE how you implemented it.
-- Auth-gated CTAs (render here, wire in T06): WishlistButton; sold_out → "Notify me when back" (restock_alerts, R-N06) — guest → login redirect. InquiryButton + share (WhatsApp deep-link) present as entry points only (inquiry composer submit is a later phase).
+BINDING RULE (T04 finding): do NOT add loading.tsx at any segment wrapping this
+route — it re-creates the soft-200 404 trap. Loading = in-page Suspense with the
+kit skeletons only.
 
-Compose only. pnpm typecheck + lint clean. Integration test: active listing renders; soft-deleted → 404; quote_only hides price/quantity; sold_out swaps CTA. STATE the view_count approach. Close-out → commit.
+RSC at src/app/[locale]/(public)/listing/[id]/page.tsx via getListingById(id):
+- null (missing/soft-deleted/removed) → notFound(), hard 404 both locales (R-L10).
+- SUSPENDED-STORE ruling (T04 verified): a suspended store's listing resolves
+  null via the stores_public null-guard → 404. Add an integration test proving it
+  (seed suspended store + active listing → getListingById null + page 404).
+- Compose: ImageGallery (≤5, hero sort_order=0 first) · title via COALESCE ·
+  PriceBlock (all four price_type variants; quote_only hides quantity/price) ·
+  StockBadge (product/service/made-to-order/sold_out) · tag chips ·
+  SellerMiniCard (avatar/name/level/rating/avg response) · RatingSummary +
+  recent visible reviews with photos + seller replies — REPO FACT (T01): reviews
+  are STORE-scoped, not listing-scoped; render as the store's reviews, labeled
+  accordingly (keyed copy) · "more from this store" rail (active listings, hide
+  if none) — rail queries respect the T04 stores!inner convention if any new
+  fragment is added.
+- view_count (FR-PUB-4): CONFIRM the write mechanism against BETK_ERD.md. Anon
+  cannot UPDATE listings under RLS. If no mechanism is pinned in the docs, FLAG
+  and ship without incrementing — do NOT add a policy, do NOT silently
+  service-role. STATE what you found + did.
+- CTAs (entry points only, wiring is T06+): WishlistButton (guest → login
+  returnUrl, locale-preserving, T02 pattern); sold_out → "notify me" restock
+  CTA (R-N06, guest → login); InquiryButton + WhatsApp share link present as
+  entry points (composer is a later phase).
+- Copy via listing.* namespace both locales (report parity); generateMetadata
+  via getTranslations with the COALESCE'd title, both locales.
+
+TESTS (integration, staging, seeded + cleaned): active listing renders full
+data · soft-deleted → null/404 · suspended-store listing → null/404 ·
+quote_only hides price/qty · sold_out swaps CTA.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build. Runtime smoke:
+/listing/<seeded-id> + /en/listing/<seeded-id> render in chrome (correct
+dir/lang); unknown id hard-404s BOTH locales (status code checked, not just
+content — the T04 trap). No ui/* or shared/* edits (diff proof). No new
+policies, no service-role. Close-out → SESSION_CONTEXT + journal → commit +
+push. HOLD for verdict — no PR until the T07 gate.
 ```
 - **Files:** `src/app/(public)/listing/[id]/page.tsx`, components (composition).
 - **Done when:** detail renders full data; 404 on removed; price_type + stock variants correct; auth-gated CTAs route guests to login. **view_count mechanism confirmed/flagged, not improvised.**
@@ -241,18 +334,60 @@ Compose only. pnpm typecheck + lint clean. Integration test: active listing rend
 - **Model:** **Opus** (the 2 auth-gated writes touch RLS + the `store_follows` uniqueness/23505 path) · **Skill:** skill-security-reviewer, skill-nextjs-engineer · **Source:** FR-PUB-5, R-S07, UI_SPEC Storefront
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T06 — Storefront at /store/[slug] + the wishlist & follow Server Actions.
+Read SESSION_CONTEXT.md, then execute Phase 03 / T06 — Storefront /store/[slug]
++ the wishlist & follow Server Actions + CD-DELTA-2 land. Branch
+feature/phase-03-catalog (continue; git pull first). Binding rules hold: no
+loading.tsx wrapping notFound()-capable routes; compose-only.
 
-Storefront RSC via getStoreBySlug(slug): suspended (R-S07) / unknown slug → 404. Compose: cover+avatar; name ar/en; bio; verified + level badges; RatingSummary (avg+count+distribution); avg response; FollowButton; governorate/city; return-policy accordion; tabs Listings (filterable grid) / Reviews / About (payment & delivery from JSONB).
+A. CD-DELTA-2 LAND (docs/handoff/cd-delta-2/): land WishlistButton.tsx (internal
+stopPropagation/preventDefault, props byte-identical), ListingCard.tsx (additive
+wishlistAddLabel?/wishlistRemoveLabel?, defaults preserved), ImageGallery.tsx
+("use client" line 1, zero other bytes). Diff each vs main — additive/stated
+deltas ONLY, anything else → STOP. Then REMOVE the two workarounds: the T02
+ref-flag in ListingCardLink (dead code once stopPropagation is internal) and
+T05's ImageGallery client wrapper (consume the component directly). Add
+listing.wishlist.add/.remove keys BOTH locales; thread the label props through
+every ListingCard composition site (homepage grids, search grid, category grid,
+T05 rail). Delete docs/handoff/cd-delta-2/ after.
 
-Two auth-gated Server Actions (Zod-validated, authenticated cookie client — public RLS + ownership):
-- toggleWishlist(listingId): insert/delete wishlists for auth.uid(). The UI routes guests to login, but the action MUST also reject unauthenticated calls. wishlists has the wishlist_own policy (self INSERT/DELETE, hard-delete allowed) — verify the insert/delete works as the authenticated user; if unexpectedly default-denied, STOP and flag (do not add a policy).
-- toggleFollow(storeId): insert/delete store_follows, UNIQUE(buyer_id,store_id) — catch the unique-violation (23505) at write time; idempotent toggle; never duplicate. store_follows self-scope policy (self INSERT/DELETE, hard-delete allowed) — same verify + STOP-and-flag rule.
+B. STOREFRONT — RSC at src/app/[locale]/(public)/store/[slug]/page.tsx via
+getStoreBySlug: suspended/unknown → notFound(), hard 404 by status code, both
+locales (R-S07, no existence leak). Compose: cover+avatar · name COALESCE · bio
+as-authored · VerifiedBadge + LevelBadge · RatingSummary (avg/count/distribution)
+· avg response · FollowButton · governorate/city · return-policy accordion ·
+tabs Listings (grid of the store's active listings, cursor-paginated) / Reviews
+(visible, photos + replies) / About (payment_methods + delivery_options via the
+typed JSONB helpers — and note REG-14: StoreDeliveryOptions.modes vs the
+store-side enum is owned by Phase 04/07; render defensively, unknown modes
+degrade gracefully, do not "fix" the shape). store.* namespace both locales
+(report parity); generateMetadata with COALESCE'd name.
 
-Wire WishlistButton (cards + detail) and FollowButton (storefront) to these actions; reflect current membership + follower count.
-Compose only otherwise. pnpm typecheck + lint clean (zod-coverage covers both actions).
-Integration test: follow then unfollow (idempotent, no dup via 23505); wishlist add/remove; unauthenticated action rejected; suspended store → 404. Report whether wishlists/store_follows insert/delete worked under their existing policies (expected: yes).
-Close-out → commit.
+C. TWO SERVER ACTIONS (src/features/discovery/actions/, Zod-validated,
+authenticated cookie client, RLS self-scope is the authz boundary — NO
+service-role, NO new policies, NO requireVerifiedPhone [wishlist/follow are not
+OD-4 transactions]):
+- toggleWishlist(listingId): insert/delete wishlists for auth.uid() under
+  wishlist_own; return the new state for optimistic UI reconciliation.
+- toggleFollow(storeId): insert/delete store_follows under its self-scope
+  policy; handle the 23505 unique race as idempotent success (already-followed
+  → treat as followed, no error surface), per the T07-auth 23505 precedent.
+- Guests: actions reject unauthenticated → client routes to login returnUrl
+  (locale-preserving). Authed renders show REAL current state (read own rows
+  under self-scope RLS) — storefront FollowButton and, where cheap, wishlist
+  state on the detail page; state reads stay in the query layer.
+- Sentry feature tag + PostHog events per the established action pattern.
+
+TESTS (integration, staging, seeded + cleaned): toggle on→off→on round-trip
+each action · cross-user isolation (B cannot see/delete A's rows) · double-
+follow 23505 path → idempotent success · suspended/unknown slug → 404 ·
+guest rejection. check-zod-coverage must pass with the 2 new action files.
+
+VERIFY: typecheck · lint · 3 guards · test:unit · build (both locales). Runtime
+smoke: /store/<seeded-slug> + /en/... render tabs in chrome; wishlist click on a
+card no longer navigates (stopPropagation proof); unknown slug hard-404 both
+locales. git diff -- src/components/ui EMPTY; src/components/shared diff =
+EXACTLY the three CD-DELTA-2 files. Close-out → SESSION_CONTEXT (+ register:
+REG-25/26/27/28 recorded) + journal → commit + push. HOLD — no PR until T07.
 ```
 - **Files:** `src/app/(public)/store/[slug]/page.tsx`, `src/features/discovery/actions/{toggleWishlist,toggleFollow}.ts`, components (composition).
 - **Done when:** storefront renders; suspended → 404; wishlist + follow toggle for authed users, reject guests, 23505-safe; membership + count reflected. Any unexpected default-deny surfaced, not patched.
@@ -263,21 +398,70 @@ Close-out → commit.
 - **Model:** **Opus** (review) · **Skill:** skill-security-reviewer · **Source:** Phase 03 Acceptance
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T07 — exit verification. Direct supabase binary.
+Read SESSION_CONTEXT.md, then execute Phase 03 / T07 — EXIT VERIFICATION +
+consolidated PR. Branch feature/phase-03-catalog (git pull first). Verification
++ seeding + docs + PR — zero feature code changes; any defect found = report
+with a PASS/FAIL line, fix ONLY if trivial-and-safe (state it), else FLAG.
 
-PASS/FAIL ledger vs FR-PUB acceptance:
-- Homepage: renders collections/categories/new-arrivals/boosted; section-level degradation; guest wishlist → login.
-- Search: tsvector + Arabic unaccent; all URL filters; R-B04 boosted-above-organic (state the rule as implemented); soft-deleted/suspended excluded.
-- Category: by slug; inactive/unknown → 404; descendant-inclusion per spec.
-- Listing detail: full data; removed → 404 (R-L10); price_type + stock variants (R-L09); view_count mechanism (confirm how it landed).
-- Storefront: by slug; suspended → 404 (R-S07); tabs render.
-- Wishlist + follow: authed toggle, guest rejected, 23505-safe; report wishlists/store_follows policy behaviour.
-- All public reads via anon client (NO service-role in features/app); 2 actions Zod-validated; CI green.
-- Compose-only: no hardcoded colors; components/ui untouched; no forked shared components.
+1. DoD SWEEP — PASS/FAIL ledger, one line per Done-when across the stack:
+   T02 homepage (strips/degradation/empty/guest-wishlist) · T03 search
+   (keyword/filters-in-URL/R-B04-cited/exclusions/states) · T04 category
+   (slug/404/chips/inclusion-rule-cited/R-S07 fix) · T05 detail (R-L10 404s/
+   price_type×4/stock variants/store-scoped reviews/CTAs/view_count-flagged) ·
+   T06 storefront+actions (R-S07/tabs/toggles/23505/cross-user isolation/guest
+   rejection) · REG-25 (sold_out detail-only, both directions) · REG-29 ·
+   PRE-GATE-FIX status-code table re-spot-checked.
 
-Block sign-off ONLY on hard failures (suspended store visible; soft-deleted listing visible; a write action default-denied & silently bypassed via service-role; search returns inactive listings; a Server Action missing Zod). Log doc/ops mismatches as corrections.
-Write the Phase 04 entry checklist from Phase-03 carry-forwards + the standing items: (a) seller_profiles permissive ownership INSERT policy owed at Phase 04 become-seller; (b) requireVerifiedPhone() now consumable by Phase 04; (c) standing pre-launch carries — live OAuth consent E2E (#13), handset SMS delivery.
-Update SESSION_CONTEXT (Last completed → Phase 03; Next → Phase 04 Seller Onboarding) + DEVELOPMENT_JOURNAL. Do NOT start Phase 04.
+2. POPULATED-RENDER SMOKE (closes the T02 gap — staging had 0 listings, only
+   empty paths ran live). Seed via the integration-harness pattern (unique-
+   suffix, service-role seeding, full cleanup): ≥2 stores (one with reviews +
+   rating_aggregate), ≥6 active listings across ≥2 categories (images sort_order
+   0.., tags), 1 live collection with collection_listings, 1 active boost,
+   1 sold_out listing. Then next start smoke — paste evidence per page:
+   - / and /en: hero + CategoryGrid + populated CollectionStrip + New Arrivals
+     + Boosted grid, correct dir/lang, titles COALESCE (seed one listing with
+     title_en to prove EN shows it and AR shows title_ar)
+   - /search?q=<seeded>: results incl. boosted-above-organic ordering visible
+   - /category/<slug>: chips + grid populated
+   - /listing/<id>: gallery/price/stock/seller card/reviews render; the
+     sold_out listing renders WITH images + restock CTA; absent from browse
+   - /store/<slug>: tabs populated, follow button state
+   - Theme: verify .dark wiring intact on these pages (class strategy present;
+     browser-interactive flip only if tooling allows — state which).
+   CLEANUP verified zero residue (paste post-run counts).
+
+3. DB LIVE STATE: pg_policies — listings_public + 2 amended children carry the
+   IN ('active','sold_out') predicates; store_follows = exactly 3 (sf_select/
+   insert/delete per ERD); no other policy drifted vs the R4-corrected count.
+   Migration ledger ↔ local 1:1 (paste count, expect 20/20). Triggers: 5 live.
+
+4. REGISTER + DOCS SYNC:
+   - Mint REG-30 (experimental.globalNotFound standing/ops — re-verify on Next
+     upgrades). Confirm REG-25/27/28/29 closed; REG-26 open (note: popularity
+     sort is static until a view_count mechanism is specced); REG-09/10/
+     11/12/13/14/15/18/23 unchanged.
+   - Pin the ERD-audit 13-table list as a named SESSION_CONTEXT table mapping
+     each specced-but-absent-policy table → owning phase (order set + shipments
+     → Phase 07; disputes set → disputes phase; inquiry/order messages →
+     messaging; restock_alerts → notifications; seller_strikes/flagged_content/
+     whatsapp_templates → admin; sessions → intentionally unused, ADR-010) so
+     future phase entry checklists inherit their rows.
+   - PHASE_03_CATALOG.md results tracker: all rows final. BETK_UI_SPEC.md
+     acceptance matrix: mark the Phase-03 screens verified (ar/en × light/dark)
+     per this gate's evidence. Carry-forwards restated so they survive:
+     relevance-sort fallback (RPC post-MVP), featured-stores row omitted
+     (unpinned rule — product decision), footer links unrouted, REG-26.
+
+5. FULL CI: typecheck · lint · 4 guards · test:unit (82/82) · full integration
+   suite · build (both locales).
+
+6. CLOSE + PR: SESSION_CONTEXT full phase close-out + journal. Push. Open the
+   consolidated PR feature/phase-03-catalog → main, title "Phase 03: Catalog &
+   Discovery (T02–T06 + REG-25/27/28/29)" — body = the DoD ledger summary +
+   migrations list + register deltas. The R5 RLS-smoke job MUST fire on this
+   PR (migration diff present) — report its result explicitly; if it's absent
+   or skipped, that's a FAIL line, not a shrug. Report full CI status.
+   DO NOT MERGE — hold for the review verdict.
 ```
 - **Done when:** all FR-PUB lines PASS or doc-corrected; no service-role leak; compose-only held; Phase 04 checklist written; signed off.
 

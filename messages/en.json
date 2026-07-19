@@ -6,6 +6,11 @@
     "backToHome": "Back to home",
     "or": "or"
   },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you’re looking for doesn’t exist or has moved.",
+    "backHome": "Back to home"
+  },
   "nav": {
     "home": "Home",
     "search": "Search",
@@ -365,5 +370,88 @@
     "next": "Next",
     "pageLabel": "Page {page}",
     "error": "Search results couldn't load."
+  },
+  "category": {
+    "metaTitleFallback": "Category — BETK",
+    "metaTitle": "{name} — BETK",
+    "metaDescription": "Browse active listings in {name} on BETK.",
+    "error": "This category's listings couldn't load.",
+    "loadMore": "Load more",
+    "empty": {
+      "message": "No active listings in {name} yet",
+      "backToParent": "Back to {name}"
+    }
+  },
+  "listing": {
+    "metaTitleFallback": "Listing — BETK",
+    "metaTitle": "{title} — BETK",
+    "metaDescription": "Details for {title} on BETK.",
+    "tagsTitle": "Tags",
+    "descriptionTitle": "Description",
+    "moreFromStore": "More from this store",
+    "wishlist": {
+      "add": "Add to wishlist",
+      "remove": "Remove from wishlist"
+    },
+    "cta": {
+      "inquiry": "Inquire now",
+      "notifyMe": "Notify me when back",
+      "share": "Share on WhatsApp"
+    },
+    "shareText": "{title} on BETK:",
+    "reviews": {
+      "title": "Store reviews",
+      "subtitle": "These reviews reflect the store's overall experience, not just this listing",
+      "buyerLabel": "Buyer",
+      "sellerReplyLabel": "Seller reply",
+      "empty": "This store has no reviews yet"
+    }
+  },
+  "store": {
+    "metaTitleFallback": "Store — BETK",
+    "metaTitle": "{name} — BETK",
+    "metaDescription": "Browse products and services from {name} on BETK.",
+    "tabs": {
+      "listings": "Listings",
+      "reviews": "Reviews",
+      "about": "About"
+    },
+    "listingsEmpty": "This store has no active listings yet",
+    "loadMore": "Load more",
+    "error": "Could not load the store's listings.",
+    "reviews": {
+      "empty": "This store has no reviews yet",
+      "buyerLabel": "Buyer",
+      "sellerReplyLabel": "Seller reply"
+    },
+    "returnPolicy": {
+      "title": "Return policy",
+      "empty": "This store has not set a return policy."
+    },
+    "about": {
+      "paymentTitle": "Payment methods",
+      "paymentEmpty": "This store has not set payment methods.",
+      "deliveryTitle": "Delivery options",
+      "deliveryEmpty": "This store has not set delivery options.",
+      "payment": {
+        "instapay": "InstaPay",
+        "vodafoneCash": "Vodafone Cash",
+        "orangeCash": "Orange Cash",
+        "cod": "Cash on delivery"
+      },
+      "delivery": {
+        "modesTitle": "Delivery modes",
+        "modes": {
+          "delivery": "Delivery",
+          "pickup": "Store pickup",
+          "remote": "Remote service"
+        },
+        "deliveryDays": "Delivery time: {min}–{max} days",
+        "deliveryFee": "Delivery fee: EGP {fee}",
+        "freeThreshold": "Free delivery on orders over EGP {amount}",
+        "pickupGovernorate": "Pickup from: {governorate}",
+        "shipsNationwide": "Ships nationwide"
+      }
+    }
   }
 }

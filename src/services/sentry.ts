@@ -36,6 +36,7 @@ export type SentryFeature =
   | "buyer-account"
   | "checkout"
   | "discovery"
+  | "discovery-actions"
   | "listing"
   | "orders"
   | "disputes"

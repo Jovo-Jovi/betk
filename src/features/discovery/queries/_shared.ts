@@ -16,6 +16,31 @@
  * rating_aggregates public (pre-aggregated, no PII). The embedded reads below
  * now surface for the anon/authenticated roles; the mapping helpers still
  * degrade gracefully (null/[]) for rows whose parent is not publicly visible.
+ *
+ * ── R-S07 consistency fix (Phase 03 / T04 STEP 0) ───────────────────────────
+ * `LISTING_SUMMARY_SELECT`'s `stores` embed is forced to `stores!inner(...)`,
+ * mirroring the pattern `searchListings.ts` (T03) already established. Why:
+ * `listings_public` RLS (BETK_DATABASE_SCHEMA.sql) only checks
+ * `status='active' AND deleted_at IS NULL` — it does NOT check the owning
+ * store's status. A plain (non-inner) `stores(...)` embed just resolves to
+ * `null` when the store fails `stores_public` RLS (suspended) — the LISTING
+ * ROW ITSELF still comes back (with `store: null` after mapping), so a
+ * suspended store's active listing would leak into `getActiveListings` /
+ * `getHomepageData` (both consume this constant). `stores!inner` makes the
+ * store an INNER join, so the whole listing row is dropped whenever its store
+ * isn't anon-readable — exactly R-S07's intent (BETK_ERD.md line 86:
+ * "suspended sellers/stores/listings are hidden via status filters (R-S07)").
+ * Verified LIVE (staging, seeded+cleaned): before this fix, an active listing
+ * under a `suspended`-status store surfaced in both `getActiveListings` and
+ * `getHomepageData` (newArrivals + boosted strips); after, it's excluded from
+ * all three — see `tests/integration/discovery.category.test.ts`.
+ * `getStoreBySlug` also consumes this constant but is unaffected in practice
+ * (it only ever queries a store already resolved as `status='active'`, so the
+ * added inner-join condition is always already satisfied there).
+ * `getListingById` uses its OWN separate `LISTING_DETAIL_SELECT` (not this
+ * constant) and is NOT touched here — see that file's header for why it
+ * already doesn't leak (verified, not fixed) — flagged for T05, which owns
+ * `/listing/[id]`.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -36,6 +61,8 @@ export const LISTINGS_PAGE_SIZE = 24;
 export const HOMEPAGE_STRIP_LIMIT = 12;
 /** Recent visible reviews shown on a listing/storefront page (not paginated in T01). */
 export const RECENT_REVIEWS_LIMIT = 10;
+/** "More from this store" rail on the listing detail page (T05). */
+export const MORE_FROM_STORE_LIMIT = 8;
 
 /**
  * Minimal client shape every discovery query depends on (`.schema("betk")`).
@@ -63,7 +90,7 @@ export const LISTING_SUMMARY_SELECT = `
   id, store_id, category_id, subcategory_id, type, title_ar, title_en,
   price, price_type, status, stock_qty, is_made_to_order, view_count, created_at,
   listing_images ( url, sort_order ),
-  stores ( id, name_ar, name_en, slug, avatar_url, governorate, city,
+  stores!inner ( id, name_ar, name_en, slug, avatar_url, governorate, city,
     rating_aggregates ( average_rating, total_reviews, rating_1, rating_2, rating_3, rating_4, rating_5 ) )
 `;
 

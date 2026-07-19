@@ -12,7 +12,9 @@ import type { PriceType } from "@/constants/enums";
  * in as a prop (Arabic default); title/store are data. Nested strings
  * (price qualifiers, stock, wishlist aria) are handled by the child
  * components' own i18n props — forward them via the pass-through props below
- * if you need to localize them here. Lifts shadow-sm → shadow-md (legacy shadow-card aliases retired per brief §3.4).
+ * if you need to localize them here. CD-DELTA-2: wishlist aria-labels are now
+ * forwardable via wishlistAddLabel / wishlistRemoveLabel (Arabic defaults
+ * preserved) so the heart localizes under /en. Lifts shadow-sm → shadow-md (legacy shadow-card aliases retired per brief §3.4).
  * NOTE: swap the <img> for next/image once image domains are configured.
  */
 export interface ListingCardProps {
@@ -28,6 +30,10 @@ export interface ListingCardProps {
   boostLabel?: string;
   saved?: boolean;
   onToggleSave?: (next: boolean) => void;
+  /** Wishlist heart aria-label when unsaved (forwarded to WishlistButton.addLabel). Default "أضف للمفضلة". */
+  wishlistAddLabel?: string;
+  /** Wishlist heart aria-label when saved (forwarded to WishlistButton.removeLabel). Default "إزالة من المفضلة". */
+  wishlistRemoveLabel?: string;
   stockQty?: number | null;
   isMadeToOrder?: boolean;
   isService?: boolean;
@@ -37,7 +43,7 @@ export interface ListingCardProps {
 
 export function ListingCard({
   titleAr, image, price, priceType = "fixed", storeName, rating, reviews,
-  boosted, boostLabel = "مميّز", saved, onToggleSave, stockQty, isMadeToOrder, isService, onClick, className,
+  boosted, boostLabel = "مميّز", saved, onToggleSave, wishlistAddLabel = "أضف للمفضلة", wishlistRemoveLabel = "إزالة من المفضلة", stockQty, isMadeToOrder, isService, onClick, className,
 }: ListingCardProps) {
   return (
     <div
@@ -56,7 +62,7 @@ export function ListingCard({
           </span>
         )}
         <span className="absolute end-2 top-2">
-          <WishlistButton active={saved} onToggle={onToggleSave} overlay size="sm" />
+          <WishlistButton active={saved} onToggle={onToggleSave} overlay size="sm" addLabel={wishlistAddLabel} removeLabel={wishlistRemoveLabel} />
         </span>
       </div>
       <div className="flex flex-col gap-2 p-3">

@@ -6,6 +6,11 @@
     "backToHome": "العودة إلى الرئيسية",
     "or": "أو"
   },
+  "notFound": {
+    "title": "الصفحة غير موجودة",
+    "description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
+    "backHome": "العودة إلى الرئيسية"
+  },
   "nav": {
     "home": "الرئيسية",
     "search": "بحث",
@@ -365,5 +370,88 @@
     "next": "التالي",
     "pageLabel": "صفحة {page}",
     "error": "تعذّر تحميل نتائج البحث."
+  },
+  "category": {
+    "metaTitleFallback": "الفئة — بيتك",
+    "metaTitle": "{name} — بيتك",
+    "metaDescription": "تصفح إعلانات فعالة في فئة {name} على بيتك.",
+    "error": "تعذّر تحميل إعلانات هذه الفئة.",
+    "loadMore": "تحميل المزيد",
+    "empty": {
+      "message": "لا توجد إعلانات فعالة في {name} حتى الآن",
+      "backToParent": "الرجوع إلى {name}"
+    }
+  },
+  "listing": {
+    "metaTitleFallback": "الإعلان — بيتك",
+    "metaTitle": "{title} — بيتك",
+    "metaDescription": "تفاصيل {title} على بيتك.",
+    "tagsTitle": "الوسوم",
+    "descriptionTitle": "الوصف",
+    "moreFromStore": "المزيد من هذا المتجر",
+    "wishlist": {
+      "add": "أضف للمفضلة",
+      "remove": "إزالة من المفضلة"
+    },
+    "cta": {
+      "inquiry": "استفسر الآن",
+      "notifyMe": "أعلمني عند التوفر",
+      "share": "مشاركة عبر واتساب"
+    },
+    "shareText": "{title} على بيتك:",
+    "reviews": {
+      "title": "تقييمات المتجر",
+      "subtitle": "هذه التقييمات تعكس تجربة المتجر بشكل عام، وليست خاصة بهذا الإعلان فقط",
+      "buyerLabel": "مشتري",
+      "sellerReplyLabel": "رد البائع",
+      "empty": "لا توجد تقييمات لهذا المتجر حتى الآن"
+    }
+  },
+  "store": {
+    "metaTitleFallback": "المتجر — بيتك",
+    "metaTitle": "{name} — بيتك",
+    "metaDescription": "تصفح منتجات وخدمات {name} على بيتك.",
+    "tabs": {
+      "listings": "المنتجات",
+      "reviews": "التقييمات",
+      "about": "عن المتجر"
+    },
+    "listingsEmpty": "لا توجد منتجات فعالة في هذا المتجر حتى الآن",
+    "loadMore": "تحميل المزيد",
+    "error": "تعذّر تحميل منتجات المتجر.",
+    "reviews": {
+      "empty": "لا توجد تقييمات لهذا المتجر حتى الآن",
+      "buyerLabel": "مشتري",
+      "sellerReplyLabel": "رد البائع"
+    },
+    "returnPolicy": {
+      "title": "سياسة الاسترجاع",
+      "empty": "لم يحدد المتجر سياسة استرجاع."
+    },
+    "about": {
+      "paymentTitle": "طرق الدفع",
+      "paymentEmpty": "لم يحدد المتجر طرق دفع.",
+      "deliveryTitle": "خيارات التوصيل",
+      "deliveryEmpty": "لم يحدد المتجر خيارات توصيل.",
+      "payment": {
+        "instapay": "إنستاباي",
+        "vodafoneCash": "فودافون كاش",
+        "orangeCash": "أورنج كاش",
+        "cod": "الدفع عند الاستلام"
+      },
+      "delivery": {
+        "modesTitle": "أنماط التوصيل",
+        "modes": {
+          "delivery": "توصيل",
+          "pickup": "استلام من المتجر",
+          "remote": "خدمة عن بُعد"
+        },
+        "deliveryDays": "مدة التوصيل: {min}–{max} يوم",
+        "deliveryFee": "رسوم التوصيل: {fee} ج.م",
+        "freeThreshold": "توصيل مجاني للطلبات فوق {amount} ج.م",
+        "pickupGovernorate": "الاستلام من: {governorate}",
+        "shipsNationwide": "التوصيل لكل المحافظات"
+      }
+    }
   }
 }

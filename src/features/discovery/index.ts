@@ -20,9 +20,19 @@ export { getListingById } from "./queries/getListingById";
 export { getStoreBySlug } from "./queries/getStoreBySlug";
 // T03 — search & filter (/search).
 export { searchListings } from "./queries/searchListings";
+// T04 — category browse (/category/[slug]).
+export { getCategoryBySlug } from "./queries/getCategoryBySlug";
+// T05 — listing detail (/listing/[id]).
+export { getMoreFromStore } from "./queries/getMoreFromStore";
+// T06 — storefront (/store/[slug]): follow-state read + the 2 auth-gated writes.
+export { getStoreFollowState } from "./queries/getStoreFollowState";
+export { toggleWishlist } from "./actions/toggleWishlist";
+export { toggleFollow } from "./actions/toggleFollow";
 
 export type {
+  CategoryDetail,
   CategoryNode,
+  CategorySummary,
   HomepageCollection,
   HomepageData,
   HomepageStrip,
@@ -45,9 +55,12 @@ export {
   listingSortSchema,
   listingIdSchema,
   storeSlugSchema,
+  categorySlugSchema,
   searchListingsParamsSchema,
   searchSortSchema,
   searchListingTypeSchema,
+  toggleWishlistInputSchema,
+  toggleFollowInputSchema,
   pickTsConfig,
 } from "@/validations/discovery";
 export type {
@@ -57,4 +70,7 @@ export type {
   SearchListingsParsedParams,
   SearchSort,
   SearchListingType,
+  ToggleWishlistInput,
+  ToggleFollowInput,
+  ToggleResult,
 } from "@/validations/discovery";
