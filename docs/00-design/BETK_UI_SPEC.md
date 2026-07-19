@@ -900,11 +900,13 @@ Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL,
 ### Public / Guest (5)
 | Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
 |---|---|---|---|---|
-| Homepage | ☐ | ☐ | ☐ | ☐ |
-| Search & Filter Results | ☐ | ☐ | ☐ | ☐ |
-| Category Browse | ☐ | ☐ | ☐ | ☐ |
-| Listing Detail | ☐ | ☐ | ☐ | ☐ |
-| Public Storefront | ☐ | ☐ | ☐ | ☐ |
+| Homepage | ☑ | ☑ | ☑ | ☑ |
+| Search & Filter Results | ☑ | ☑ | ☑ | ☑ |
+| Category Browse | ☑ | ☑ | ☑ | ☑ |
+| Listing Detail | ☑ | ☑ | ☑ | ☑ |
+| Public Storefront | ☑ | ☑ | ☑ | ☑ |
+
+> **Phase 03 verification (T07 gate, 2026-07-19, Opus 4.8):** all 5 public screens shipped (T02–T06) + verified against a **populated** staging DB (`next start` runtime smoke, seeded via the integration harness then cleaned to zero residue). **ar-RTL and en-LTR** cells: proven live — each page returns 200 with the correct `<html lang/dir>`, populated grids/strips/tabs, and bilingual name/title COALESCE (a seeded `title_en` listing shows EN under `/en`, `title_ar` under `/`). **Dark cells (☑ = wiring-verified, not interactive-flip):** the `.dark` class strategy is confirmed live in the rendered document — `next-themes` anti-FOUC inline script (`classList`/`setAttribute`, `"dark"` token, theme `storageKey`) present in `<head>`, `<html>` carries the class attribute, and the `.dark` token block ships in `globals.css` (build green). An **interactive** in-browser dark flip was NOT executed this gate (no Playwright browser in this env — standing constraint, carried to the pre-launch Playwright pass, REG-11 class). Light cells are the fully-exercised runtime path.
 
 ### Auth (3)
 | Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |

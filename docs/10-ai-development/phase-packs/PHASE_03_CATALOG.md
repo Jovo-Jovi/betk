@@ -52,6 +52,25 @@
 
 ---
 
+## Results tracker (FINAL — T07 gate, 2026-07-19, Opus 4.8)
+
+| Task | Scope | Status | Evidence |
+|---|---|---|---|
+| T00 | Claude-Design catalog components (`components/shared`) | ✅ PASS | Shipped in Claude Design; composed by T02–T06 (compose-only held, no `components/ui/*` edits). |
+| T01 | Public read query layer (queries + types) | ✅ PASS | `lib/queries/*` live; consumed by all public pages; typecheck green. |
+| T02 | Homepage `/` | ✅ PASS | Runtime smoke on populated DB: hero + CategoryGrid + populated CollectionStrip + New Arrivals + Boosted grid; section-level degradation + empty states; guest-wishlist redirect. |
+| T03 | Search `/search` (tsvector + Arabic unaccent + R-B04) | ✅ PASS | Keyword + filters-in-URL; R-B04 boosted-above-organic cited + visible; deleted/suspended exclusions; all states. |
+| T04 | Category `/category/[slug]` | ✅ PASS | Slug resolve + 404; chips; inclusion-rule (cat OR subcat) cited; R-S07 suspended-store fix live. |
+| T05 | Listing detail `/listing/[id]` | ✅ PASS | R-L10 404s; price_type ×4; stock variants; store-scoped reviews; CTAs; `view_count` increment flagged (REG-26). |
+| T06 | Storefront `/store/[slug]` + wishlist/follow actions | ✅ PASS | R-S07; tabs; toggles; 23505 dup-safe; cross-user isolation; guest rejection → login redirect. |
+| REG-25 | sold_out detail-only (browse-excluded, detail-included both dir) | ✅ CLOSED | Runtime smoke: sold_out listing renders WITH images + restock CTA, absent from all browse surfaces (AR + EN). |
+| REG-29 | (listings_public + 2 children carry `IN ('active','sold_out')`) | ✅ CLOSED | `pg_policies` live-verified; migration ledger 20/20. |
+| T07 | Exit verification + consolidated PR | ✅ THIS GATE | DoD sweep + populated-render smoke (zero residue) + DB live-state + full CI + PR. |
+
+**Carry-forwards (survive Phase 03 close):** relevance-sort fallback (RPC, post-MVP); featured-stores homepage row omitted (unpinned "featured" rule — product decision, not a defect); footer links unrouted (target pages ship later phases); **REG-26** popularity sort static until a `view_count` write mechanism is specced; interactive dark-flip → pre-launch Playwright pass.
+
+---
+
 ## T00 — Claude-Design handoff (DS gate)
 - **Surface:** **Claude Design** (NOT Cursor) · **Source:** `00-design/BETK_DESIGN_BRIEF.md`, `BETK_UI_SPEC.md` §1 + Homepage/Search/Listing/Storefront, BETK_CODEBASE_ARCHITECTURE §Design-system ownership, `phase-packs/PHASE_DS_DESIGN_SYSTEM.md`
 - **Deliverable:** the catalog shared components in `components/shared`, RTL-first, **token-only** (UI Spec §1 CSS vars — no hardcoded colors), extending shadcn (never editing `components/ui/*`), with **all states** (default / loading-skeleton / empty / error) per UI Spec:
@@ -379,21 +398,70 @@ REG-25/26/27/28 recorded) + journal → commit + push. HOLD — no PR until T07.
 - **Model:** **Opus** (review) · **Skill:** skill-security-reviewer · **Source:** Phase 03 Acceptance
 - **Prompt:**
 ```
-Read SESSION_CONTEXT.md, then execute Phase 03 / T07 — exit verification. Direct supabase binary.
+Read SESSION_CONTEXT.md, then execute Phase 03 / T07 — EXIT VERIFICATION +
+consolidated PR. Branch feature/phase-03-catalog (git pull first). Verification
++ seeding + docs + PR — zero feature code changes; any defect found = report
+with a PASS/FAIL line, fix ONLY if trivial-and-safe (state it), else FLAG.
 
-PASS/FAIL ledger vs FR-PUB acceptance:
-- Homepage: renders collections/categories/new-arrivals/boosted; section-level degradation; guest wishlist → login.
-- Search: tsvector + Arabic unaccent; all URL filters; R-B04 boosted-above-organic (state the rule as implemented); soft-deleted/suspended excluded.
-- Category: by slug; inactive/unknown → 404; descendant-inclusion per spec.
-- Listing detail: full data; removed → 404 (R-L10); price_type + stock variants (R-L09); view_count mechanism (confirm how it landed).
-- Storefront: by slug; suspended → 404 (R-S07); tabs render.
-- Wishlist + follow: authed toggle, guest rejected, 23505-safe; report wishlists/store_follows policy behaviour.
-- All public reads via anon client (NO service-role in features/app); 2 actions Zod-validated; CI green.
-- Compose-only: no hardcoded colors; components/ui untouched; no forked shared components.
+1. DoD SWEEP — PASS/FAIL ledger, one line per Done-when across the stack:
+   T02 homepage (strips/degradation/empty/guest-wishlist) · T03 search
+   (keyword/filters-in-URL/R-B04-cited/exclusions/states) · T04 category
+   (slug/404/chips/inclusion-rule-cited/R-S07 fix) · T05 detail (R-L10 404s/
+   price_type×4/stock variants/store-scoped reviews/CTAs/view_count-flagged) ·
+   T06 storefront+actions (R-S07/tabs/toggles/23505/cross-user isolation/guest
+   rejection) · REG-25 (sold_out detail-only, both directions) · REG-29 ·
+   PRE-GATE-FIX status-code table re-spot-checked.
 
-Block sign-off ONLY on hard failures (suspended store visible; soft-deleted listing visible; a write action default-denied & silently bypassed via service-role; search returns inactive listings; a Server Action missing Zod). Log doc/ops mismatches as corrections.
-Write the Phase 04 entry checklist from Phase-03 carry-forwards + the standing items: (a) seller_profiles permissive ownership INSERT policy owed at Phase 04 become-seller; (b) requireVerifiedPhone() now consumable by Phase 04; (c) standing pre-launch carries — live OAuth consent E2E (#13), handset SMS delivery.
-Update SESSION_CONTEXT (Last completed → Phase 03; Next → Phase 04 Seller Onboarding) + DEVELOPMENT_JOURNAL. Do NOT start Phase 04.
+2. POPULATED-RENDER SMOKE (closes the T02 gap — staging had 0 listings, only
+   empty paths ran live). Seed via the integration-harness pattern (unique-
+   suffix, service-role seeding, full cleanup): ≥2 stores (one with reviews +
+   rating_aggregate), ≥6 active listings across ≥2 categories (images sort_order
+   0.., tags), 1 live collection with collection_listings, 1 active boost,
+   1 sold_out listing. Then next start smoke — paste evidence per page:
+   - / and /en: hero + CategoryGrid + populated CollectionStrip + New Arrivals
+     + Boosted grid, correct dir/lang, titles COALESCE (seed one listing with
+     title_en to prove EN shows it and AR shows title_ar)
+   - /search?q=<seeded>: results incl. boosted-above-organic ordering visible
+   - /category/<slug>: chips + grid populated
+   - /listing/<id>: gallery/price/stock/seller card/reviews render; the
+     sold_out listing renders WITH images + restock CTA; absent from browse
+   - /store/<slug>: tabs populated, follow button state
+   - Theme: verify .dark wiring intact on these pages (class strategy present;
+     browser-interactive flip only if tooling allows — state which).
+   CLEANUP verified zero residue (paste post-run counts).
+
+3. DB LIVE STATE: pg_policies — listings_public + 2 amended children carry the
+   IN ('active','sold_out') predicates; store_follows = exactly 3 (sf_select/
+   insert/delete per ERD); no other policy drifted vs the R4-corrected count.
+   Migration ledger ↔ local 1:1 (paste count, expect 20/20). Triggers: 5 live.
+
+4. REGISTER + DOCS SYNC:
+   - Mint REG-30 (experimental.globalNotFound standing/ops — re-verify on Next
+     upgrades). Confirm REG-25/27/28/29 closed; REG-26 open (note: popularity
+     sort is static until a view_count mechanism is specced); REG-09/10/
+     11/12/13/14/15/18/23 unchanged.
+   - Pin the ERD-audit 13-table list as a named SESSION_CONTEXT table mapping
+     each specced-but-absent-policy table → owning phase (order set + shipments
+     → Phase 07; disputes set → disputes phase; inquiry/order messages →
+     messaging; restock_alerts → notifications; seller_strikes/flagged_content/
+     whatsapp_templates → admin; sessions → intentionally unused, ADR-010) so
+     future phase entry checklists inherit their rows.
+   - PHASE_03_CATALOG.md results tracker: all rows final. BETK_UI_SPEC.md
+     acceptance matrix: mark the Phase-03 screens verified (ar/en × light/dark)
+     per this gate's evidence. Carry-forwards restated so they survive:
+     relevance-sort fallback (RPC post-MVP), featured-stores row omitted
+     (unpinned rule — product decision), footer links unrouted, REG-26.
+
+5. FULL CI: typecheck · lint · 4 guards · test:unit (82/82) · full integration
+   suite · build (both locales).
+
+6. CLOSE + PR: SESSION_CONTEXT full phase close-out + journal. Push. Open the
+   consolidated PR feature/phase-03-catalog → main, title "Phase 03: Catalog &
+   Discovery (T02–T06 + REG-25/27/28/29)" — body = the DoD ledger summary +
+   migrations list + register deltas. The R5 RLS-smoke job MUST fire on this
+   PR (migration diff present) — report its result explicitly; if it's absent
+   or skipped, that's a FAIL line, not a shrug. Report full CI status.
+   DO NOT MERGE — hold for the review verdict.
 ```
 - **Done when:** all FR-PUB lines PASS or doc-corrected; no service-role leak; compose-only held; Phase 04 checklist written; signed off.
 
