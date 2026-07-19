@@ -440,7 +440,8 @@ and-safe fixes stated, else FLAG).
 | Task | Model | Status | Commit | Verdict | Notes |
 |---|---|---|---|---|---|
 | T00 CD-DELTA-3 | CD | — | — | — | |
-| T01 DB+storage | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | REG-10 closed (`sp_insert`) + REG-31 minted+closed (`stores_insert`) via `20260719133011`; `docs`/`media` buckets + storage RLS via `20260719133052`; ledger 20→22 (1:1); REG-14 MATCH (T07 = 3 toggles not 4); integration 7/7 + full CI green; advisor WARN `public_bucket_allows_listing` on media (accepted, candidate hardening) |
+| T01 DB+storage | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | REG-10 closed (`sp_insert`) + REG-31 minted+closed (`stores_insert`) via `20260719133011`; `docs`/`media` buckets + storage RLS via `20260719133052`; ledger 20→22 (1:1); REG-14 MATCH (T07 = 3 toggles not 4); integration 7/7 + full CI green; advisor WARN `public_bucket_allows_listing` on media → **RESOLVED by T01-FIX (not carried)** |
+| T01-FIX media listing hardening | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | DB-only. Migration `20260719134903_media_select_own_prefix_rls`: DROP `media_public_select` (broad SELECT TO public) + CREATE `media_select_own_prefix` (SELECT TO authenticated, own-prefix); bucket stays `public=true`. Ledger 22→23 (1:1). Advisor `public_bucket_allows_listing` WARN GONE, no new findings. Media integration case extended (public-URL bytes load-bearing + `.list()` denials); full CI green. Boundary flag: per-object public read stays open on a public bucket (enumeration hardened, not object reads) |
 | T02 middleware+shell | Opus | — | — | — | |
 | T03 submit action | Opus | — | — | — | ADR-012 |
 | T04 wizard UI | Sonnet | — | — | — | |

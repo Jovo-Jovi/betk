@@ -18,7 +18,15 @@
  *             +  owner uploads + reads own docs object                  (PASS)
  *             -  anon and another authed user get NOTHING on docs        (PASS)
  *             +  admin reads the owner's docs object (review path)       (PASS)
- *             +  media public read works; owner writes own-prefix        (PASS)
+ *   STORAGE media (public=true, SELECT hardened to own-prefix, T01-FIX):
+ *             +  anon fetch via PUBLIC URL still returns bytes (load-bearing)
+ *             -  anon .list() on the bucket returns zero rows (denied)   (PASS)
+ *             -  other-user .list() of a foreign prefix returns zero rows (denied)
+ *             +  owner lists + reads own prefix; writes own-prefix       (PASS)
+ *   NOTE: per-object READ (download / public URL) stays open on a public bucket
+ *   by design — the advisor (0025 public_bucket_allows_listing) + T01-FIX target
+ *   LISTING/enumeration, not public object reads. A foreign-prefix download of a
+ *   KNOWN path still returns the bytes; that boundary is asserted explicitly.
  */
 
 import { randomUUID } from "node:crypto";
@@ -304,10 +312,13 @@ describeOrSkip("Phase 04 / T01 — seller DB + storage RLS (staging)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // STORAGE — media (public-read) own-prefix write + public read
+  // STORAGE — media: public=true (URL serving unaffected) but SELECT hardened
+  // to own-prefix (T01-FIX, migration 20260719134903) so the Data API cannot
+  // enumerate the whole bucket. Clears advisor 0025 public_bucket_allows_listing.
   // -------------------------------------------------------------------------
-  it("STORAGE media: owner writes own-prefix; public (anon) read works", async () => {
+  it("STORAGE media: public URL still serves; .list() own-prefix only; foreign-prefix enumeration denied", async () => {
     const owner = await createActor("media-owner", { phone: makePhone() });
+    const other = await createActor("media-other", { phone: makePhone() });
     const path = `${owner.id}/avatar.png`;
 
     const up = await owner.client.storage
@@ -322,9 +333,48 @@ describeOrSkip("Phase 04 / T01 — seller DB + storage RLS (staging)", () => {
       .upload(`someone-else/avatar.png`, PNG_1x1, { contentType: "image/png" });
     expect(badUp.error).not.toBeNull();
 
-    // (+) public read via the public object URL (no auth required)
+    // (1) LOAD-BEARING POSITIVE: anon fetch of the object via its PUBLIC URL
+    // still returns the bytes. public=true buckets serve URLs bypassing RLS —
+    // this is the app's read path and MUST keep working after the SELECT-policy
+    // swap. If this fails, the hardening broke public serving — STOP, do not
+    // restore the broad public SELECT.
     const { data: pub } = owner.client.storage.from(MEDIA_BUCKET).getPublicUrl(path);
     const res = await fetch(pub.publicUrl);
     expect(res.ok).toBe(true);
+    const bytes = Buffer.from(await res.arrayBuffer());
+    expect(bytes.length).toBe(PNG_1x1.length);
+
+    // (2) anon .list() on the media bucket returns ZERO rows (no SELECT policy
+    // for anon → RLS filters everything; enumeration denied).
+    const anonList = await anonClient().storage.from(MEDIA_BUCKET).list(owner.id);
+    expect(anonList.error).toBeNull();
+    expect(anonList.data?.length ?? 0).toBe(0);
+
+    // (3) another authenticated user cannot ENUMERATE a foreign prefix via the
+    // Data API — the own-prefix SELECT does not match their uid, so .list()
+    // returns zero rows. This is the property advisor 0025 flags and T01-FIX
+    // closes: no cross-tenant listing of the bucket.
+    const otherList = await other.client.storage.from(MEDIA_BUCKET).list(owner.id);
+    expect(otherList.error).toBeNull();
+    expect(otherList.data?.length ?? 0).toBe(0);
+
+    // BOUNDARY (documented, not a regression): per-object READ stays open on a
+    // public bucket. download()/public-URL of a KNOWN path succeeds for any
+    // caller — that is what public=true means and is the app's avatar/cover
+    // serving path (assertion 1). The hardening removes LISTING/enumeration,
+    // not public object reads. So a foreign-prefix download still returns the
+    // bytes; assert that reality explicitly rather than hide it.
+    const otherDownload = await other.client.storage.from(MEDIA_BUCKET).download(path);
+    expect(otherDownload.error).toBeNull();
+    expect(otherDownload.data).toBeTruthy();
+
+    // (4) the owner lists + reads their OWN prefix.
+    const ownList = await owner.client.storage.from(MEDIA_BUCKET).list(owner.id);
+    expect(ownList.error).toBeNull();
+    expect(ownList.data?.some((o) => o.name === "avatar.png")).toBe(true);
+
+    const ownDownload = await owner.client.storage.from(MEDIA_BUCKET).download(path);
+    expect(ownDownload.error).toBeNull();
+    expect(ownDownload.data).toBeTruthy();
   });
 });

@@ -1391,8 +1391,9 @@ CREATE POLICY payouts_phone_gate ON betk.payouts AS RESTRICTIVE FOR INSERT
 -- ============================================================
 
 -- ============================================================
--- STORAGE (Phase 04 / T01) — buckets + storage.objects RLS
--- Migration 20260719133052_storage_buckets_docs_media_rls.sql. Bucket NAMES are
+-- STORAGE (Phase 04 / T01 + T01-FIX) — buckets + storage.objects RLS
+-- Migrations 20260719133052_storage_buckets_docs_media_rls.sql +
+-- 20260719134903_media_select_own_prefix_rls.sql. Bucket NAMES are
 -- configuration, settled with the human (docs / media), read via configs/env.ts
 -- (SUPABASE_DOCS_BUCKET / SUPABASE_MEDIA_BUCKET) — never hardcoded in app code.
 -- MIME allow-list + size limits are CHOSEN DEFAULTS (SECURITY_GUIDELINES pins
@@ -1415,13 +1416,14 @@ CREATE POLICY "docs_select_own_or_admin" ON storage.objects
   FOR SELECT TO authenticated
   USING (bucket_id = 'docs' AND ((storage.foldername(name))[1] = auth.uid()::text OR betk.is_admin()));
 
--- media = PUBLIC-read (avatar/cover; listing images in Phase 05). Public-URL
--- reads bypass RLS; media_public_select additionally permits Data-API list/read
--- (advisor 0025 public_bucket_allows_listing WARN — accepted for non-sensitive
--- public marketing images; candidate hardening if listing is undesired).
-CREATE POLICY "media_public_select" ON storage.objects
-  FOR SELECT TO public
-  USING (bucket_id = 'media');
+-- media = PUBLIC-read (avatar/cover; listing images in Phase 05). Bucket stays
+-- public=true so object URLs serve WITHOUT RLS — that is the app's read path.
+-- SELECT is scoped to own-prefix (T01-FIX, migration 20260719134903) so the
+-- Data API cannot enumerate the whole bucket; this cleared advisor 0025
+-- public_bucket_allows_listing. Mirrors the media INSERT/UPDATE prefix rule.
+CREATE POLICY "media_select_own_prefix" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
 CREATE POLICY "media_insert_own_prefix" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
