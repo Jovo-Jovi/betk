@@ -1060,7 +1060,16 @@ CREATE POLICY sp_select ON betk.seller_profiles FOR SELECT
   USING (id = auth.uid() OR status = 'active' OR betk.is_admin());
 CREATE POLICY sp_update ON betk.seller_profiles FOR UPDATE
   USING (id = auth.uid() OR betk.is_admin());
--- SELLER_DOCUMENTS: own seller only; admin
+-- Permissive ownership INSERT (ERD §3 seller_profiles INSERT = self). Originally
+-- SPECCED but the CREATE POLICY was omitted from this SQL contract (only the
+-- RESTRICTIVE seller_profiles_phone_gate existed → INSERT impossible for all);
+-- restored additively by migration 20260719133011_seller_ownership_insert_rls.sql
+-- (Phase 04 / T01, REG-10). COMBINES with the RESTRICTIVE phone gate below (both
+-- must hold): a phone-verified user inserts their own row; phone-NULL is blocked.
+CREATE POLICY sp_insert ON betk.seller_profiles FOR INSERT
+  WITH CHECK (id = auth.uid());
+-- SELLER_DOCUMENTS: own seller only; admin (FOR ALL → own SELECT/INSERT/UPDATE,
+-- USING serves as the INSERT WITH CHECK). ERD §3 fully satisfied — no additions.
 CREATE POLICY sdoc_own ON betk.seller_documents FOR ALL
   USING (seller_id = auth.uid() OR betk.is_admin());
 -- STORES: public read active; seller manages own
@@ -1068,6 +1077,14 @@ CREATE POLICY stores_public ON betk.stores FOR SELECT
   USING (status = 'active' OR seller_id = auth.uid() OR betk.is_admin());
 CREATE POLICY stores_manage ON betk.stores FOR UPDATE
   USING (seller_id = auth.uid() OR betk.is_admin());
+-- Permissive ownership INSERT (ERD §3 stores INSERT = own). Originally SPECCED
+-- but the CREATE POLICY was omitted from this SQL contract (only stores_public
+-- SELECT + stores_manage UPDATE existed → INSERT uncovered); restored additively
+-- by migration 20260719133011_seller_ownership_insert_rls.sql (Phase 04 / T01,
+-- REG-31 — 3rd instance of the open-issue-#14 / REG-29 class). No RESTRICTIVE
+-- phone gate on stores (ERD gates only orders/seller_profiles/payouts).
+CREATE POLICY stores_insert ON betk.stores FOR INSERT
+  WITH CHECK (seller_id = auth.uid());
 -- STORE_FOLLOWS: self-scope (ERD §3 line 45). Originally SPECCED but the
 -- CREATE POLICY statements were omitted from this SQL contract (table left
 -- RLS-enabled + zero policies → default-deny); restored additively by
@@ -1372,3 +1389,43 @@ CREATE POLICY payouts_phone_gate ON betk.payouts AS RESTRICTIVE FOR INSERT
 --  5. seller_documents in a PRIVATE Storage bucket; signed URLs <=15 min (RISK 5).
 -- These are gates in LAUNCH_CHECKLIST.md. PgBouncer on from day 1; notifications 90-day archive scheduled.
 -- ============================================================
+
+-- ============================================================
+-- STORAGE (Phase 04 / T01) — buckets + storage.objects RLS
+-- Migration 20260719133052_storage_buckets_docs_media_rls.sql. Bucket NAMES are
+-- configuration, settled with the human (docs / media), read via configs/env.ts
+-- (SUPABASE_DOCS_BUCKET / SUPABASE_MEDIA_BUCKET) — never hardcoded in app code.
+-- MIME allow-list + size limits are CHOSEN DEFAULTS (SECURITY_GUIDELINES pins
+-- only docs-private+signed-URLs / media-public; no numeric limits are specced).
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('docs',  'docs',  false, 10485760, ARRAY['image/jpeg','image/png','image/webp']),
+  ('media', 'media', true,   5242880, ARRAY['image/jpeg','image/png','image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+-- docs = PRIVATE (national-ID PII). Own-prefix = first path folder is the owner
+-- uid. Admin review = short-lived signed URLs (RISK 5), service-role side.
+-- No UPDATE/DELETE policy: resubmission (R-S08/MW2) writes a NEW object under the
+-- owner prefix; retaining prior documents is intentional (default-deny backs it).
+CREATE POLICY "docs_insert_own_prefix" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'docs' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "docs_select_own_or_admin" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'docs' AND ((storage.foldername(name))[1] = auth.uid()::text OR betk.is_admin()));
+
+-- media = PUBLIC-read (avatar/cover; listing images in Phase 05). Public-URL
+-- reads bypass RLS; media_public_select additionally permits Data-API list/read
+-- (advisor 0025 public_bucket_allows_listing WARN — accepted for non-sensitive
+-- public marketing images; candidate hardening if listing is undesired).
+CREATE POLICY "media_public_select" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'media');
+CREATE POLICY "media_insert_own_prefix" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "media_update_own_prefix" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text)
+  WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
