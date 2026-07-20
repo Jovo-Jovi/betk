@@ -23,6 +23,8 @@ export type { AuthIdentity, AuthProviderInput } from "@/validations/auth";
 export {
   requireVerifiedPhone,
   requireVerifiedPhoneForUser,
+  requireActiveUser,
+  requireActiveUserForUser,
   NotAuthenticatedError,
   PhoneRequiredError,
 } from "./queries/requireVerifiedPhone";

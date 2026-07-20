@@ -136,3 +136,57 @@ export async function requireVerifiedPhone(): Promise<VerifiedPhoneUser> {
 
   return requireVerifiedPhoneForUser(user.id);
 }
+
+/**
+ * R-A05 gate WITHOUT the phone requirement — for actions that need "the
+ * caller is an active, non-deactivated account" but do NOT transact (so a
+ * verified phone is not re-required). Phase 04 / T05's resubmitSellerApplication
+ * is the first consumer: the caller is already a seller from a prior
+ * verified-phone submit, so re-checking the phone here would be redundant —
+ * only the R-A05 status checks apply, per the task's own instruction.
+ *
+ * Same ordering as {@link requireVerifiedPhoneForUser} (deactivated checked
+ * before not-active) but stops before the phone_number check.
+ *
+ * `userId` MUST be a session-verified GoTrue uid. Public callers should use
+ * {@link requireActiveUser}.
+ *
+ * @throws {UserDeactivatedError | UserNotActiveError | NotAuthenticatedError}
+ */
+export async function requireActiveUserForUser(userId: string): Promise<UserRow> {
+  const row = await getUserRowById(userId);
+
+  if (!row) {
+    throw new NotAuthenticatedError();
+  }
+
+  if (row.deleted_at !== null) {
+    throw new UserDeactivatedError(row.id);
+  }
+  if (row.status !== "active") {
+    throw new UserNotActiveError(row.id, row.status);
+  }
+
+  return row;
+}
+
+/**
+ * Canonical R-A05-only gate (no phone requirement) — reads the current user
+ * from the live GoTrue session, then delegates to
+ * {@link requireActiveUserForUser}.
+ *
+ * @throws {NotAuthenticatedError} when there is no session.
+ * @throws {UserDeactivatedError | UserNotActiveError} when R-A05 blocks the user.
+ */
+export async function requireActiveUser(): Promise<UserRow> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new NotAuthenticatedError();
+  }
+
+  return requireActiveUserForUser(user.id);
+}

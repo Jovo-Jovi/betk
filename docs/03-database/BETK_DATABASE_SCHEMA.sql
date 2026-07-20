@@ -1060,7 +1060,16 @@ CREATE POLICY sp_select ON betk.seller_profiles FOR SELECT
   USING (id = auth.uid() OR status = 'active' OR betk.is_admin());
 CREATE POLICY sp_update ON betk.seller_profiles FOR UPDATE
   USING (id = auth.uid() OR betk.is_admin());
--- SELLER_DOCUMENTS: own seller only; admin
+-- Permissive ownership INSERT (ERD §3 seller_profiles INSERT = self). Originally
+-- SPECCED but the CREATE POLICY was omitted from this SQL contract (only the
+-- RESTRICTIVE seller_profiles_phone_gate existed → INSERT impossible for all);
+-- restored additively by migration 20260719133011_seller_ownership_insert_rls.sql
+-- (Phase 04 / T01, REG-10). COMBINES with the RESTRICTIVE phone gate below (both
+-- must hold): a phone-verified user inserts their own row; phone-NULL is blocked.
+CREATE POLICY sp_insert ON betk.seller_profiles FOR INSERT
+  WITH CHECK (id = auth.uid());
+-- SELLER_DOCUMENTS: own seller only; admin (FOR ALL → own SELECT/INSERT/UPDATE,
+-- USING serves as the INSERT WITH CHECK). ERD §3 fully satisfied — no additions.
 CREATE POLICY sdoc_own ON betk.seller_documents FOR ALL
   USING (seller_id = auth.uid() OR betk.is_admin());
 -- STORES: public read active; seller manages own
@@ -1068,6 +1077,14 @@ CREATE POLICY stores_public ON betk.stores FOR SELECT
   USING (status = 'active' OR seller_id = auth.uid() OR betk.is_admin());
 CREATE POLICY stores_manage ON betk.stores FOR UPDATE
   USING (seller_id = auth.uid() OR betk.is_admin());
+-- Permissive ownership INSERT (ERD §3 stores INSERT = own). Originally SPECCED
+-- but the CREATE POLICY was omitted from this SQL contract (only stores_public
+-- SELECT + stores_manage UPDATE existed → INSERT uncovered); restored additively
+-- by migration 20260719133011_seller_ownership_insert_rls.sql (Phase 04 / T01,
+-- REG-31 — 3rd instance of the open-issue-#14 / REG-29 class). No RESTRICTIVE
+-- phone gate on stores (ERD gates only orders/seller_profiles/payouts).
+CREATE POLICY stores_insert ON betk.stores FOR INSERT
+  WITH CHECK (seller_id = auth.uid());
 -- STORE_FOLLOWS: self-scope (ERD §3 line 45). Originally SPECCED but the
 -- CREATE POLICY statements were omitted from this SQL contract (table left
 -- RLS-enabled + zero policies → default-deny); restored additively by
@@ -1372,3 +1389,217 @@ CREATE POLICY payouts_phone_gate ON betk.payouts AS RESTRICTIVE FOR INSERT
 --  5. seller_documents in a PRIVATE Storage bucket; signed URLs <=15 min (RISK 5).
 -- These are gates in LAUNCH_CHECKLIST.md. PgBouncer on from day 1; notifications 90-day archive scheduled.
 -- ============================================================
+
+-- ============================================================
+-- STORAGE (Phase 04 / T01 + T01-FIX) — buckets + storage.objects RLS
+-- Migrations 20260719133052_storage_buckets_docs_media_rls.sql +
+-- 20260719134903_media_select_own_prefix_rls.sql. Bucket NAMES are
+-- configuration, settled with the human (docs / media), read via configs/env.ts
+-- (SUPABASE_DOCS_BUCKET / SUPABASE_MEDIA_BUCKET) — never hardcoded in app code.
+-- MIME allow-list + size limits are CHOSEN DEFAULTS (SECURITY_GUIDELINES pins
+-- only docs-private+signed-URLs / media-public; no numeric limits are specced).
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('docs',  'docs',  false, 10485760, ARRAY['image/jpeg','image/png','image/webp']),
+  ('media', 'media', true,   5242880, ARRAY['image/jpeg','image/png','image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+-- docs = PRIVATE (national-ID PII). Own-prefix = first path folder is the owner
+-- uid. Admin review = short-lived signed URLs (RISK 5), service-role side.
+-- No UPDATE/DELETE policy: resubmission (R-S08/MW2) writes a NEW object under the
+-- owner prefix; retaining prior documents is intentional (default-deny backs it).
+CREATE POLICY "docs_insert_own_prefix" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'docs' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "docs_select_own_or_admin" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'docs' AND ((storage.foldername(name))[1] = auth.uid()::text OR betk.is_admin()));
+
+-- media = PUBLIC-read (avatar/cover; listing images in Phase 05). Bucket stays
+-- public=true so object URLs serve WITHOUT RLS — that is the app's read path.
+-- SELECT is scoped to own-prefix (T01-FIX, migration 20260719134903) so the
+-- Data API cannot enumerate the whole bucket; this cleared advisor 0025
+-- public_bucket_allows_listing. Mirrors the media INSERT/UPDATE prefix rule.
+CREATE POLICY "media_select_own_prefix" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "media_insert_own_prefix" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "media_update_own_prefix" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text)
+  WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+-- SELLER APPLICATION SUBMIT RPC (Phase 04 / T03, ADR-012)
+-- Migration 20260720083710_seller_application_submit_rpc.sql.
+-- Atomic multi-table write: seller_profiles + stores + 2 seller_documents in
+-- ONE transaction (PostgREST wraps each rpc call in a transaction; any failure
+-- rolls back every row -> no partial residue). Chosen over sequential
+-- authenticated-client writes with compensating cleanup because seller_profiles
+-- has no DELETE policy (compensation would need service-role) and a mid-sequence
+-- crash could strand a half-built application.
+--
+-- SECURITY INVOKER (NOT DEFINER): RLS is NOT bypassed, so the RESTRICTIVE
+-- seller_profiles_phone_gate bites naturally (OD-4 / REG-10 at the DB layer with
+-- no hand-rolled phone check) and sp_insert / stores_insert / sdoc_own enforce
+-- id / seller_id = auth.uid(). A SECURITY DEFINER function granted to
+-- authenticated would add advisor 0029 (authenticated_security_definer_function_
+-- executable) — forbidden by the "no new advisor findings" bar. The users.role
+-- flip is NOT in this function (betk.users has no permissive UPDATE policy) — it
+-- runs LAST via the service-role setUserRole() helper after this rpc commits
+-- (REG-19; the seller_profiles row provably exists before the flip).
+-- ============================================================
+CREATE OR REPLACE FUNCTION betk.submit_seller_application(
+  p_name_ar             TEXT,
+  p_name_en             TEXT,
+  p_bio_ar              TEXT,
+  p_slug                TEXT,
+  p_category_primary    TEXT,
+  p_category_secondary  TEXT,
+  p_governorate         TEXT,
+  p_city                TEXT,
+  p_payment_methods     JSONB,
+  p_delivery_options    JSONB,
+  p_return_policy       TEXT,
+  p_min_order_egp       NUMERIC,
+  p_doc_front_path      TEXT,
+  p_doc_back_path       TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = betk, public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_constraint TEXT;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'BETK_NOT_AUTHENTICATED';
+  END IF;
+
+  INSERT INTO betk.seller_profiles (id, status, level, submitted_at)
+  VALUES (v_uid, 'pending', 'bronze', now());
+
+  INSERT INTO betk.stores (
+    seller_id, name_ar, name_en, slug, bio_ar,
+    category_primary, category_secondary, governorate, city,
+    payment_methods, delivery_options, return_policy, min_order_egp, status
+  )
+  VALUES (
+    v_uid, p_name_ar, p_name_en, p_slug, p_bio_ar,
+    p_category_primary, p_category_secondary, p_governorate, p_city,
+    COALESCE(p_payment_methods, '{}'::jsonb),
+    COALESCE(p_delivery_options, '{}'::jsonb),
+    p_return_policy, p_min_order_egp, 'pending'
+  );
+
+  INSERT INTO betk.seller_documents (seller_id, document_type, storage_path, review_status)
+  VALUES
+    (v_uid, 'national_id_front', p_doc_front_path, 'pending'),
+    (v_uid, 'national_id_back',  p_doc_back_path,  'pending');
+
+EXCEPTION
+  WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint = 'uq_stores_slug' THEN
+      RAISE EXCEPTION 'BETK_SLUG_TAKEN';
+    ELSIF v_constraint IN ('seller_profiles_pkey', 'uq_stores_seller', 'uq_seller_doc_type') THEN
+      RAISE EXCEPTION 'BETK_APPLICATION_EXISTS';
+    ELSE
+      RAISE;
+    END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION betk.submit_seller_application(
+  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT, NUMERIC, TEXT, TEXT
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION betk.submit_seller_application(
+  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT, NUMERIC, TEXT, TEXT
+) TO authenticated;
+
+-- ============================================================
+-- SELLER APPLICATION RESUBMIT RPC (Phase 04 / T05, ADR-012 pattern)
+-- Migration 20260720095552_seller_application_resubmit_rpc.sql.
+--
+-- CONFIRMED STATE MODEL (T05 citations):
+--   * seller_status enum = {pending, active, suspended, banned} ONLY (see the
+--     CREATE TYPE above) -- no 'rejected' member, live-verified via pg_enum
+--     with zero drift. "Rejected" is therefore the COMPOUND state
+--     status='pending' AND rejected_reason IS NOT NULL. BETK_UI_SPEC.md's
+--     routing rule ("pending/rejected -> /seller/status", distinct from
+--     "suspended/banned -> restricted view") groups pending+rejected into one
+--     branch, corroborating this reading independently of the DB. Resubmit
+--     therefore does NOT change `status` (it never left 'pending'); it only
+--     clears rejected_reason back to NULL and refreshes submitted_at.
+--   * seller_documents' UNIQUE (seller_id, document_type) (uq_seller_doc_type
+--     above) makes a second per-doc-type INSERT impossible (unique_violation
+--     -- the same exception submit_seller_application maps to
+--     BETK_APPLICATION_EXISTS). Resubmission therefore UPDATEs the two
+--     existing rows in place: overwrite storage_path, reset
+--     review_status='pending', clear reviewed_at, refresh uploaded_at.
+--   * No DB trigger/constraint governs this transition (live-verified: zero
+--     user-defined triggers on seller_profiles/seller_documents/stores) --
+--     entirely app-layer, implemented here.
+--   * stores.status is NOT touched -- it only ever mirrors seller status at
+--     submit time ('pending' literal above) and a rejection never moves
+--     seller_profiles.status away from 'pending', so nothing to mirror back.
+--   * Storage-OBJECT retention (R-S08) happens at the STORAGE layer (docs
+--     bucket has no UPDATE/DELETE policy -- see "docs = PRIVATE" above): each
+--     resubmit upload lands at a NEW object path under the same own-prefix;
+--     the prior object is intentionally left in place. This rpc only
+--     repoints the DB row's storage_path to the new object.
+--
+-- SECURITY INVOKER: no client-supplied id anywhere -- the function only ever
+-- acts on the caller's own auth.uid() rows (sp_update / sdoc_own enforce
+-- ownership naturally); cross-user access has no code path to attempt.
+-- ============================================================
+CREATE OR REPLACE FUNCTION betk.resubmit_seller_application(
+  p_doc_front_path TEXT,
+  p_doc_back_path  TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = betk, public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'BETK_NOT_AUTHENTICATED';
+  END IF;
+
+  -- Rejected-only guard, SERVER-SIDE (never trust the caller): only a row
+  -- that is status='pending' AND rejected_reason IS NOT NULL qualifies.
+  UPDATE betk.seller_profiles
+  SET rejected_reason = NULL,
+      submitted_at = now()
+  WHERE id = v_uid
+    AND status = 'pending'
+    AND rejected_reason IS NOT NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BETK_NOT_REJECTED';
+  END IF;
+
+  UPDATE betk.seller_documents
+  SET storage_path = p_doc_front_path,
+      review_status = 'pending',
+      reviewed_at = NULL,
+      uploaded_at = now()
+  WHERE seller_id = v_uid AND document_type = 'national_id_front';
+
+  UPDATE betk.seller_documents
+  SET storage_path = p_doc_back_path,
+      review_status = 'pending',
+      reviewed_at = NULL,
+      uploaded_at = now()
+  WHERE seller_id = v_uid AND document_type = 'national_id_back';
+END;
+$$;
+REVOKE ALL ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) TO authenticated;

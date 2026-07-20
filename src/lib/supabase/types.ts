@@ -1984,6 +1984,29 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       my_store_id: { Args: never; Returns: string }
+      resubmit_seller_application: {
+        Args: { p_doc_back_path: string; p_doc_front_path: string }
+        Returns: undefined
+      }
+      submit_seller_application: {
+        Args: {
+          p_bio_ar: string
+          p_category_primary: string
+          p_category_secondary: string
+          p_city: string
+          p_delivery_options: Json
+          p_doc_back_path: string
+          p_doc_front_path: string
+          p_governorate: string
+          p_min_order_egp: number
+          p_name_ar: string
+          p_name_en: string
+          p_payment_methods: Json
+          p_return_policy: string
+          p_slug: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       auth_provider: "phone" | "google"

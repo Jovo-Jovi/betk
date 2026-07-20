@@ -87,3 +87,13 @@ export type { AddressFormProps, AddressValue, AddressSelectProps, AddressOption 
 // ── CD-DELTA-1 (signed off 2026-07-18) ──────────────────────
 export { Footer } from "./Footer";
 export type { FooterProps, FooterColumn, FooterLink } from "./Footer";
+
+// ── CD-DELTA-3 (Phase-04 kit gate; signed off 2026-07-18) ───
+// Textarea is NOT re-exported here — it lands as vanilla ui/textarea (CLI add),
+// consumed like ui/input. Only the DS-styled shared components appear below.
+export { Stepper } from "./Stepper";
+export type { StepperProps, StepperStep } from "./Stepper";
+export { Toggle } from "./Toggle";
+export type { ToggleProps } from "./Toggle";
+export { Alert } from "./Alert";
+export type { AlertProps, AlertVariant } from "./Alert";

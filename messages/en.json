@@ -30,6 +30,25 @@
       "account": "Account"
     }
   },
+  "console": {
+    "subtitle": "Seller console",
+    "openNav": "Open navigation",
+    "theme": "Toggle theme",
+    "language": "Change language",
+    "nav": {
+      "dashboard": "Dashboard",
+      "status": "Application status",
+      "store": "Store profile",
+      "delivery": "Delivery",
+      "returns": "Returns",
+      "payments": "Payments"
+    },
+    "landing": {
+      "title": "Dashboard",
+      "emptyMessage": "No activity yet — add your first listing",
+      "emptyHint": "Once you publish your first listing and start receiving orders, your activity will show up here."
+    }
+  },
   "footer": {
     "tagline": "BETK — Egypt's creative-economy marketplace.",
     "columns": {
@@ -451,6 +470,274 @@
         "freeThreshold": "Free delivery on orders over EGP {amount}",
         "pickupGovernorate": "Pickup from: {governorate}",
         "shipsNationwide": "Ships nationwide"
+      }
+    }
+  },
+  "seller": {
+    "onboarding": {
+      "metaTitle": "Become a seller — BETK",
+      "metaDescription": "Set up your BETK store in five steps and start selling.",
+      "title": "Open your store on BETK",
+      "subtitle": "Complete the five steps to submit your store for review.",
+      "stepCounter": "Step {current} of {total}",
+      "steps": {
+        "identity": "Identity",
+        "category": "Category",
+        "payment": "Payment",
+        "delivery": "Delivery",
+        "documents": "Documents"
+      },
+      "nav": {
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit for review",
+        "submitting": "Submitting…"
+      },
+      "errors": {
+        "required": "This field is required",
+        "invalid": "Invalid value",
+        "taken": "That name is taken — pick another",
+        "submitFailed": "Couldn't submit your application, please try again."
+      },
+      "identity": {
+        "nameArLabel": "Store name (Arabic)",
+        "nameArPlaceholder": "e.g. أتيليه نور",
+        "nameEnLabel": "Store name (English)",
+        "nameEnHint": "Optional — shown to English visitors; the Arabic name is used otherwise.",
+        "nameEnPlaceholder": "e.g. Nour Atelier",
+        "bioLabel": "Store bio",
+        "bioHint": "Optional — a short description in one language (up to 200 characters).",
+        "bioPlaceholder": "Write a short intro for your store…",
+        "slugLabel": "Store link",
+        "slugHint": "Lowercase letters, numbers and hyphens only (3–50 characters).",
+        "slugPlaceholder": "nour-atelier",
+        "slugChecking": "Checking availability…",
+        "slugAvailable": "Link is available",
+        "slugTaken": "This link is already in use"
+      },
+      "category": {
+        "primaryLabel": "Primary category",
+        "primaryPlaceholder": "Choose a category",
+        "secondaryLabel": "Secondary category",
+        "secondaryHint": "Optional",
+        "secondaryPlaceholder": "None",
+        "governorateLabel": "Governorate",
+        "governoratePlaceholder": "Choose a governorate",
+        "cityLabel": "City",
+        "cityPlaceholder": "Optional"
+      },
+      "payment": {
+        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "instapayLabel": "InstaPay handle",
+        "instapayPlaceholder": "Username or number",
+        "vodafoneLabel": "Vodafone Cash",
+        "vodafonePlaceholder": "01xxxxxxxxx",
+        "orangeLabel": "Orange Cash",
+        "orangePlaceholder": "01xxxxxxxxx",
+        "codLabel": "Cash on delivery",
+        "atLeastOneHint": "At least one payment method is required before publishing your first listing (you can add it later)."
+      },
+      "delivery": {
+        "intro": "Choose how buyers receive their orders.",
+        "modes": {
+          "delivery": "Delivery",
+          "pickup": "Pickup from store",
+          "remote": "Remote service"
+        },
+        "minDaysLabel": "Min delivery time (days)",
+        "maxDaysLabel": "Max delivery time (days)",
+        "feeLabel": "Default delivery fee (EGP)",
+        "feeHint": "Leave empty if delivery is free.",
+        "pickupGovLabel": "Pickup governorate",
+        "pickupGovHint": "For pickup from your store.",
+        "pickupGovPlaceholder": "Choose a governorate"
+      },
+      "documents": {
+        "intro": "Upload your national ID (front and back) to verify your identity. Your documents stay strictly private.",
+        "frontLabel": "National ID — front",
+        "frontHint": "A clear photo of the front of the card.",
+        "backLabel": "National ID — back",
+        "backHint": "A clear photo of the back of the card.",
+        "uploadLabel": "Tap to choose an image",
+        "uploaded": "Uploaded",
+        "uploadError": "Upload failed, please try again.",
+        "retry": "Retry",
+        "bothRequired": "Both ID photos (front and back) are required before submitting."
+      },
+      "phonePointer": {
+        "title": "Verified phone required",
+        "message": "You'll need a verified phone number to complete your store setup.",
+        "link": "Add your phone number"
+      }
+    },
+    "status": {
+      "metaTitle": "Application status",
+      "title": "Application status",
+      "submittedAtLabel": "Submitted on {date}",
+      "empty": {
+        "message": "No application found",
+        "hint": "Start your seller application to open a store on BETK."
+      },
+      "approved": {
+        "title": "Your store is live",
+        "message": "Your application has been approved. Head to your dashboard to start managing your store.",
+        "cta": "Go to dashboard"
+      },
+      "pending": {
+        "title": "Under review",
+        "message": "Your application is being reviewed. We'll let you know as soon as there's an update.",
+        "slaNote": "Applications are typically reviewed within 24 hours.",
+        "slaRemaining": "{hours}h remaining",
+        "slaBreached": "Review is taking longer than usual — thanks for your patience."
+      },
+      "rejected": {
+        "title": "Changes needed",
+        "reasonLabel": "Reason",
+        "message": "Your application wasn't approved this time. Review the reason below, update your documents if needed, and resubmit."
+      },
+      "suspended": {
+        "title": "Store suspended",
+        "message": "Your store has been temporarily suspended. Contact support for more information."
+      },
+      "banned": {
+        "title": "Store banned",
+        "message": "Your store has been permanently banned from BETK."
+      },
+      "resubmit": {
+        "title": "Resubmit your documents",
+        "intro": "Upload your national ID again (front and back) to request a new review.",
+        "frontLabel": "National ID — front",
+        "frontHint": "A clear photo of the front of the card.",
+        "backLabel": "National ID — back",
+        "backHint": "A clear photo of the back of the card.",
+        "uploadLabel": "Tap to choose an image",
+        "uploaded": "Uploaded",
+        "uploadError": "Upload failed, please try again.",
+        "retry": "Retry",
+        "bothRequired": "Both ID photos (front and back) are required before resubmitting.",
+        "editStore": "Edit store details",
+        "submit": "Resubmit for review",
+        "submitting": "Resubmitting…",
+        "failed": "Couldn't resubmit your application, please try again."
+      }
+    },
+    "store": {
+      "metaTitle": "Store profile",
+      "title": "Store profile",
+      "empty": {
+        "message": "No store found",
+        "hint": "Complete your seller application to set up your store."
+      },
+      "nameArLabel": "Store name (Arabic)",
+      "nameArPlaceholder": "e.g. أتيليه نور",
+      "nameEnLabel": "Store name (English)",
+      "nameEnHint": "Optional — shown to English visitors; the Arabic name is used otherwise.",
+      "nameEnPlaceholder": "e.g. Nour Atelier",
+      "bioLabel": "Store bio",
+      "bioHint": "Optional — a short description in one language (up to 200 characters).",
+      "bioPlaceholder": "Write a short intro for your store…",
+      "slug": {
+        "label": "Store link",
+        "hint": "Lowercase letters, numbers and hyphens only (3–50 characters). You can change this once.",
+        "placeholder": "nour-atelier",
+        "checking": "Checking availability…",
+        "available": "Link is available",
+        "taken": "This link is already in use",
+        "locked": "Your store link has already been changed once and can't be changed again.",
+        "lockedError": "Your store link can only be changed once — it's already been used."
+      },
+      "primaryLabel": "Primary category",
+      "primaryPlaceholder": "Choose a category",
+      "secondaryLabel": "Secondary category",
+      "secondaryHint": "Optional",
+      "secondaryPlaceholder": "None",
+      "governorateLabel": "Governorate",
+      "governoratePlaceholder": "Choose a governorate",
+      "cityLabel": "City",
+      "cityPlaceholder": "Optional",
+      "minOrderLabel": "Minimum order (EGP)",
+      "minOrderHint": "Optional — the smallest order value buyers can place.",
+      "minOrderPlaceholder": "e.g. 100",
+      "avatarLabel": "Store logo",
+      "avatarUploadLabel": "Tap to choose an image",
+      "avatarHint": "Square image, at least 200×200 pixels.",
+      "coverLabel": "Cover image",
+      "coverUploadLabel": "Tap to choose an image",
+      "coverHint": "Wide image, at least 1200×400 pixels.",
+      "uploaded": "Uploaded",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Store profile saved",
+      "saveFailed": "Couldn't save your changes, please try again.",
+      "errors": {
+        "required": "This field is required",
+        "invalid": "Invalid value",
+        "taken": "This link is already in use — pick another",
+        "tooSmall": "Image is too small — use a larger one.",
+        "uploadFailed": "Upload failed, please try again."
+      },
+      "delivery": {
+        "metaTitle": "Delivery settings",
+        "title": "Delivery settings",
+        "intro": "Choose the delivery methods available for your store and their default fees.",
+        "modesTitle": "Delivery methods",
+        "modes": {
+          "delivery": "Delivery",
+          "pickup": "Pickup from store",
+          "remote": "Remote service"
+        },
+        "minDaysLabel": "Min delivery time (days)",
+        "maxDaysLabel": "Max delivery time (days)",
+        "feeLabel": "Default delivery fee (EGP)",
+        "feeHint": "Leave empty if delivery is free.",
+        "freeThresholdLabel": "Free delivery threshold (EGP)",
+        "freeThresholdHint": "Delivery becomes free once the order total passes this amount. Optional.",
+        "pickupGovLabel": "Pickup governorate",
+        "pickupGovHint": "For pickup from your store.",
+        "pickupGovPlaceholder": "Choose a governorate",
+        "shipsNationwideLabel": "Ships to all governorates",
+        "allModesOffWarning": "No delivery method is enabled — buyers won't be able to receive their orders. You can still save now and enable a method later.",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Delivery settings saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
+      },
+      "returns": {
+        "metaTitle": "Return policy",
+        "title": "Return policy",
+        "label": "Return policy text",
+        "hint": "This policy is shown publicly on your storefront page.",
+        "placeholder": "e.g. Items can be returned within 7 days of delivery, provided they're in original condition…",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Return policy saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
+      },
+      "payments": {
+        "metaTitle": "Payment methods",
+        "title": "Payment methods",
+        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "instapayLabel": "InstaPay handle",
+        "instapayPlaceholder": "Username or number",
+        "vodafoneLabel": "Vodafone Cash",
+        "vodafonePlaceholder": "01xxxxxxxxx",
+        "orangeLabel": "Orange Cash",
+        "orangePlaceholder": "01xxxxxxxxx",
+        "codLabel": "Cash on delivery",
+        "emptyWarning": "Add at least one payment method to start selling.",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Payment methods saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
       }
     }
   }
