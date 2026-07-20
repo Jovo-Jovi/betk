@@ -6,4 +6,6 @@
  * JSONB:   stores.delivery_options (StoreDeliveryOptions), stores.payment_methods (StorePaymentMethods)
  */
 
-export {};
+export { getOwnStore } from "./queries/getOwnStore";
+export type { OwnStore, StoreManagementClient } from "./queries/getOwnStore";
+export { updateStoreProfile } from "./actions/updateStoreProfile";

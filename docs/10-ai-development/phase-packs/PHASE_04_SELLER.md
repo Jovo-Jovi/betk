@@ -430,28 +430,61 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T06 — /seller/store profile
-settings. Branch feature/phase-04-seller.
+settings. Branch feature/phase-04-seller (continue; git pull first — on top
+of d9e480e). Compose-only; seller shell + kit + ui primitives; missing state
+→ STOP-and-flag to Claude Design.
 
-Form (seller shell; own store via stores_manage RLS, authenticated client):
-name_ar/name_en, bio, avatar upload (validate ≥200×200) + cover (≥1200×400)
-→ MEDIA bucket own-prefix, store public URL on the row; category primary/
-secondary (bilingual picker → text columns per schema); governorate/city;
-min_order_egp (Zod numeric bounds).
+This page is the target of T05's resubmit "edit store" link — creating it
+closes that dangling in-scope link.
+
+Form (seller shell, dynamic/authed; own store via stores_manage RLS,
+authenticated cookie client):
+- name_ar (required) / name_en (optional, COALESCE display set) / bio
+  (as-authored, Textarea).
+- avatar upload (validate ≥200×200) + cover (validate ≥1200×400) → MEDIA
+  bucket under the caller's OWN PREFIX (${uid}/… — the T01 media storage RLS:
+  public SELECT for reads via public URL, INSERT/UPDATE own-prefix). Store the
+  resulting PUBLIC URL on stores.avatar_url/cover_url. Note: the public URL
+  embeds the seller's uid in the path — this is the accepted id-not-PII posture
+  (consistent with Sentry id-only); state it in the close-out for the T08
+  SECURITY_GUIDELINES media-section line, do not treat it as a leak.
+- category primary/secondary (bilingual picker → the FREE-TEXT columns per
+  schema, NOT FKs — Phase-03 T01 finding; store the picker's chosen value as
+  text).
+- governorate/city (constants); min_order_egp (Zod numeric bounds).
 
 SLUG CHANGE-ONCE (R-S03): slug editable ONLY while slug_changed_at IS NULL;
-the update action sets slug + slug_changed_at=now() together, server-side
-guarded (reject if already set — do not trust the UI lock); UI shows the
-lock indicator once spent; 23505 → field-level taken error. CONFIRM whether
-any DB-level guard (trigger/constraint) exists for R-S03 — if the app layer
-is the only guard, STATE that as a finding for the register (candidate
-hardening), do not add DB objects here.
+the update action sets slug + slug_changed_at=now() TOGETHER, server-side
+guarded (reject if slug_changed_at IS NOT NULL — do NOT trust the UI lock;
+the UI lock is cosmetic, the server guard is authoritative). UI shows the lock
+indicator once spent. 23505 on the slug unique constraint → field-level "taken"
+error (authoritative, per R-S02; the availability pre-check is UX-only —
+stores_public exposes only ACTIVE stores so a pre-check can't see pending/
+suspended slugs). CONFIRM whether any DB-level guard (trigger/CHECK/constraint)
+enforces R-S03 change-once — if the APP LAYER is the only guard, STATE that as
+a register finding (candidate hardening, e.g. a trigger rejecting a slug UPDATE
+when slug_changed_at IS NOT NULL); do NOT add DB objects in this task.
 
-updateStoreProfile action: Zod, own-row only (RLS enforced + server-verified),
-Sentry/PostHog per pattern, save toast via Toaster. i18n seller.store.* both
-locales (parity count). TESTS: own-row update works; cross-user denied by
-RLS; second slug change rejected server-side; dimension validation.
-typecheck · lint · 4 guards · test:unit · build · smoke both locales/themes.
-Zero ui/*/shared/* edits. Close-out → commit + push. HOLD.
+updateStoreProfile action (src/features/store-management/actions/ or the
+established seller feature folder, "use server", Zod): own-row only (RLS
+enforced AND server-verified via the session uid — belt and suspenders),
+Sentry ('store-management' or the established tag, id-only) + PostHog per
+pattern, save toast via Toaster (kit). If the update is a single-table
+stores UPDATE it's atomically fine — no rpc needed (ADR-012 was for the
+multi-table submit); state that reasoning.
+
+i18n: seller.store.* namespace BOTH locales (paste parity count).
+generateMetadata both locales. VERIFY: typecheck · lint · 4 guards ·
+test:unit · build (both locales). Runtime smoke: /seller/store + /en/seller/
+store 200, correct dir/lang, shell rendered, both themes wiring; the slug lock
+indicator renders when slug_changed_at is set. TESTS (integration, staging,
+seeded+cleaned): own-row update persists every field; cross-user update denied
+by stores_manage RLS; SECOND slug change rejected SERVER-SIDE (set
+slug_changed_at, attempt another change → rejected even if the client sends
+it); image dimension validation rejects undersized. Zero ui/*/shared/* edits
+(diff proof). Close-out → commit + push. HOLD — do not start T07.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** profile edits under RLS; slug change-once enforced server-side with the app-only-guard finding recorded if true; media uploads validated; parity reported.
 
@@ -555,6 +588,6 @@ and-safe fixes stated, else FLAG).
 | T03 submit action | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **ADR-012 = atomic `SECURITY INVOKER` rpc `betk.submit_seller_application`** (NOT sequential+compensation — no `seller_profiles` DELETE policy + non-atomic; NOT `SECURITY DEFINER` — would bypass RLS phone gate REG-10 + add advisor 0029). Migration `20260720083710_seller_application_submit_rpc` (additive, MCP, ledger 23→24 1:1, source-backfilled, advisor sweep byte-identical to baseline). `submitSellerApplication` action: `requireVerifiedPhone` FIRST → server-side prefix-ownership check on both doc paths → atomic rpc (delivery = 3-mode REG-14) → 23505 mapping (`uq_stores_slug`→slug_taken / others→application_exists R-S01→`/seller/status`) → `setUserRole(uid,'seller')` REG-19 helper LAST → Sentry id-only + PostHog, NO doc paths in logs (PII). `getOwnSellerApplication` self-scope query. Integration 7/7 (phone-NULL zero-rows both halves, happy-path exact counts + role flip, **slug-collision NO PARTIAL RESIDUE = ADR-012 rollback proof**, dup R-S01, deactivated R-A05, cross-user isolation); check-zod-coverage green (new action covered); full CI green (23 routes both locales). T02 carries recorded (`/seller/status` 404-until-T05; `(seller-onboarding)` URL-invariance). HOLD — do not start T04 |
 | T04 wizard UI | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | 5-step Stepper wizard at `/seller/onboarding` replacing the T02 placeholder (chromeless `(seller-onboarding)` group, URL unchanged). Composes T00 kit (Stepper/Toggle/Alert/Textarea) + ImageUploader + ui primitives; **zero `ui/*`/`shared/*` edits** (empty diff). Delivery = exactly 3 REG-14 toggles {delivery,pickup,remote} (typed shape, not reshaped); step-5 ID upload → `docs` bucket own-prefix via authenticated browser client (matches T03 prefix re-check), per-file retry, R-S05; slug availability pre-check UX-only (23505 authoritative → field error, stay step 1); per-step Zod = `submitSellerApplicationSchema.pick(...)`; submit routes on typed outcome (ok/application_exists → `/seller/status`). Client-state resume within session (sessionStorage, no draft rows — cross-session FLAGGED as product decision). Non-blocking phone pointer → `/auth/phone` (action gate is hard). i18n `seller.onboarding.*` both locales (parity 392/392) + generateMetadata both locales. VERIFY all green: typecheck · lint · 4 guards · unit 82/82 · build (23 routes both locales) · runtime smoke (forged @supabase/ssr session cookie → both locales 200, dir/lang + Stepper + step-1 + Next). **REG-32 minted (owner T08)** — hand-maintained `betk.Functions` RPC signatures; 5-min types-drift check INCONCLUSIVE in-env (degenerate `gen types --linked` + public-only MCP typegen) → REG-32 stands, hand-edit retained (load-bearing) |
 | T05 status+resubmit | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **CLOSES the T02 carry** — `/seller/status` now exists; smoke proves an authenticated pending seller gets 200 (not the prior 404) both locales (`/en/seller/status` + unprefixed `/seller/status` for AR — AR's `/ar/...` 307s to the unprefixed canonical form per `routing.ts` `as-needed`, unrelated to auth). **State model CONFIRMED WITH CITATIONS (not invented)**: `seller_status` enum has no `'rejected'` member (`BETK_DATABASE_SCHEMA.sql` L41, live-verified zero-drift via `pg_enum`) → "rejected" is the COMPOUND state `status='pending' AND rejected_reason IS NOT NULL`, corroborated independently by `BETK_UI_SPEC.md`'s routing rule grouping pending+rejected into one middleware branch. `seller_documents.uq_seller_doc_type` UNIQUE(seller_id,document_type) (L208) makes a second per-type INSERT impossible → resubmission UPDATEs the 2 existing rows in place (storage_path/review_status='pending'/reviewed_at=NULL/uploaded_at=now()), proven directly by the retention test (row count stays 2, prior storage object still downloadable post-resubmit — R-S08 retention lives at the STORAGE layer, own-prefix bucket has no UPDATE/DELETE policy, not a DB row). `stores.status` does NOT mirror back (never had to — rejection never moved `seller_profiles.status` off `'pending'`). No DB trigger governs the transition (live-verified zero user-defined triggers) — entirely app-layer, in the new rpc. Implemented as **ADR-012-consistent** additive migration `20260720095552_seller_application_resubmit_rpc` (`betk.resubmit_seller_application`, `SECURITY INVOKER`, no client-supplied id — only ever acts on caller's own `auth.uid()` rows; rejected-only guard via `UPDATE ... WHERE status='pending' AND rejected_reason IS NOT NULL; IF NOT FOUND THEN RAISE 'BETK_NOT_REJECTED'`), ledger 24→25 (1:1, source-backfilled), advisor sweep byte-identical to baseline (no new security/perf findings from the new rpc). New `requireActiveUser()` helper (R-A05 status checks, no phone re-check) added to `features/auth`. `resubmitSellerApplication` action: Zod → `requireActiveUser` → server-side prefix-ownership re-check on both doc paths → rpc → `BETK_NOT_REJECTED` mapped to `not_rejected`; Sentry id-only + PostHog `seller_application_resubmitted`, NO doc paths in logs (PII). `/seller/status` RSC page (seller shell): banner per resolved display-status (approved defensive CTA→`/seller` / pending + R-M01 24h SLA badge / rejected + reason + `ResubmitPanel` / suspended restricted / banned defensive) + `submitted_at` display; composes T00 kit (`Alert`/`SLABadge`/`EmptyState`) + `ImageUploader`, **zero `ui/*`/`shared/*` edits** (empty diff). `ResubmitPanel` (client): re-upload via `ImageUploader` → docs bucket own-prefix new timestamped paths (old objects untouched); edit-store link → `/seller/store` (T06, in-scope target). i18n `seller.status.*` both locales (parity 427/427, +35 keys exact match). Integration 7/7 (rejected happy-path incl. **retention proof** [row count=2 + prior objects still downloadable], 4× non-rejected-status guards [never-reviewed pending/active/suspended/banned → `not_rejected` + zero writes], deactivated R-A05 blocked, cross-user isolation [no id param exists — B's call can only ever touch B's own rows, A untouched]). Full CI green: typecheck · lint · 4 guards · unit 82/82 · build (25 routes both locales, `/seller/status` ● SSG-shell/dynamic-per-request like `/account`+`/seller`) · runtime smoke both locales × 4 banner states (pending/rejected/approved/suspended, minted users, real HTML assertions) + T02-carry 200 proof. HOLD — do not start T06 |
-| T06 store profile | Sonnet | — | — | — | |
+| T06 store profile | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | `/seller/store` profile settings (seller shell, dynamic/authed) — **closes the T05 resubmit "edit store" dangling link**. `getOwnStore` self-scope query (stores_public seller_id branch) + `updateStoreProfile` action (`src/features/store-management/`, "use server", Zod `updateStoreProfileSchema`): `requireActiveUser` (R-A05) → session-uid-pinned own-row (belt+suspenders on top of `stores_manage` RLS) → **SINGLE-TABLE `betk.stores` UPDATE, no rpc** (ADR-012 was for the multi-table submit; one statement = one transaction, stated). **SLUG CHANGE-ONCE (R-S03) server-authoritative:** reads current slug+slug_changed_at, rejects a changed slug when `slug_changed_at IS NOT NULL` BEFORE any write (`slug_locked`), writes `slug`+`slug_changed_at=now()` TOGETHER only when allowed, AND guards the UPDATE with `.is("slug_changed_at", null)` so a race → 0 rows → `slug_locked`; the UI lock is cosmetic. 23505 on `uq_stores_slug` → field-level `slug_taken` (authoritative, R-S02; pre-check UX-only). **REG-33 minted (R-S03 app-only guard):** live DB has NO trigger/CHECK enforcing change-once on `betk.stores` (only chk_store_slug_fmt/uq_stores_slug/uq_stores_seller) — app layer is the sole guard; candidate hardening = a trigger rejecting a slug UPDATE when slug_changed_at IS NOT NULL (no DB object added this task). **MEDIA:** avatar (≥200×200) + cover (≥1200×400) validated client-side (`meetsMinDimensions`, undersized rejected pre-upload) → MEDIA bucket own-prefix (`${uid}/…`) via authenticated browser client → PUBLIC URL stored on `stores.avatar_url/cover_url`; the public URL embeds the uid (accepted id-not-PII posture, T08 SECURITY_GUIDELINES media line). Category primary/secondary → FREE-TEXT columns (picker value as text). Sentry `'store-management'` id-only + PostHog `store_profile_updated`; save toast via `sonner`/Toaster (kit). Composes kit (`Alert`/`ImageUploader`) + ui primitives (Input/Textarea/Button/native select) + a local structural `Field`; **zero `ui/*`/`shared/*` edits** (`git diff d9e480e -- src/components/ui src/components/shared` EMPTY). i18n `seller.store.*` both locales (parity **475/475**, +48 keys each). generateMetadata both locales. VERIFY all green: typecheck · lint (pre-existing warnings only) · 4 guards (i18n 475/475) · unit 82/82 · build (27 routes both locales; `/seller/store` prerendered-shell/dynamic-per-request like `/seller/status`) · integration `store.profile` 5/5 (2 pure dimension + own-row persists every field + cross-user UPDATE denied by stores_manage RLS 0-rows + **SECOND slug change rejected server-side even when the client sends it**) · runtime smoke both locales (minted seller w/ slug_changed_at set → `/seller/store`+`/en/…` 200, dir/lang, seller shell, slug lock indicator rendered, theme wiring). HOLD — do not start T07 |
 | T07 settings ×3 | Sonnet | — | — | — | |
 | T08 exit gate | Opus | — | — | — | |

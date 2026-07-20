@@ -620,6 +620,62 @@
         "submitting": "Resubmitting…",
         "failed": "Couldn't resubmit your application, please try again."
       }
+    },
+    "store": {
+      "metaTitle": "Store profile",
+      "title": "Store profile",
+      "empty": {
+        "message": "No store found",
+        "hint": "Complete your seller application to set up your store."
+      },
+      "nameArLabel": "Store name (Arabic)",
+      "nameArPlaceholder": "e.g. أتيليه نور",
+      "nameEnLabel": "Store name (English)",
+      "nameEnHint": "Optional — shown to English visitors; the Arabic name is used otherwise.",
+      "nameEnPlaceholder": "e.g. Nour Atelier",
+      "bioLabel": "Store bio",
+      "bioHint": "Optional — a short description in one language (up to 200 characters).",
+      "bioPlaceholder": "Write a short intro for your store…",
+      "slug": {
+        "label": "Store link",
+        "hint": "Lowercase letters, numbers and hyphens only (3–50 characters). You can change this once.",
+        "placeholder": "nour-atelier",
+        "checking": "Checking availability…",
+        "available": "Link is available",
+        "taken": "This link is already in use",
+        "locked": "Your store link has already been changed once and can't be changed again.",
+        "lockedError": "Your store link can only be changed once — it's already been used."
+      },
+      "primaryLabel": "Primary category",
+      "primaryPlaceholder": "Choose a category",
+      "secondaryLabel": "Secondary category",
+      "secondaryHint": "Optional",
+      "secondaryPlaceholder": "None",
+      "governorateLabel": "Governorate",
+      "governoratePlaceholder": "Choose a governorate",
+      "cityLabel": "City",
+      "cityPlaceholder": "Optional",
+      "minOrderLabel": "Minimum order (EGP)",
+      "minOrderHint": "Optional — the smallest order value buyers can place.",
+      "minOrderPlaceholder": "e.g. 100",
+      "avatarLabel": "Store logo",
+      "avatarUploadLabel": "Tap to choose an image",
+      "avatarHint": "Square image, at least 200×200 pixels.",
+      "coverLabel": "Cover image",
+      "coverUploadLabel": "Tap to choose an image",
+      "coverHint": "Wide image, at least 1200×400 pixels.",
+      "uploaded": "Uploaded",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Store profile saved",
+      "saveFailed": "Couldn't save your changes, please try again.",
+      "errors": {
+        "required": "This field is required",
+        "invalid": "Invalid value",
+        "taken": "This link is already in use — pick another",
+        "tooSmall": "Image is too small — use a larger one.",
+        "uploadFailed": "Upload failed, please try again."
+      }
     }
   }
 }
