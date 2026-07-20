@@ -45,6 +45,34 @@ import {
 } from "@/validations/sellerOnboarding";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import type { Database, Json } from "@/lib/supabase/types";
+
+/**
+ * The real (nullable) shape of the `submit_seller_application` rpc args, per
+ * its migration (20260720083710) — several params are optional at the DB
+ * layer. `Database["betk"]["Functions"]["submit_seller_application"]["Args"]`
+ * (types.ts) types every arg NON-NULL because CI's generated-from-live-schema
+ * types (REG-32) carry no pg function-parameter nullability metadata; that
+ * generated shape is intentionally left untouched (never hand-edited). This
+ * type documents the true call-site contract; the mismatch is bridged by ONE
+ * cast at the rpc boundary below.
+ */
+type SubmitSellerApplicationRpcArgs = {
+  p_name_ar: string;
+  p_name_en: string | null;
+  p_bio_ar: string | null;
+  p_slug: string;
+  p_category_primary: string;
+  p_category_secondary: string | null;
+  p_governorate: string;
+  p_city: string | null;
+  p_payment_methods: Json;
+  p_delivery_options: Json;
+  p_return_policy: string | null;
+  p_min_order_egp: number | null;
+  p_doc_front_path: string;
+  p_doc_back_path: string;
+};
 
 /** The rpc raises these opaque tokens (never containing PII) on 23505. */
 const RPC_SLUG_TAKEN = "BETK_SLUG_TAKEN";
@@ -102,7 +130,7 @@ export async function submitSellerApplication(
 
   // ── 3) Atomic multi-table write via the SECURITY INVOKER rpc (ADR-012) ──────
   const supabase = await createClient();
-  const { error: rpcError } = await supabase.schema("betk").rpc("submit_seller_application", {
+  const submitArgs: SubmitSellerApplicationRpcArgs = {
     p_name_ar: app.nameAr,
     p_name_en: app.nameEn ?? null,
     p_bio_ar: app.bioAr ?? null,
@@ -117,7 +145,15 @@ export async function submitSellerApplication(
     p_min_order_egp: app.minOrderEgp ?? null,
     p_doc_front_path: app.docFrontPath,
     p_doc_back_path: app.docBackPath,
-  });
+  };
+  // generated arg types are non-null because pg function metadata carries no
+  // nullability; the function accepts NULLs (see migration 20260720083710).
+  // Do not "fix" by editing types.ts — it must stay generated-byte-identical
+  // (REG-32).
+  const { error: rpcError } = await supabase.schema("betk").rpc(
+    "submit_seller_application",
+    submitArgs as Database["betk"]["Functions"]["submit_seller_application"]["Args"],
+  );
 
   if (rpcError) {
     const message = rpcError.message ?? "";

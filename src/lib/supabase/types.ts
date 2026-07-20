@@ -1984,30 +1984,26 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       my_store_id: { Args: never; Returns: string }
-      submit_seller_application: {
-        Args: {
-          p_name_ar: string
-          p_name_en: string | null
-          p_bio_ar: string | null
-          p_slug: string
-          p_category_primary: string
-          p_category_secondary: string | null
-          p_governorate: string
-          p_city: string | null
-          p_payment_methods: Json
-          p_delivery_options: Json
-          p_return_policy: string | null
-          p_min_order_egp: number | null
-          p_doc_front_path: string
-          p_doc_back_path: string
-        }
+      resubmit_seller_application: {
+        Args: { p_doc_back_path: string; p_doc_front_path: string }
         Returns: undefined
       }
-      // REG-32 hand-maintained (Phase 04 / T05) — see submit_seller_application above.
-      resubmit_seller_application: {
+      submit_seller_application: {
         Args: {
-          p_doc_front_path: string
+          p_bio_ar: string
+          p_category_primary: string
+          p_category_secondary: string
+          p_city: string
+          p_delivery_options: Json
           p_doc_back_path: string
+          p_doc_front_path: string
+          p_governorate: string
+          p_min_order_egp: number
+          p_name_ar: string
+          p_name_en: string
+          p_payment_methods: Json
+          p_return_policy: string
+          p_slug: string
         }
         Returns: undefined
       }

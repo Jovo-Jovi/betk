@@ -226,22 +226,30 @@ describeOrSkip("Phase 04 / T03 — seller-application submit (staging)", () => {
   it("phone-NULL → the rpc itself is denied by the RESTRICTIVE phone gate (DB half)", async () => {
     const g = await createActor("phone-null-rpc", { phone: null });
 
-    const { error } = await g.client.rpc("submit_seller_application", {
+    // generated arg types are non-null because pg function metadata carries no
+    // nullability; the function accepts NULLs (see migration 20260720083710).
+    // Do not "fix" by editing types.ts — it must stay generated-byte-identical
+    // (REG-32).
+    const rpcArgs = {
       p_name_ar: "متجر",
-      p_name_en: null,
-      p_bio_ar: null,
+      p_name_en: null as string | null,
+      p_bio_ar: null as string | null,
       p_slug: makeSlug(),
       p_category_primary: "handmade",
-      p_category_secondary: null,
+      p_category_secondary: null as string | null,
       p_governorate: "cairo",
-      p_city: null,
+      p_city: null as string | null,
       p_payment_methods: {},
       p_delivery_options: {},
-      p_return_policy: null,
-      p_min_order_egp: null,
+      p_return_policy: null as string | null,
+      p_min_order_egp: null as number | null,
       p_doc_front_path: `${g.id}/f.png`,
       p_doc_back_path: `${g.id}/b.png`,
-    });
+    };
+    const { error } = await g.client.rpc(
+      "submit_seller_application",
+      rpcArgs as Database["betk"]["Functions"]["submit_seller_application"]["Args"],
+    );
 
     expect(error).not.toBeNull();
     const counts = await countRows(g.id);
