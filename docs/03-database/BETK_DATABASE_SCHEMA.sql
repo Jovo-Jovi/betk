@@ -1431,3 +1431,92 @@ CREATE POLICY "media_update_own_prefix" ON storage.objects
   FOR UPDATE TO authenticated
   USING (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text)
   WITH CHECK (bucket_id = 'media' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+-- SELLER APPLICATION SUBMIT RPC (Phase 04 / T03, ADR-012)
+-- Migration 20260720083710_seller_application_submit_rpc.sql.
+-- Atomic multi-table write: seller_profiles + stores + 2 seller_documents in
+-- ONE transaction (PostgREST wraps each rpc call in a transaction; any failure
+-- rolls back every row -> no partial residue). Chosen over sequential
+-- authenticated-client writes with compensating cleanup because seller_profiles
+-- has no DELETE policy (compensation would need service-role) and a mid-sequence
+-- crash could strand a half-built application.
+--
+-- SECURITY INVOKER (NOT DEFINER): RLS is NOT bypassed, so the RESTRICTIVE
+-- seller_profiles_phone_gate bites naturally (OD-4 / REG-10 at the DB layer with
+-- no hand-rolled phone check) and sp_insert / stores_insert / sdoc_own enforce
+-- id / seller_id = auth.uid(). A SECURITY DEFINER function granted to
+-- authenticated would add advisor 0029 (authenticated_security_definer_function_
+-- executable) — forbidden by the "no new advisor findings" bar. The users.role
+-- flip is NOT in this function (betk.users has no permissive UPDATE policy) — it
+-- runs LAST via the service-role setUserRole() helper after this rpc commits
+-- (REG-19; the seller_profiles row provably exists before the flip).
+-- ============================================================
+CREATE OR REPLACE FUNCTION betk.submit_seller_application(
+  p_name_ar             TEXT,
+  p_name_en             TEXT,
+  p_bio_ar              TEXT,
+  p_slug                TEXT,
+  p_category_primary    TEXT,
+  p_category_secondary  TEXT,
+  p_governorate         TEXT,
+  p_city                TEXT,
+  p_payment_methods     JSONB,
+  p_delivery_options    JSONB,
+  p_return_policy       TEXT,
+  p_min_order_egp       NUMERIC,
+  p_doc_front_path      TEXT,
+  p_doc_back_path       TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = betk, public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_constraint TEXT;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'BETK_NOT_AUTHENTICATED';
+  END IF;
+
+  INSERT INTO betk.seller_profiles (id, status, level, submitted_at)
+  VALUES (v_uid, 'pending', 'bronze', now());
+
+  INSERT INTO betk.stores (
+    seller_id, name_ar, name_en, slug, bio_ar,
+    category_primary, category_secondary, governorate, city,
+    payment_methods, delivery_options, return_policy, min_order_egp, status
+  )
+  VALUES (
+    v_uid, p_name_ar, p_name_en, p_slug, p_bio_ar,
+    p_category_primary, p_category_secondary, p_governorate, p_city,
+    COALESCE(p_payment_methods, '{}'::jsonb),
+    COALESCE(p_delivery_options, '{}'::jsonb),
+    p_return_policy, p_min_order_egp, 'pending'
+  );
+
+  INSERT INTO betk.seller_documents (seller_id, document_type, storage_path, review_status)
+  VALUES
+    (v_uid, 'national_id_front', p_doc_front_path, 'pending'),
+    (v_uid, 'national_id_back',  p_doc_back_path,  'pending');
+
+EXCEPTION
+  WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint = 'uq_stores_slug' THEN
+      RAISE EXCEPTION 'BETK_SLUG_TAKEN';
+    ELSIF v_constraint IN ('seller_profiles_pkey', 'uq_stores_seller', 'uq_seller_doc_type') THEN
+      RAISE EXCEPTION 'BETK_APPLICATION_EXISTS';
+    ELSE
+      RAISE;
+    END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION betk.submit_seller_application(
+  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT, NUMERIC, TEXT, TEXT
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION betk.submit_seller_application(
+  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT, NUMERIC, TEXT, TEXT
+) TO authenticated;

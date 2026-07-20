@@ -215,34 +215,44 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T03 — seller application
-submit (queries + Server Action; UI is T04). Branch feature/phase-04-seller.
+submit (queries + Server Action; UI is T04). Branch feature/phase-04-seller
+(continue; git pull first — on top of 98d2b92).
 
 DECISION FIRST — ADR-012 (record in docs/02-architecture/ADR.md, next free
-slot): the submit writes seller_profiles + stores + 2 seller_documents + the
-betk.users.role flip. PostgREST gives no client-side multi-table transaction.
-Evaluate (a) sequential authenticated-client writes with compensating cleanup
-vs (b) one SECURITY DEFINER RPC (search_path pinned, EXECUTE revoked from
-PUBLIC and granted to authenticated — the R2 hardening pattern) taking the
-validated payload. Decide against the ARCHITECTURE/ADR precedents; the ROLE
-FLIP ordering risk is decisive input: role='seller' with no seller_profiles
-row strands the user at the middleware seller-gate, so the flip must be LAST
-and the profile row must exist first — or the whole thing is atomic. State
-the decision + rationale; if (b), it is an additive migration (MCP path,
-ledger, source backfill, advisor-clean like R2).
+slot — confirm the number; ADR-011 is the last one taken per REG-04): the
+submit writes seller_profiles + stores + 2 seller_documents + the
+betk.users.role flip. PostgREST gives no client-side multi-table
+transaction. Evaluate (a) sequential authenticated-client writes with
+compensating cleanup vs (b) one SECURITY DEFINER RPC (search_path pinned,
+EXECUTE revoked from PUBLIC and granted to authenticated — the R2 hardening
+pattern) taking the validated payload. Decide against the ARCHITECTURE/ADR
+precedents; the ROLE FLIP ordering risk is decisive input: role='seller'
+with no seller_profiles row strands the user at the middleware seller-gate,
+so the flip must be LAST and the profile row must exist first — or the whole
+thing is atomic. State the decision + rationale; if (b), it is an additive
+migration (MCP path, ledger, source backfill, advisor-clean like R2 —
+REVOKE PUBLIC EXECUTE, no new advisor findings). Note the phone-gate
+interaction: the RESTRICTIVE seller_profiles_phone_gate RLS must still bite
+under whichever mechanism you pick — if (b) SECURITY DEFINER, state
+explicitly how the phone gate is honored (the RPC must NOT bypass it — check
+phone_number IS NOT NULL inside, or the definer context defeats REG-10;
+this is a decisive security point, not a footnote).
 
 ACTION submitSellerApplication (src/features/seller-onboarding/actions/,
 "use server", Zod full-payload schema):
 1. requireVerifiedPhone() FIRST (canonical gate — R-A05 order then phone;
    typed errors route to /blocked, /auth/phone, /auth/login).
 2. Uploads: the 2 ID files land in the docs bucket under the user's own
-   prefix via the authenticated client (T01 storage RLS) BEFORE row creation;
-   the action receives storage paths, validates prefix ownership server-side,
-   and writes seller_documents rows referencing them. Never accept a path
-   outside auth.uid()'s prefix.
+   prefix via the authenticated client (T01 storage RLS) BEFORE row
+   creation; the action receives storage paths, validates prefix ownership
+   server-side, and writes seller_documents rows referencing them. Never
+   accept a path outside auth.uid()'s prefix.
 3. Creates seller_profiles (status='pending', level='bronze', submitted_at)
    + stores (validated slug, name_ar required / name_en optional, category
    text values from the picker, JSONB payment/delivery per the typed
-   interfaces) + 2 seller_documents (front+back, review_status='pending').
+   interfaces — delivery modes = {delivery,pickup,remote}, the 3-mode
+   REG-14 shape, NOT four) + 2 seller_documents (front+back,
+   review_status='pending').
 4. Role flip LAST via a new column-scoped service-role helper
    setUserRole(id,'seller') in src/services/authUsers.ts (REG-19 pattern —
    sets ONLY role, keyed to the session-verified uid).
@@ -250,18 +260,26 @@ ACTION submitSellerApplication (src/features/seller-onboarding/actions/,
    seller_id 23505 / existing profile → R-S01 "application already exists"
    → route to /seller/status. Pre-checks are UX-only.
 6. Sentry feature tag ('seller-onboarding', id-only) + PostHog
-   seller_application_submitted. NO document paths in any log/event.
+   seller_application_submitted. NO document paths/filenames in any
+   log/event/error message (PII discipline — the docs bucket is private).
 Queries: getOwnSellerApplication() (profile + store + documents under
 self-scope RLS) for status/resume use.
 
-TESTS (integration, staging, minted GoTrue users, seeded+cleaned): phone-NULL
-user → PhoneRequiredError, ZERO rows created; happy path → exactly 1+1+2 rows
-+ role='seller' + status='pending'; slug collision → clean error, no partial
-residue (proves the ADR-012 mechanism's cleanup/atomicity); second application
-→ R-S01 rejection; deactivated user blocked; cross-user isolation on
+TESTS (integration, staging, minted GoTrue users, seeded+cleaned, zero
+residue pasted): phone-NULL user → PhoneRequiredError, ZERO rows created;
+happy path → exactly 1 seller_profiles + 1 stores + 2 seller_documents +
+role='seller' + status='pending'; slug collision mid-submit → clean
+error + NO PARTIAL RESIDUE — this test proves whatever ADR-012 decided
+(RPC → transactional rollback leaves zero rows; sequential → the
+compensation path fired and cleaned up; state which invariant you're
+proving); second application by an existing seller → R-S01 rejection;
+deactivated user blocked (R-A05); cross-user isolation on
 getOwnSellerApplication. check-zod-coverage green with the new action.
-typecheck · lint · 4 guards · test:unit · build. Close-out (+ADR-012) →
-commit + push. HOLD.
+typecheck · lint · 4 guards · test:unit · build. Close-out (+ADR-012, +the
+two T02 carries: /seller/status-404-until-T05 and the (seller-onboarding)
+route-group URL-invariance note) → commit + push. HOLD — do not start T04.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** ADR-012 recorded; phone gate proven at the action; happy path atomic-or-compensated with the no-partial-residue test; role flip last; 23505 paths clean; PII discipline holds.
 
@@ -461,7 +479,7 @@ and-safe fixes stated, else FLAG).
 | T01 DB+storage | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | REG-10 closed (`sp_insert`) + REG-31 minted+closed (`stores_insert`) via `20260719133011`; `docs`/`media` buckets + storage RLS via `20260719133052`; ledger 20→22 (1:1); REG-14 MATCH (T07 = 3 toggles not 4); integration 7/7 + full CI green; advisor WARN `public_bucket_allows_listing` on media → **RESOLVED by T01-FIX (not carried)** |
 | T01-FIX media listing hardening | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | DB-only. Migration `20260719134903_media_select_own_prefix_rls`: DROP `media_public_select` (broad SELECT TO public) + CREATE `media_select_own_prefix` (SELECT TO authenticated, own-prefix); bucket stays `public=true`. Ledger 22→23 (1:1). Advisor `public_bucket_allows_listing` WARN GONE, no new findings. Media integration case extended (public-URL bytes load-bearing + `.list()` denials); full CI green. Boundary flag: per-object public read stays open on a public bucket (enumeration hardened, not object reads) |
 | T02 middleware+shell | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Middleware: `/seller/onboarding` → AUTH-ONLY inside the seller gate (buyers reach it; existing sellers bounce per status active→`/seller`, else→`/seller/status`); every other `/seller*` verdict byte-unchanged (runtime gate-regression matrix 5×4×2 pasted — only the 2 onboarding cells differ). Seller shell via `SellerChrome` + `(seller)/layout.tsx` mounting `ConsoleSidebar` (6 in-scope nav items only, no dead routes); `console.*` i18n both locales (parity 318/318). `/seller` empty-state landing (guidance-only CTA, no dead Phase-05 link); chromeless onboarding placeholder in `(seller-onboarding)` group marked for T04; no `/seller/status` page (T05's). Zero `ui/*`/`shared/*` edits. Full CI green (typecheck/lint/4 guards/unit 82/82/build 21 routes both locales) |
-| T03 submit action | Opus | — | — | — | ADR-012 |
+| T03 submit action | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **ADR-012 = atomic `SECURITY INVOKER` rpc `betk.submit_seller_application`** (NOT sequential+compensation — no `seller_profiles` DELETE policy + non-atomic; NOT `SECURITY DEFINER` — would bypass RLS phone gate REG-10 + add advisor 0029). Migration `20260720083710_seller_application_submit_rpc` (additive, MCP, ledger 23→24 1:1, source-backfilled, advisor sweep byte-identical to baseline). `submitSellerApplication` action: `requireVerifiedPhone` FIRST → server-side prefix-ownership check on both doc paths → atomic rpc (delivery = 3-mode REG-14) → 23505 mapping (`uq_stores_slug`→slug_taken / others→application_exists R-S01→`/seller/status`) → `setUserRole(uid,'seller')` REG-19 helper LAST → Sentry id-only + PostHog, NO doc paths in logs (PII). `getOwnSellerApplication` self-scope query. Integration 7/7 (phone-NULL zero-rows both halves, happy-path exact counts + role flip, **slug-collision NO PARTIAL RESIDUE = ADR-012 rollback proof**, dup R-S01, deactivated R-A05, cross-user isolation); check-zod-coverage green (new action covered); full CI green (23 routes both locales). T02 carries recorded (`/seller/status` 404-until-T05; `(seller-onboarding)` URL-invariance). HOLD — do not start T04 |
 | T04 wizard UI | Sonnet | — | — | — | |
 | T05 status+resubmit | Sonnet | — | — | — | |
 | T06 store profile | Sonnet | — | — | — | |

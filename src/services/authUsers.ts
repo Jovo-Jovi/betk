@@ -22,6 +22,7 @@ import type { Database } from "@/lib/supabase/types";
 
 type UserRow = Database["betk"]["Tables"]["users"]["Row"];
 type AuthProvider = Database["betk"]["Enums"]["auth_provider"];
+type UserRole = Database["betk"]["Enums"]["user_role"];
 
 /** Postgres unique_violation. */
 const PG_UNIQUE_VIOLATION = "23505";
@@ -180,6 +181,50 @@ export async function setUserPhoneNumber(
     throw new Error(`[authUsers] setUserPhoneNumber failed: ${error.message}`);
   }
   return { ok: true };
+}
+
+/**
+ * Set `betk.users.role` for the given verified user id (Phase 04 / T03,
+ * become-seller). Used by `submitSellerApplication` to flip `buyer → 'seller'`
+ * as the LAST step, AFTER the atomic `submit_seller_application` rpc has
+ * committed the `seller_profiles` + `stores` + `seller_documents` rows (ADR-012:
+ * the profile must exist before the flip so the middleware seller-gate never
+ * strands a role='seller' user with no profile).
+ *
+ * SCOPE (security-critical, REG-19): this update sets EXACTLY ONE column,
+ * `role`. It NEVER touches `status` / `deleted_at` / `phone_number` /
+ * `auth_provider` / any other column, and NEVER another user's row — the caller
+ * passes `id` read from the live GoTrue session (`auth.uid()`), never a
+ * client-supplied value.
+ *
+ * WHY service-role (REG-19 / ADR-010 standing pattern, mirrors
+ * `deactivateAccount` / `setUserPhoneNumber`): `betk.users` has only a
+ * `users_self` SELECT policy and NO permissive UPDATE policy, while the
+ * table-level GRANT to `authenticated` covers UPDATE on ALL columns — so a
+ * scoped self-UPDATE policy would be a privilege-escalation vector (a user could
+ * set their own `role='admin'`) until that grant is revoked + re-scoped. The
+ * service-role path keeps the write column-scoped in code with zero schema
+ * change and leaves RLS as the authz boundary. This is ALSO why the role flip is
+ * NOT inside the `submit_seller_application` rpc (a SECURITY INVOKER function
+ * could not update `betk.users` under RLS anyway).
+ *
+ * Idempotent: re-setting the same role is a no-op write (used to heal a prior
+ * submit whose rpc committed but whose role flip failed — ADR-012 residual).
+ *
+ * The `id` MUST be a verified GoTrue uid.
+ */
+export async function setUserRole(id: string, role: UserRole): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .schema("betk")
+    .from("users")
+    // Only `role`. Do NOT add any other column here.
+    .update({ role })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`[authUsers] setUserRole failed: ${error.message}`);
+  }
 }
 
 /**
