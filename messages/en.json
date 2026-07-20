@@ -472,5 +472,103 @@
         "shipsNationwide": "Ships nationwide"
       }
     }
+  },
+  "seller": {
+    "onboarding": {
+      "metaTitle": "Become a seller — BETK",
+      "metaDescription": "Set up your BETK store in five steps and start selling.",
+      "title": "Open your store on BETK",
+      "subtitle": "Complete the five steps to submit your store for review.",
+      "stepCounter": "Step {current} of {total}",
+      "steps": {
+        "identity": "Identity",
+        "category": "Category",
+        "payment": "Payment",
+        "delivery": "Delivery",
+        "documents": "Documents"
+      },
+      "nav": {
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit for review",
+        "submitting": "Submitting…"
+      },
+      "errors": {
+        "required": "This field is required",
+        "invalid": "Invalid value",
+        "taken": "That name is taken — pick another",
+        "submitFailed": "Couldn't submit your application, please try again."
+      },
+      "identity": {
+        "nameArLabel": "Store name (Arabic)",
+        "nameArPlaceholder": "e.g. أتيليه نور",
+        "nameEnLabel": "Store name (English)",
+        "nameEnHint": "Optional — shown to English visitors; the Arabic name is used otherwise.",
+        "nameEnPlaceholder": "e.g. Nour Atelier",
+        "bioLabel": "Store bio",
+        "bioHint": "Optional — a short description in one language (up to 200 characters).",
+        "bioPlaceholder": "Write a short intro for your store…",
+        "slugLabel": "Store link",
+        "slugHint": "Lowercase letters, numbers and hyphens only (3–50 characters).",
+        "slugPlaceholder": "nour-atelier",
+        "slugChecking": "Checking availability…",
+        "slugAvailable": "Link is available",
+        "slugTaken": "This link is already in use"
+      },
+      "category": {
+        "primaryLabel": "Primary category",
+        "primaryPlaceholder": "Choose a category",
+        "secondaryLabel": "Secondary category",
+        "secondaryHint": "Optional",
+        "secondaryPlaceholder": "None",
+        "governorateLabel": "Governorate",
+        "governoratePlaceholder": "Choose a governorate",
+        "cityLabel": "City",
+        "cityPlaceholder": "Optional"
+      },
+      "payment": {
+        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "instapayLabel": "InstaPay handle",
+        "instapayPlaceholder": "Username or number",
+        "vodafoneLabel": "Vodafone Cash",
+        "vodafonePlaceholder": "01xxxxxxxxx",
+        "orangeLabel": "Orange Cash",
+        "orangePlaceholder": "01xxxxxxxxx",
+        "codLabel": "Cash on delivery",
+        "atLeastOneHint": "At least one payment method is required before publishing your first listing (you can add it later)."
+      },
+      "delivery": {
+        "intro": "Choose how buyers receive their orders.",
+        "modes": {
+          "delivery": "Delivery",
+          "pickup": "Pickup from store",
+          "remote": "Remote service"
+        },
+        "minDaysLabel": "Min delivery time (days)",
+        "maxDaysLabel": "Max delivery time (days)",
+        "feeLabel": "Default delivery fee (EGP)",
+        "feeHint": "Leave empty if delivery is free.",
+        "pickupGovLabel": "Pickup governorate",
+        "pickupGovHint": "For pickup from your store.",
+        "pickupGovPlaceholder": "Choose a governorate"
+      },
+      "documents": {
+        "intro": "Upload your national ID (front and back) to verify your identity. Your documents stay strictly private.",
+        "frontLabel": "National ID — front",
+        "frontHint": "A clear photo of the front of the card.",
+        "backLabel": "National ID — back",
+        "backHint": "A clear photo of the back of the card.",
+        "uploadLabel": "Tap to choose an image",
+        "uploaded": "Uploaded",
+        "uploadError": "Upload failed, please try again.",
+        "retry": "Retry",
+        "bothRequired": "Both ID photos (front and back) are required before submitting."
+      },
+      "phonePointer": {
+        "title": "Verified phone required",
+        "message": "You'll need a verified phone number to complete your store setup.",
+        "link": "Add your phone number"
+      }
+    }
   }
 }

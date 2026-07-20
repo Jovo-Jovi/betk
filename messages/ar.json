@@ -472,5 +472,103 @@
         "shipsNationwide": "التوصيل لكل المحافظات"
       }
     }
+  },
+  "seller": {
+    "onboarding": {
+      "metaTitle": "كن بائعاً — بيتك",
+      "metaDescription": "أنشئ متجرك على بيتك في خمس خطوات وابدأ البيع.",
+      "title": "افتح متجرك على بيتك",
+      "subtitle": "أكمل الخطوات الخمس لإرسال طلب فتح المتجر للمراجعة.",
+      "stepCounter": "الخطوة {current} من {total}",
+      "steps": {
+        "identity": "الهوية",
+        "category": "التصنيف",
+        "payment": "الدفع",
+        "delivery": "التوصيل",
+        "documents": "الوثائق"
+      },
+      "nav": {
+        "back": "السابق",
+        "next": "التالي",
+        "submit": "إرسال للمراجعة",
+        "submitting": "جاري الإرسال…"
+      },
+      "errors": {
+        "required": "هذا الحقل مطلوب",
+        "invalid": "قيمة غير صحيحة",
+        "taken": "هذا الاسم محجوز، اختر اسماً آخر",
+        "submitFailed": "تعذّر إرسال الطلب، حاول مرة أخرى."
+      },
+      "identity": {
+        "nameArLabel": "اسم المتجر (بالعربية)",
+        "nameArPlaceholder": "مثال: أتيليه نور",
+        "nameEnLabel": "اسم المتجر (بالإنجليزية)",
+        "nameEnHint": "اختياري — يُعرض للزوّار بالإنجليزية، وإلا يُستخدم الاسم العربي.",
+        "nameEnPlaceholder": "e.g. Nour Atelier",
+        "bioLabel": "نبذة عن المتجر",
+        "bioHint": "اختياري — وصف مختصر بلغة واحدة (حتى 200 حرف).",
+        "bioPlaceholder": "اكتب نبذة قصيرة تعرّف بمتجرك…",
+        "slugLabel": "رابط المتجر",
+        "slugHint": "أحرف إنجليزية صغيرة وأرقام وشرطات فقط (٣ إلى ٥٠ حرفاً).",
+        "slugPlaceholder": "nour-atelier",
+        "slugChecking": "جاري التحقق من التوفّر…",
+        "slugAvailable": "الرابط متاح",
+        "slugTaken": "هذا الرابط مستخدم بالفعل"
+      },
+      "category": {
+        "primaryLabel": "التصنيف الرئيسي",
+        "primaryPlaceholder": "اختر تصنيفاً",
+        "secondaryLabel": "تصنيف ثانوي",
+        "secondaryHint": "اختياري",
+        "secondaryPlaceholder": "بدون",
+        "governorateLabel": "المحافظة",
+        "governoratePlaceholder": "اختر المحافظة",
+        "cityLabel": "المدينة",
+        "cityPlaceholder": "اختياري"
+      },
+      "payment": {
+        "note": "هذه الأرقام والحسابات تُعرض للمشترين عند الدفع — لا تُدخلها ككلمات سر في أي حقل آخر.",
+        "instapayLabel": "حساب إنستاباي",
+        "instapayPlaceholder": "اسم المستخدم أو الرقم",
+        "vodafoneLabel": "فودافون كاش",
+        "vodafonePlaceholder": "01xxxxxxxxx",
+        "orangeLabel": "أورنج كاش",
+        "orangePlaceholder": "01xxxxxxxxx",
+        "codLabel": "الدفع عند الاستلام",
+        "atLeastOneHint": "يلزم إضافة وسيلة دفع واحدة على الأقل قبل نشر أول منتج (يمكنك إضافتها لاحقاً)."
+      },
+      "delivery": {
+        "intro": "حدّد كيف يستلم المشترون طلباتهم.",
+        "modes": {
+          "delivery": "توصيل",
+          "pickup": "استلام من المتجر",
+          "remote": "خدمة عن بُعد"
+        },
+        "minDaysLabel": "أقل مدة توصيل (أيام)",
+        "maxDaysLabel": "أقصى مدة توصيل (أيام)",
+        "feeLabel": "رسوم التوصيل الافتراضية (ج.م)",
+        "feeHint": "اتركها فارغة إذا كان التوصيل مجانياً.",
+        "pickupGovLabel": "محافظة الاستلام",
+        "pickupGovHint": "للاستلام من المتجر.",
+        "pickupGovPlaceholder": "اختر المحافظة"
+      },
+      "documents": {
+        "intro": "ارفع صورة بطاقة الرقم القومي (الوجه والظهر) للتحقق من هويتك. تبقى وثائقك خاصة تماماً.",
+        "frontLabel": "بطاقة الرقم القومي — الوجه",
+        "frontHint": "صورة واضحة لوجه البطاقة.",
+        "backLabel": "بطاقة الرقم القومي — الظهر",
+        "backHint": "صورة واضحة لظهر البطاقة.",
+        "uploadLabel": "اضغط لاختيار صورة",
+        "uploaded": "تم الرفع",
+        "uploadError": "فشل الرفع، حاول مرة أخرى.",
+        "retry": "إعادة المحاولة",
+        "bothRequired": "يجب رفع صورتي البطاقة (الوجه والظهر) قبل الإرسال."
+      },
+      "phonePointer": {
+        "title": "مطلوب رقم هاتف موثّق",
+        "message": "يلزم توثيق رقم هاتفك قبل إتمام فتح المتجر.",
+        "link": "أضف رقم هاتفك"
+      }
+    }
   }
 }

@@ -288,21 +288,44 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T04 — onboarding wizard UI at
-/seller/onboarding. Branch feature/phase-04-seller. Compose-only; T00 kit
-(Stepper) + ImageUploader + ui primitives; missing state → STOP-and-flag.
+/seller/onboarding. Branch feature/phase-04-seller (continue; git pull first —
+on top of fd94e08). Compose-only; T00 kit (Stepper + Toggle + Alert +
+Textarea) + ImageUploader + ui primitives; missing state → STOP-and-flag to
+Claude Design, never improvise styled UI in the feature folder.
 
-Page (AuthShell-style layout per spec, not the seller sidebar): 5-step Stepper
-— (1) Identity: store name_ar (required) + name_en (optional, COALESCE set) +
-bio (as-authored, single language); (2) Category: primary + optional secondary
-from the bilingual categories list + governorate/city (constants); (3) Payment
-config: instapay_handle / vodafone_cash / orange_cash / cod_enabled (display
-handles, not secrets — spec note rendered); (4) Delivery config: the 4 modes +
-per-governorate est days + default fee (REG-14-verified shape); (5) National
-ID front + back via ImageUploader → docs bucket own-prefix (T01/T03 path),
-per-file retry, R-S05 both required. Slug picker with availability UX
-pre-check (best-effort; 23505 from submit is authoritative — render its
-field-level error). Per-step Zod (client mirror of the T03 schema slices);
-final submit calls submitSellerApplication and routes to /seller/status.
+REPLACES the T02 chromeless placeholder body under (seller-onboarding) —
+same precedent as Phase 03 T02 replacing the BL-01 homepage stub. Do NOT move
+it under (seller)/ or add the sidebar: layout stays AuthShell-style / chromeless
+per T02's deliberate route-group split (URL /seller/onboarding is unchanged).
+
+Page: 5-step Stepper —
+ (1) Identity: store name_ar (required) + name_en (optional, COALESCE set) +
+     bio (as-authored, single language, Textarea).
+ (2) Category: primary + optional secondary from the bilingual categories list
+     + governorate/city (constants).
+ (3) Payment config: instapay_handle / vodafone_cash / orange_cash /
+     cod_enabled (Toggle) — display handles, not secrets: render the spec note.
+ (4) Delivery config: THREE modes {delivery, pickup, remote} (Toggle each) —
+     the REG-14-verified 3-mode StoreDeliveryOptions shape, NOT four; consume
+     the typed interface, do not reshape. Per-governorate est days + default
+     fee.
+ (5) National ID front + back via ImageUploader → docs bucket own-prefix,
+     per-file retry, R-S05 both required.
+
+UPLOAD PATH CONTRACT (must match T03): step-5 files upload to the docs bucket
+under the CURRENT USER'S OWN PREFIX (first path folder = auth.uid()::text) via
+the authenticated client (T01 storage RLS). The T03 submitSellerApplication
+action re-validates prefix ownership server-side and REJECTS any path outside
+auth.uid()'s prefix — so a wrong prefix fails submit, not just render. The
+wizard passes the resulting storage paths into the submit payload.
+
+Slug picker with availability UX pre-check (best-effort; stores_public exposes
+only ACTIVE stores so the pre-check can't see pending/suspended slugs — 23505
+from submit is authoritative, render its field-level error). Per-step Zod
+(client mirror of the T03 schema slices). Final submit calls
+submitSellerApplication and routes to /seller/status per the returned outcome
+(R-S01 "application already exists" → /seller/status; slug 23505 → field error,
+stay on step 1).
 
 RESUME: CONFIRM against UI_SPEC — per-step server persistence is NOT pinned
 (only "resume incomplete wizard" as an edge). Implement client-state resume
@@ -310,13 +333,26 @@ within the session; do NOT invent draft rows. Flag the cross-session resume
 question as a product decision in the close-out.
 
 Phone-NULL users see the non-blocking capture pointer → /auth/phone (T07-auth
-pattern) before the wizard advances to submit.
+pattern) before the wizard advances to submit — the action's
+requireVerifiedPhone() is the hard gate; this is the UX pointer only.
 
 i18n: seller.onboarding.* namespace BOTH locales (paste parity count).
 generateMetadata both locales. VERIFY: typecheck · lint · 4 guards ·
-test:unit · build. Runtime smoke: wizard renders AR + /en, both themes wiring
-intact; step validation blocks advance; uploader states render.
-Zero ui/*/shared/* edits. Close-out → commit + push. HOLD.
+test:unit · build (both locales). Runtime smoke: wizard renders AR + /en,
+correct dir/lang, both themes wiring intact; Stepper current/complete/upcoming
+states render (first real Stepper consumer — this is its render proof); step
+validation blocks advance; ImageUploader states render; delivery shows exactly
+3 toggles. Zero ui/*/shared/* edits (diff proof).
+
+Close-out: fold in the two owed T03 items — (i) mint REG-32 (betk.Functions
+RPC signatures hand-maintained in types.ts; verify vs the types-drift gate;
+first instance submit_seller_application, owner T08) AND run the 5-min check:
+does CI's types-drift regeneration (supabase gen types --schema
+betk,betk_analytics) emit the RPC signature natively? Report yes/no — if yes,
+remove the hand-edit and close REG-32; if no, REG-32 stands as the pattern.
+SESSION_CONTEXT + journal + tracker. Commit + push. HOLD — do not start T05.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** 5 steps compose the kit; AR-required/EN-optional naming; uploads own-prefix; slug UX + 23505 authoritative; resume behavior confirmed-not-invented; parity reported.
 
@@ -480,7 +516,7 @@ and-safe fixes stated, else FLAG).
 | T01-FIX media listing hardening | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | DB-only. Migration `20260719134903_media_select_own_prefix_rls`: DROP `media_public_select` (broad SELECT TO public) + CREATE `media_select_own_prefix` (SELECT TO authenticated, own-prefix); bucket stays `public=true`. Ledger 22→23 (1:1). Advisor `public_bucket_allows_listing` WARN GONE, no new findings. Media integration case extended (public-URL bytes load-bearing + `.list()` denials); full CI green. Boundary flag: per-object public read stays open on a public bucket (enumeration hardened, not object reads) |
 | T02 middleware+shell | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Middleware: `/seller/onboarding` → AUTH-ONLY inside the seller gate (buyers reach it; existing sellers bounce per status active→`/seller`, else→`/seller/status`); every other `/seller*` verdict byte-unchanged (runtime gate-regression matrix 5×4×2 pasted — only the 2 onboarding cells differ). Seller shell via `SellerChrome` + `(seller)/layout.tsx` mounting `ConsoleSidebar` (6 in-scope nav items only, no dead routes); `console.*` i18n both locales (parity 318/318). `/seller` empty-state landing (guidance-only CTA, no dead Phase-05 link); chromeless onboarding placeholder in `(seller-onboarding)` group marked for T04; no `/seller/status` page (T05's). Zero `ui/*`/`shared/*` edits. Full CI green (typecheck/lint/4 guards/unit 82/82/build 21 routes both locales) |
 | T03 submit action | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **ADR-012 = atomic `SECURITY INVOKER` rpc `betk.submit_seller_application`** (NOT sequential+compensation — no `seller_profiles` DELETE policy + non-atomic; NOT `SECURITY DEFINER` — would bypass RLS phone gate REG-10 + add advisor 0029). Migration `20260720083710_seller_application_submit_rpc` (additive, MCP, ledger 23→24 1:1, source-backfilled, advisor sweep byte-identical to baseline). `submitSellerApplication` action: `requireVerifiedPhone` FIRST → server-side prefix-ownership check on both doc paths → atomic rpc (delivery = 3-mode REG-14) → 23505 mapping (`uq_stores_slug`→slug_taken / others→application_exists R-S01→`/seller/status`) → `setUserRole(uid,'seller')` REG-19 helper LAST → Sentry id-only + PostHog, NO doc paths in logs (PII). `getOwnSellerApplication` self-scope query. Integration 7/7 (phone-NULL zero-rows both halves, happy-path exact counts + role flip, **slug-collision NO PARTIAL RESIDUE = ADR-012 rollback proof**, dup R-S01, deactivated R-A05, cross-user isolation); check-zod-coverage green (new action covered); full CI green (23 routes both locales). T02 carries recorded (`/seller/status` 404-until-T05; `(seller-onboarding)` URL-invariance). HOLD — do not start T04 |
-| T04 wizard UI | Sonnet | — | — | — | |
+| T04 wizard UI | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | 5-step Stepper wizard at `/seller/onboarding` replacing the T02 placeholder (chromeless `(seller-onboarding)` group, URL unchanged). Composes T00 kit (Stepper/Toggle/Alert/Textarea) + ImageUploader + ui primitives; **zero `ui/*`/`shared/*` edits** (empty diff). Delivery = exactly 3 REG-14 toggles {delivery,pickup,remote} (typed shape, not reshaped); step-5 ID upload → `docs` bucket own-prefix via authenticated browser client (matches T03 prefix re-check), per-file retry, R-S05; slug availability pre-check UX-only (23505 authoritative → field error, stay step 1); per-step Zod = `submitSellerApplicationSchema.pick(...)`; submit routes on typed outcome (ok/application_exists → `/seller/status`). Client-state resume within session (sessionStorage, no draft rows — cross-session FLAGGED as product decision). Non-blocking phone pointer → `/auth/phone` (action gate is hard). i18n `seller.onboarding.*` both locales (parity 392/392) + generateMetadata both locales. VERIFY all green: typecheck · lint · 4 guards · unit 82/82 · build (23 routes both locales) · runtime smoke (forged @supabase/ssr session cookie → both locales 200, dir/lang + Stepper + step-1 + Next). **REG-32 minted (owner T08)** — hand-maintained `betk.Functions` RPC signatures; 5-min types-drift check INCONCLUSIVE in-env (degenerate `gen types --linked` + public-only MCP typegen) → REG-32 stands, hand-edit retained (load-bearing) |
 | T05 status+resubmit | Sonnet | — | — | — | |
 | T06 store profile | Sonnet | — | — | — | |
 | T07 settings ×3 | Sonnet | — | — | — | |
