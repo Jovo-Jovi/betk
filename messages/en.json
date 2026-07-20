@@ -30,6 +30,25 @@
       "account": "Account"
     }
   },
+  "console": {
+    "subtitle": "Seller console",
+    "openNav": "Open navigation",
+    "theme": "Toggle theme",
+    "language": "Change language",
+    "nav": {
+      "dashboard": "Dashboard",
+      "status": "Application status",
+      "store": "Store profile",
+      "delivery": "Delivery",
+      "returns": "Returns",
+      "payments": "Payments"
+    },
+    "landing": {
+      "title": "Dashboard",
+      "emptyMessage": "No activity yet — add your first listing",
+      "emptyHint": "Once you publish your first listing and start receiving orders, your activity will show up here."
+    }
+  },
   "footer": {
     "tagline": "BETK — Egypt's creative-economy marketplace.",
     "columns": {

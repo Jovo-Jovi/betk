@@ -39,7 +39,14 @@ import { routing } from "@/i18n/routing";
  *   /wishlist,/inbox,/notifications,/checkout,/disputes  → buyer  (unchanged)
  *   /seller         /en/seller          /seller         seller   (unchanged)
  *   /seller/status  /en/seller/status   /seller/status  seller   (unchanged, R-S04 loop-safe)
+ *   /seller/onboarding /en/seller/onboarding /seller/onboarding seller-gate → AUTH-ONLY (Phase 04 T02)
  *   /admin          /en/admin           /admin          admin    (unchanged)
+ *
+ * Phase 04 T02: /seller/onboarding is matched by the seller gate (the /seller/*
+ * prefix) but treated as AUTHENTICATION-ONLY inside that branch — any active
+ * authenticated user (buyer included) may reach it; an existing seller is
+ * redirected per status (active → /seller, else → /seller/status). Every OTHER
+ * /seller* verdict is byte-unchanged; only the onboarding rows differ.
  *
  * Redirect targets (login / blocked / role-mismatch / seller-status) are re-
  * localized to the SAME normalized locale, so a gate never drops the user out of
@@ -72,6 +79,12 @@ const ADMIN_PREFIX = "/admin";
 // Seller landing for pending/rejected/suspended sellers (R-S04) — must be
 // reachable while the seller's profile is not yet active.
 const SELLER_STATUS_ROUTE = "/seller/status";
+
+// Seller onboarding entry (Phase 04) — AUTHENTICATION-ONLY, not role=seller.
+// BETK_UI_SPEC §3: "protected (becomes role: seller on submit)". Any active
+// authenticated user (typically a buyer) may reach it; an existing seller is
+// bounced out per status (see the gate === "seller" branch below).
+const SELLER_ONBOARDING_ROUTE = "/seller/onboarding";
 
 type Gate = "public" | "buyer" | "seller" | "admin";
 
@@ -213,6 +226,38 @@ export async function middleware(request: NextRequest) {
   }
 
   if (gate === "seller") {
+    // /seller/onboarding — AUTHENTICATION-ONLY entry (Phase 04 T02). The wizard
+    // "becomes seller on submit" (BETK_UI_SPEC §3), so any active authenticated
+    // user — typically a buyer — may reach it. An EXISTING seller is bounced OUT
+    // so the wizard is never re-run: active → /seller (dashboard); any other
+    // status → /seller/status. The verified-phone (OD-4) gate is deliberately
+    // NOT enforced here — it lives in the T03 become-seller Server Action + RLS
+    // WITH CHECK (Phase-02 boundary); the page renders the phone-capture pointer
+    // for phone-NULL users. Middleware stays role/status logic only.
+    if (path === SELLER_ONBOARDING_ROUTE) {
+      if (profile.role === "seller") {
+        const { data: sellerProfile } = await supabase
+          .schema("betk")
+          .from("seller_profiles")
+          .select("status")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        return redirect(
+          request,
+          response,
+          localize(
+            locale,
+            sellerProfile?.status === "active"
+              ? SELLER_PREFIX
+              : SELLER_STATUS_ROUTE,
+          ),
+        );
+      }
+      // Non-seller (buyer): allowed through to start onboarding.
+      return response;
+    }
+
     if (profile.role !== "seller") {
       return redirect(request, response, localize(locale, "/"));
     }

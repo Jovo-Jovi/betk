@@ -160,7 +160,8 @@ typecheck · lint · 4 guards · test:unit · build. Close-out → SESSION_CONTE
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T02 — middleware onboarding
-gate + seller shell. Branch feature/phase-04-seller (continue).
+gate + seller shell. Branch feature/phase-04-seller (continue; git pull
+first — on top of 513d1c1).
 
 A. MIDDLEWARE: today ALL /seller* requires role='seller', which locks buyers
 out of /seller/onboarding (spec: "protected — becomes seller on submit").
@@ -184,11 +185,28 @@ later-phase routes are NOT added dead. Labels via a console.* (or extended
 chrome.*) namespace BOTH locales — paste parity count. Zero ui/*/shared/*
 edits (diff proof).
 
+C. [FLAGGED EXPANSION — no other task owns this surface] /seller LANDING
+PAGE: create src/app/[locale]/(seller)/seller/page.tsx as the UI_SPEC
+empty-state landing ONLY ("No activity yet — add your first listing"
+guidance, EmptyState kit component, seller shell layout). Phase 13 fills
+the KPI widgets — add NOTHING else. The spec's CTA targets the new-listing
+route which is Phase 05: apply the same no-dead-routes principle as the nav
+— state your handling in the close-out (guidance without a dead link is
+acceptable), do not silently ship a 404 link. i18n keys in the same
+namespace as B, both locales.
+
 VERIFY: typecheck · lint · 4 guards · test:unit · build (both locales).
 Runtime smoke: buyer reaches /seller/onboarding (200, both locales, correct
-dir/lang, sidebar absent there per AuthShell layout); buyer hitting /seller →
-unchanged prior verdict; pending seller → /seller/status with shell rendered.
-Close-out → commit + push. HOLD.
+dir/lang, sidebar absent there per AuthShell layout — the onboarding PAGE
+itself is T04's; a minimal chromeless placeholder body is acceptable for the
+smoke, marked for T04 replacement); buyer hitting /seller → unchanged prior
+verdict; pending seller hitting /seller → REDIRECT VERDICT to /seller/status
+proven by status code + Location header (page render proof is T05's — do
+not create a status page); active seller (service-role-minted test user) →
+/seller renders the landing + shell, both locales, both themes wiring.
+Close-out → commit + push. HOLD — do not start T03.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** onboarding reachable by any authed user; all other gate verdicts byte-unchanged (table pasted); seller shell renders bilingual both themes; no dead nav items.
 
@@ -442,7 +460,7 @@ and-safe fixes stated, else FLAG).
 | T00 CD-DELTA-3 | CD + Sonnet (LAND) | ✅ LANDED | `feature/phase-04-seller` (CD-DELTA-3-LAND) | HOLD (review) | Coverage walk + emit (CD) → landed by CD-DELTA-3-LAND (Sonnet 5, 2026-07-20): `Stepper`/`Toggle`/`Alert` shared components + 3 vanilla `ui/*` CLI adds (switch/alert/textarea, +1 dep `@radix-ui/react-switch`); barrel strict-superset; byte-diff-verified vs handoff; zero raw-color/physical-RTL on independent re-sweep; zero `src/features` wiring (T04–T07 owed); all 3 guards + full CI green. Deferred w/ owners: Tabs→CD-DELTA-4/Phase-05, Checkbox/Radio→micro-delta, Progress→ImageUploader. **Gate now OPEN — T04–T07 may proceed on PASS.** |
 | T01 DB+storage | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | REG-10 closed (`sp_insert`) + REG-31 minted+closed (`stores_insert`) via `20260719133011`; `docs`/`media` buckets + storage RLS via `20260719133052`; ledger 20→22 (1:1); REG-14 MATCH (T07 = 3 toggles not 4); integration 7/7 + full CI green; advisor WARN `public_bucket_allows_listing` on media → **RESOLVED by T01-FIX (not carried)** |
 | T01-FIX media listing hardening | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | DB-only. Migration `20260719134903_media_select_own_prefix_rls`: DROP `media_public_select` (broad SELECT TO public) + CREATE `media_select_own_prefix` (SELECT TO authenticated, own-prefix); bucket stays `public=true`. Ledger 22→23 (1:1). Advisor `public_bucket_allows_listing` WARN GONE, no new findings. Media integration case extended (public-URL bytes load-bearing + `.list()` denials); full CI green. Boundary flag: per-object public read stays open on a public bucket (enumeration hardened, not object reads) |
-| T02 middleware+shell | Opus | — | — | — | |
+| T02 middleware+shell | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Middleware: `/seller/onboarding` → AUTH-ONLY inside the seller gate (buyers reach it; existing sellers bounce per status active→`/seller`, else→`/seller/status`); every other `/seller*` verdict byte-unchanged (runtime gate-regression matrix 5×4×2 pasted — only the 2 onboarding cells differ). Seller shell via `SellerChrome` + `(seller)/layout.tsx` mounting `ConsoleSidebar` (6 in-scope nav items only, no dead routes); `console.*` i18n both locales (parity 318/318). `/seller` empty-state landing (guidance-only CTA, no dead Phase-05 link); chromeless onboarding placeholder in `(seller-onboarding)` group marked for T04; no `/seller/status` page (T05's). Zero `ui/*`/`shared/*` edits. Full CI green (typecheck/lint/4 guards/unit 82/82/build 21 routes both locales) |
 | T03 submit action | Opus | — | — | — | ADR-012 |
 | T04 wizard UI | Sonnet | — | — | — | |
 | T05 status+resubmit | Sonnet | — | — | — | |
