@@ -554,47 +554,123 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T08 — exit verification +
-consolidated PR. Verification + docs + PR; zero feature code changes (trivial-
-and-safe fixes stated, else FLAG).
+consolidated PR prep. Branch feature/phase-04-seller (git pull first — on top
+of 49fc07f). Verification + docs + push; ZERO feature-code changes (trivial-
+and-safe fixes stated inline, anything more → FLAG and stop). The human opens
+and merges the PR manually — you prepare the branch, paste the PR title/body,
+and STOP at push.
 
-1. DoD LEDGER (PASS/FAIL per line): R-S01 one-store (second application
-   blocked, 23505); R-S02 slug unique + URL-safe (Zod pattern + 23505); R-S03
-   change-once (server-guarded second change rejected); R-S04 approval gates
-   go-live (simulate approval via SERVICE-ROLE status flip in the test harness
-   — legitimate test setup, admin UI is Phase 14 — then prove middleware
-   routes the active seller to /seller and the store becomes publicly visible
-   at /store/[slug]); R-S05 front+back required; R-S08 resubmit retains docs;
-   R-S09 banner-only with enforcement deferred to Phase 05 (cited); OD-4
-   phone gate proven at action + RLS levels; REG-19 role flip service-role
-   column-scoped.
-2. E2E-SHAPED INTEGRATION (staging, minted users, seeded+cleaned, zero
-   residue pasted): fresh phone-verified buyer → submit application → rows
-   1+1+2 + role flip → status pending → service-role approve → /seller
-   reachable + storefront public → then negative sweep (phone-NULL, dup slug,
-   dup application, cross-user reads/writes, doc-bucket anon+other-user
-   denials, signed-URL read works).
-3. DB LIVE STATE: pg_policies for the phase's tables match ERD-verbatim
-   expectations; storage buckets + policies as T01 left them; migration
-   ledger ↔ local 1:1 (paste count); no drift elsewhere vs the Phase-03 gate
-   numbers.
-4. BILINGUAL/THEME: every Phase-04 screen AR + /en spot-checked (dir/lang +
-   keyed copy, no hardcoded literals — Guards C/D green); dark = wiring
-   verified (interactive flip stays in the pre-launch Playwright basket);
-   UI_SPEC acceptance matrix rows marked with the honest footnote.
-5. REGISTER + DOCS: REG-10/14 closed with evidence; REG-15 row corrected to
-   Phase 05; new findings minted (e.g. R-S03 app-only guard if T06 flagged
-   it); Phase-05 ENTRY CHECKLIST written (REG-15 title rule; R-S09 publish
-   gate consumes the payments config; listings_seller RLS expectations;
-   low-stock DERIVED per OD-1). SECURITY_GUIDELINES storage section updated;
-   PHASE_04 results tracker final; SESSION_CONTEXT + journal.
-6. CI + PR: typecheck · lint · 4 guards · test:unit · full integration ·
-   build. Push; open the consolidated PR feature/phase-04-seller → main
-   ("Phase 04: Seller Onboarding & Store Management") — migrations present,
-   so the RLS-smoke job MUST fire; report its trigger condition. DO NOT
-   MERGE — hold for the review verdict.
-```
-- **Done when:** every DoD line has a verdict; the full onboarding→approval→public-storefront path is proven end-to-end on staging; register + entry checklist written; PR open with RLS-smoke firing; merge held.
+1. DoD LEDGER — one PASS/FAIL verdict per line, evidence each:
+   R-S01 one-store (second application → 23505/R-S01 rejection) ·
+   R-S02 slug unique + URL-safe (Zod pattern + 23505 authoritative) ·
+   R-S03 change-once (second change rejected SERVER-side; REG-33 app-only
+   finding restated) · R-S04 approval gates go-live (see the E2E in step 2) ·
+   R-S05 front+back required · R-S08 resubmit retains documents (row count
+   stays 2 + prior storage object persists at its old path — the T05 model) ·
+   R-S09 banner-only, enforcement cited as Phase-05 publish gate ·
+   OD-4 phone gate proven at BOTH action level (requireVerifiedPhone) and RLS
+   level (RESTRICTIVE seller_profiles_phone_gate biting through the ADR-012
+   INVOKER rpc — cite the T03 phone-NULL-zero-rows test) ·
+   REG-19 role flip service-role column-scoped, LAST ·
+   Binding rules held: no loading.tsx wrapping notFound()-capable segments;
+   pre-checks UX-only/23505 authoritative; PII discipline absolute for
+   seller_documents (no path/filename in any log/Sentry/PostHog — grep-proof).
 
+2. E2E LIFECYCLE (staging, minted users, seeded+cleaned, ZERO residue pasted)
+   — the full path no single task exercised:
+   fresh phone-verified buyer → submit (rows 1+1+2, role='seller',
+   status='pending') → service-role REJECT (set rejected_reason — the T05
+   compound state: status stays 'pending', rejected_reason NOT NULL) →
+   /seller/status renders the rejected banner → resubmit (status compound
+   cleared: rejected_reason NULL, submitted_at refreshed, doc rows still 2,
+   prior objects persist) → service-role APPROVE (legitimate test setup —
+   admin UI is Phase 14): confirm approval must flip BOTH
+   seller_profiles.status AND stores.status to 'active' (the T05 finding was
+   that stores.status never mirrors during reject/resubmit — approval is
+   where it flips; if the flip mechanism doesn't exist yet because it's
+   admin-phase work, PROVE what the correct target state is by setting both
+   via service-role and state that the admin task owns the flip) →
+   middleware routes the active seller to /seller (not /seller/status) →
+   the store is PUBLICLY visible at /store/[slug] (anon, both locales, the
+   Phase-03 storefront renders it) → avatar/cover public URLs resolve.
+   THEN the negative sweep: phone-NULL submit (zero rows, both gate levels);
+   dup slug; dup application; cross-user reads/writes on seller_profiles/
+   stores/seller_documents; docs-bucket anon + other-user denials; admin
+   signed-URL read works; media anon .list() still denied (T01-FIX holds).
+
+3. DB LIVE STATE (MCP read-only): pg_policies for seller_profiles/stores/
+   seller_documents/storage.objects match ERD-verbatim + T01/T01-FIX
+   expectations; both rpcs present, INVOKER, EXECUTE revoked-PUBLIC/granted-
+   authenticated; migration ledger ↔ local 1:1 — paste the count (expect 25);
+   advisor sweep = baseline, no new findings; no drift vs the Phase-03 gate
+   numbers elsewhere.
+
+4. REG-32 RESOLUTION (the authoritative check — inconclusive locally in T04):
+   the PR will run the real types-drift CI gate (supabase gen types --schema
+   betk,betk_analytics + git diff --exit-code). BEFORE pushing, if you can
+   run the same regeneration with CI-equivalent access, do it; otherwise the
+   PR's gate result is the arbiter. If CI regenerates betk.Functions natively
+   → remove the hand-edit, let the generated output stand, close REG-32. If
+   CI also cannot emit betk functions → the hand-maintenance is the standing
+   pattern; REG-32 stays open, documented, with the CI behavior recorded.
+   Budget one fix iteration for this — it is the expected wrinkle.
+
+5. BILINGUAL/THEME: all 7 Phase-04 screens (onboarding, status, /seller
+   landing, store, delivery, returns, payments) AR + /en spot-checked —
+   dir/lang + keyed copy, Guards C/D green (paste final parity); dark =
+   wiring-verified with the honest footnote (interactive flip stays in the
+   pre-launch Playwright basket); UI_SPEC acceptance matrix rows marked.
+
+6. REGISTER + DOCS SYNC:
+   - Close with evidence: REG-10, REG-14 (type-level T01 + runtime exact-
+     shape T07), REG-31. Correct REG-15's row to Phase 05. REG-33: ensure
+     the row states the WHY (future multi-writer paths — Phase-14 admin
+     edits/backfills bypass an app-only guard), owner = first second-writer
+     task or an opportunistic DB-hardening batch.
+   - SECURITY_GUIDELINES storage section — ONE write folding THREE pieces:
+     (a) bucket division: docs private + ≤15-min signed URLs + no UPDATE/
+     DELETE (default-deny backs R-S08 retention) vs media public-read +
+     own-prefix writes + listing denied (T01-FIX); (b) T05 retention
+     semantics: a rejected application's original ID objects persist at
+     their old paths, recoverable by prefix, never GC'd in MVP — accepted
+     PII-lifecycle posture, admin review (Phase 14) should know old paths
+     exist; (c) T06: public media URLs embed the seller uid — accepted
+     id-not-PII posture, consistent with Sentry id-only.
+   - Doc-vs-schema divergence correction: UI_SPEC §3 Seller Onboarding
+     step 4 + Delivery Settings — replace self_deliver/bosta/pickup/remote
+     with the 3-mode {delivery, pickup, remote} shape (REG-14); note the
+     product option (distinguishing courier = OD amendment) was declined by
+     default. Fix the pack's T07 "4 toggles" line the same way (record-only).
+   - ADR-012 confirmed in ADR.md; BETK_DATABASE_SCHEMA.sql carries every
+     Phase-04 policy + both rpcs + storage (verify, don't assume).
+   - Cross-session wizard resume: record the product decision as
+     declined-by-default (sessionStorage in-session only; a draft table
+     would need an OD amendment) unless SESSION_CONTEXT says otherwise.
+   - PHASE-05 ENTRY CHECKLIST (named section): REG-15 bilingual-title Zod
+     rule (title required AR+EN at form layer, title_en stays nullable in
+     DB); R-S09 publish gate CONSUMES stores.payment_methods (the T07
+     banner comment points here); listings/listing_images/listing_tags
+     seller-side WRITE policies — check the ERD §3 map + live pg_policies
+     for what Phase 05 owes (listings_seller exists; children may need
+     owner-write policies — state what you find); low-stock DERIVED (OD-1,
+     no inventory_alerts table); Tabs component → CD-DELTA-4 (Listings
+     Management filter tabs, the T00 deferral); media bucket reuse for
+     listing images (T01 naming decision).
+   - PHASE_04_SELLER.md results tracker final; SESSION_CONTEXT + journal.
+
+7. CI + PUSH (no PR creation — human does it): typecheck · lint · 4 guards ·
+   test:unit · FULL integration suite · build both locales. Push everything.
+   Then paste, for the human: (a) the PR title "Phase 04: Seller Onboarding
+   & Store Management (T01–T07 + REG-31/32/33)" + a body summarizing scope,
+   migrations (list all 5 by version), register deltas, and the RLS-smoke
+   expectation; (b) the explicit note that migrations are present so the R5
+   "RLS smoke (staging)" job MUST fire on the PR — its absence or failure is
+   a FAIL requiring investigation before merge; (c) the REG-32 instruction:
+   check the types-drift job result on the PR — if it fails on the hand-
+   edit, report back BEFORE merging. STOP after pasting. Do not open or
+   merge anything.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ---
 
 ## Definition of Done (phase)
@@ -624,4 +700,4 @@ and-safe fixes stated, else FLAG).
 | T05 status+resubmit | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **CLOSES the T02 carry** — `/seller/status` now exists; smoke proves an authenticated pending seller gets 200 (not the prior 404) both locales (`/en/seller/status` + unprefixed `/seller/status` for AR — AR's `/ar/...` 307s to the unprefixed canonical form per `routing.ts` `as-needed`, unrelated to auth). **State model CONFIRMED WITH CITATIONS (not invented)**: `seller_status` enum has no `'rejected'` member (`BETK_DATABASE_SCHEMA.sql` L41, live-verified zero-drift via `pg_enum`) → "rejected" is the COMPOUND state `status='pending' AND rejected_reason IS NOT NULL`, corroborated independently by `BETK_UI_SPEC.md`'s routing rule grouping pending+rejected into one middleware branch. `seller_documents.uq_seller_doc_type` UNIQUE(seller_id,document_type) (L208) makes a second per-type INSERT impossible → resubmission UPDATEs the 2 existing rows in place (storage_path/review_status='pending'/reviewed_at=NULL/uploaded_at=now()), proven directly by the retention test (row count stays 2, prior storage object still downloadable post-resubmit — R-S08 retention lives at the STORAGE layer, own-prefix bucket has no UPDATE/DELETE policy, not a DB row). `stores.status` does NOT mirror back (never had to — rejection never moved `seller_profiles.status` off `'pending'`). No DB trigger governs the transition (live-verified zero user-defined triggers) — entirely app-layer, in the new rpc. Implemented as **ADR-012-consistent** additive migration `20260720095552_seller_application_resubmit_rpc` (`betk.resubmit_seller_application`, `SECURITY INVOKER`, no client-supplied id — only ever acts on caller's own `auth.uid()` rows; rejected-only guard via `UPDATE ... WHERE status='pending' AND rejected_reason IS NOT NULL; IF NOT FOUND THEN RAISE 'BETK_NOT_REJECTED'`), ledger 24→25 (1:1, source-backfilled), advisor sweep byte-identical to baseline (no new security/perf findings from the new rpc). New `requireActiveUser()` helper (R-A05 status checks, no phone re-check) added to `features/auth`. `resubmitSellerApplication` action: Zod → `requireActiveUser` → server-side prefix-ownership re-check on both doc paths → rpc → `BETK_NOT_REJECTED` mapped to `not_rejected`; Sentry id-only + PostHog `seller_application_resubmitted`, NO doc paths in logs (PII). `/seller/status` RSC page (seller shell): banner per resolved display-status (approved defensive CTA→`/seller` / pending + R-M01 24h SLA badge / rejected + reason + `ResubmitPanel` / suspended restricted / banned defensive) + `submitted_at` display; composes T00 kit (`Alert`/`SLABadge`/`EmptyState`) + `ImageUploader`, **zero `ui/*`/`shared/*` edits** (empty diff). `ResubmitPanel` (client): re-upload via `ImageUploader` → docs bucket own-prefix new timestamped paths (old objects untouched); edit-store link → `/seller/store` (T06, in-scope target). i18n `seller.status.*` both locales (parity 427/427, +35 keys exact match). Integration 7/7 (rejected happy-path incl. **retention proof** [row count=2 + prior objects still downloadable], 4× non-rejected-status guards [never-reviewed pending/active/suspended/banned → `not_rejected` + zero writes], deactivated R-A05 blocked, cross-user isolation [no id param exists — B's call can only ever touch B's own rows, A untouched]). Full CI green: typecheck · lint · 4 guards · unit 82/82 · build (25 routes both locales, `/seller/status` ● SSG-shell/dynamic-per-request like `/account`+`/seller`) · runtime smoke both locales × 4 banner states (pending/rejected/approved/suspended, minted users, real HTML assertions) + T02-carry 200 proof. HOLD — do not start T06 |
 | T06 store profile | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | `/seller/store` profile settings (seller shell, dynamic/authed) — **closes the T05 resubmit "edit store" dangling link**. `getOwnStore` self-scope query (stores_public seller_id branch) + `updateStoreProfile` action (`src/features/store-management/`, "use server", Zod `updateStoreProfileSchema`): `requireActiveUser` (R-A05) → session-uid-pinned own-row (belt+suspenders on top of `stores_manage` RLS) → **SINGLE-TABLE `betk.stores` UPDATE, no rpc** (ADR-012 was for the multi-table submit; one statement = one transaction, stated). **SLUG CHANGE-ONCE (R-S03) server-authoritative:** reads current slug+slug_changed_at, rejects a changed slug when `slug_changed_at IS NOT NULL` BEFORE any write (`slug_locked`), writes `slug`+`slug_changed_at=now()` TOGETHER only when allowed, AND guards the UPDATE with `.is("slug_changed_at", null)` so a race → 0 rows → `slug_locked`; the UI lock is cosmetic. 23505 on `uq_stores_slug` → field-level `slug_taken` (authoritative, R-S02; pre-check UX-only). **REG-33 minted (R-S03 app-only guard):** live DB has NO trigger/CHECK enforcing change-once on `betk.stores` (only chk_store_slug_fmt/uq_stores_slug/uq_stores_seller) — app layer is the sole guard; candidate hardening = a trigger rejecting a slug UPDATE when slug_changed_at IS NOT NULL (no DB object added this task). **MEDIA:** avatar (≥200×200) + cover (≥1200×400) validated client-side (`meetsMinDimensions`, undersized rejected pre-upload) → MEDIA bucket own-prefix (`${uid}/…`) via authenticated browser client → PUBLIC URL stored on `stores.avatar_url/cover_url`; the public URL embeds the uid (accepted id-not-PII posture, T08 SECURITY_GUIDELINES media line). Category primary/secondary → FREE-TEXT columns (picker value as text). Sentry `'store-management'` id-only + PostHog `store_profile_updated`; save toast via `sonner`/Toaster (kit). Composes kit (`Alert`/`ImageUploader`) + ui primitives (Input/Textarea/Button/native select) + a local structural `Field`; **zero `ui/*`/`shared/*` edits** (`git diff d9e480e -- src/components/ui src/components/shared` EMPTY). i18n `seller.store.*` both locales (parity **475/475**, +48 keys each). generateMetadata both locales. VERIFY all green: typecheck · lint (pre-existing warnings only) · 4 guards (i18n 475/475) · unit 82/82 · build (27 routes both locales; `/seller/store` prerendered-shell/dynamic-per-request like `/seller/status`) · integration `store.profile` 5/5 (2 pure dimension + own-row persists every field + cross-user UPDATE denied by stores_manage RLS 0-rows + **SECOND slug change rejected server-side even when the client sends it**) · runtime smoke both locales (minted seller w/ slug_changed_at set → `/seller/store`+`/en/…` 200, dir/lang, seller shell, slug lock indicator rendered, theme wiring). HOLD — do not start T07 |
 | T07 settings ×3 | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Three sibling pages `/seller/store/{delivery,returns,payments}` (seller shell, dynamic/authed), each with a dedicated lean query + client form + single-table `betk.stores` UPDATE action (no rpc — single-table UPDATE is atomically fine, stated). **Delivery:** exactly 3 REG-14 mode toggles {delivery,pickup,remote} (typed `StoreDeliveryOptions`, not reshaped) + min/max days + fee + free threshold + pickup governorate + a separate "ships nationwide" toggle (not a 4th mode); all-modes-off → live `Alert` warning but SAVEABLE (not a save-block — stated + integration-proven); per-governorate est. days flagged (schema has one min/max range, not per-governorate — built the schema's actual shape). **Returns:** `return_policy` Textarea, empty→true NULL (a `?? null` vs `\|\| null` bug was caught by the integration test and fixed); "shown publicly" note (T06's storefront accordion already renders it). **Payments:** instapay/vodafone/orange handles + COD toggle, all-empty → `Alert` banner with a code comment stating R-S09 enforcement is the Phase-05 publish gate, NOT this page. Zod schemas reused verbatim from T04's `storeDeliveryOptionsSchema`/`storePaymentMethodsSchema`. Zero `ui/*`/`shared/*` edits (empty diff vs `bcfbf75`). i18n `seller.store.{delivery,returns,payments}.*` both locales (parity 524/524). Full CI green (typecheck/lint/4 guards/unit 82/82/build 33 routes both locales) + integration `store.settings` 8/8 (exact-shape JSONB round-trips incl. NULL discipline + cross-user RLS denial on all 3 columns) + runtime smoke 24/24 (both locales × 3 pages: 200/dir/lang/shell/exactly-3-mode-toggles/both warning banners). |
-| T08 exit gate | Opus | — | — | — | |
+| T08 exit gate | Opus | ✅ DONE | `feature/phase-04-seller` (docs-only) | HOLD (human opens+merges PR) | **Exit verification + consolidated PR prep. ZERO feature-code changes** (docs-only + one throwaway staging E2E test DELETED pre-commit). **DoD LEDGER all PASS** (R-S01/02/03/04/05/08/09, OD-4 both gate levels, REG-19, binding rules incl. grep-proof PII discipline). **E2E LIFECYCLE (throwaway `_e2e_lifecycle_t08.test.ts`, staging, minted+cleaned, ZERO residue, DELETED):** phone-verified buyer → submit (1+1+2, role=seller, both 'pending') → anon storefront hidden → REJECT (compound: status stays 'pending', rejected_reason set) → resubmit (reason→NULL, submitted_at refreshed, docs still 2 repointed, **v1 objects still downloadable = R-S08**) → APPROVE: `seller_profiles.status`→'active' does NOT auto-flip `stores.status` (**T05 no-mirror finding PROVEN; Phase-14 admin task owns flipping BOTH**) → set stores.status='active' → anon storefront PUBLIC (locale-independent) + avatar public URL resolves; negatives (phone-NULL both levels, cross-user read denied). **DB LIVE STATE (MCP):** ledger **25/25** 1:1; pg_policies verbatim-match ERD + T01/T01-FIX; both rpcs INVOKER + search_path + EXECUTE authenticated-only; advisor sweep = exact baseline (no new findings). **REG-32 stays OPEN** — local typegen inconclusive (MCP public-only; CLI `--linked` degenerate; no access token), `types.ts` untouched → the PR `types-drift` job is the arbiter (human checks). **BILINGUAL/THEME:** 7 screens prerendered both locales, Guard D 524/524, dark=wiring-verified footnote; UI_SPEC matrix marked. **REGISTER+DOCS:** REG-10/14/31 closed; REG-15→Phase 05; REG-33 WHY+owner; SECURITY_GUIDELINES storage fold; UI_SPEC §3 REG-14 3-mode correction; Phase-05 entry checklist (incl. live finding: `listing_images`/`listing_tags` have only public SELECT → Phase 05 owes owner-write policies). **CI FULL GREEN:** typecheck · lint · 4 guards (i18n 524/524) · unit 82/82 · full integration 115 passed/1 skipped · build 33 routes both locales. **FLAG (CI-config, not fixed — outside docs scope):** `ci.yml` build-job fallback bucket names stale (`seller-documents`/`listing-media` vs settled `docs`/`media`) — harmless (build hermetic) but align in a housekeeping window. Branch PUSHED; human opens+merges (RLS-smoke MUST fire — 5 migrations; check types-drift). |

@@ -333,7 +333,8 @@ Pages are grouped by surface area. Every page lists its documenting use case(s) 
 - **Auth gate:** protected (becomes role: seller on submit)
 - **Layout:** AuthShell → wizard (Stepper)
 - **Use case(s):** Create Seller Storefront (WF1); Seller Registration Step 5 (ID upload)
-- **Components:** 5-step `Stepper` — (1) Identity (store name_ar/en, bio), (2) Category (primary + optional secondary, governorate/city), (3) Payment config (instapay_handle, vodafone_cash, orange_cash, cod_enabled), (4) Delivery config (self_deliver/bosta/pickup/remote + est days per gov), (5) National ID upload (front + back). Slug picker with availability check. Submit-for-review.
+- **Components:** 5-step `Stepper` — (1) Identity (store name_ar/en, bio), (2) Category (primary + optional secondary, governorate/city), (3) Payment config (instapay_handle, vodafone_cash, orange_cash, cod_enabled), (4) Delivery config (**3 mode toggles `{delivery, pickup, remote}`** + est delivery days [single min/max range] + default fee — REG-14), (5) National ID upload (front + back). Slug picker with availability check. Submit-for-review.
+  - _REG-14 correction (Phase 04 / T01+T07, 2026-07-20): the live `betk.delivery_preference` enum + `StoreDeliveryOptions.modes` type are the 3 modes `{delivery, pickup, remote}` — NOT the earlier `self_deliver/bosta/pickup/remote` 4-value wording (self-deliver + Bosta both map to the single `delivery` fulfillment mode). Type-level MATCH proven at T01, runtime exact-shape JSONB round-trip proven at T07. The product option of distinguishing courier vs. self-delivery (a 4th mode) was **declined by default** — it would require an OD scope amendment. `ships_nationwide` is a separate boolean field on the delivery settings page, not a 4th mode._
 - **Data requirements:** Creates `seller_profiles` (status='pending', level='bronze', `submitted_at`) and `stores` (seller_id UQ — one store per seller R-S01; slug UQ + URL-safe R-S02; name_ar NN; category_primary; payment_methods/delivery_options JSONB); `seller_documents` (two rows: national_id_front/back, storage_path via signed URL, review_status='pending' — R-S05); `categories` for pickers.
 - **User flows:** Happy — complete 5 steps → submit → `/seller/status` (pending). Edge — slug taken (R-S02); missing required payment method blocks publish later (R-S09); resume incomplete wizard.
 - **Empty state:** N/A (wizard).
@@ -381,7 +382,7 @@ Pages are grouped by surface area. Every page lists its documenting use case(s) 
 - **Auth gate:** role: seller
 - **Layout:** SellerShell
 - **Use case(s):** Manage Delivery Settings
-- **Components:** Toggles (self_deliver, bosta, pickup, remote), per-governorate estimated delivery days, default delivery fee.
+- **Components:** **3 mode toggles `{delivery, pickup, remote}`** (REG-14 — live `StoreDeliveryOptions.modes`, NOT the stale `self_deliver/bosta/pickup/remote` 4-value wording), est delivery days (a single min/max range — the schema has one range, not per-governorate; divergence recorded), default delivery fee, free-delivery threshold, pickup governorate, and a separate `ships_nationwide` toggle (a real field, not a 4th mode).
 - **Data requirements:** `stores.delivery_options` (JSONB) update; used by checkout fee calc and `shipments`.
 - **User flows:** Happy — configure options → save. Edge — disabling all delivery methods warning.
 - **Empty state:** Sensible defaults pre-filled.
@@ -935,13 +936,13 @@ Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL,
 ### Seller (22)
 | Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
 |---|---|---|---|---|
-| Seller Onboarding (5-step) | ☐ | ☐ | ☐ | ☐ |
-| Seller Application Status | ☐ | ☐ | ☐ | ☐ |
-| Seller Dashboard | ☐ | ☐ | ☐ | ☐ |
-| Store Profile Settings | ☐ | ☐ | ☐ | ☐ |
-| Delivery Settings | ☐ | ☐ | ☐ | ☐ |
-| Return Policy Settings | ☐ | ☐ | ☐ | ☐ |
-| Payment Methods Settings | ☐ | ☐ | ☐ | ☐ |
+| Seller Onboarding (5-step) | ✅ | ✅† | ✅ | ✅† |
+| Seller Application Status | ✅ | ✅† | ✅ | ✅† |
+| Seller Dashboard | ✅ | ✅† | ✅ | ✅† |
+| Store Profile Settings | ✅ | ✅† | ✅ | ✅† |
+| Delivery Settings | ✅ | ✅† | ✅ | ✅† |
+| Return Policy Settings | ✅ | ✅† | ✅ | ✅† |
+| Payment Methods Settings | ✅ | ✅† | ✅ | ✅† |
 | Listings Management | ☐ | ☐ | ☐ | ☐ |
 | Create / Edit Listing | ☐ | ☐ | ☐ | ☐ |
 | Stock & Inventory | ☐ | ☐ | ☐ | ☐ |
@@ -957,6 +958,8 @@ Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL,
 | Level Progress | ☐ | ☐ | ☐ | ☐ |
 | Seller Analytics | ☐ | ☐ | ☐ | ☐ |
 | Dispute Detail (Seller) | ☐ | ☐ | ☐ | ☐ |
+
+> **† (Phase 04 / T08, 2026-07-20):** the 7 Phase-04 seller screens (Onboarding, Application Status, Dashboard = `/seller` landing, Store Profile, Delivery, Return Policy, Payment Methods) are marked verified for AR-RTL + EN-LTR at the data/render layer — build prerenders both locales for all 7, i18n Guard D parity 524/524, runtime smoke confirmed `<html lang/dir>` + keyed copy per task. **`✅†` (dark columns) = wiring-verified only**: `next-themes` `.dark` class strategy + `suppressHydrationWarning` are in place, but the interactive light↔dark flip is asserted by code/build, not a live browser toggle — the interactive flip stays in the pre-launch Playwright basket (BL-03/REG-11 precedent). Same honest footnote as the Phase-03 Public/Guest rows.
 
 ### Admin (17 headings — incl. WhatsApp Templates as a merged tab)
 | Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |
