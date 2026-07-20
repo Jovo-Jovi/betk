@@ -2003,6 +2003,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      // REG-32 hand-maintained (Phase 04 / T05) — see submit_seller_application above.
+      resubmit_seller_application: {
+        Args: {
+          p_doc_front_path: string
+          p_doc_back_path: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       auth_provider: "phone" | "google"

@@ -361,30 +361,67 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T05 — /seller/status +
-resubmission. Branch feature/phase-04-seller.
+resubmission (MW2). Branch feature/phase-04-seller (continue; git pull first —
+on top of c9ecacb). Compose-only; seller shell + kit; missing state →
+STOP-and-flag to Claude Design.
 
-Status page (seller shell): banner per seller_profiles.status (pending /
-rejected + rejected_reason / suspended restricted view / approved CTA →
-/seller), R-M01 24h SLA note, submitted_at display. Data via
-getOwnSellerApplication (T03).
+This page CLOSES the T02 carry: middleware has been routing pending/active
+sellers to /seller/status which 404s until now. Confirm in your smoke that a
+pending seller reaching /seller/status gets 200 (not the prior 404), both
+locales — that carry is resolved by this task.
 
-RESUBMIT (MW2, rejected only): CONFIRM the exact state semantics against
-UI_SPEC + ERD before writing — R-S08 says previous documents are RETAINED on
-rejection; determine from the schema whether resubmission INSERTs new
-seller_documents rows (retention = old rows kept) or re-uploads to new
-storage paths with new rows, and what flips status back to 'pending' +
-refreshes submitted_at. STATE the confirmed model with citations; if the
-docs do not pin it, STOP-and-flag — do not invent the state machine.
-Implement per the confirmed model: re-upload via ImageUploader (own-prefix),
-edit-store link (T06 page), resubmitSellerApplication action (Zod,
-requireVerifiedPhone NOT re-required — already a seller — but R-A05 status
-checks apply; rejected-only guard server-side).
+Status page (seller shell, dynamic/authed): banner per seller_profiles.status
+— pending / rejected (+ rejected_reason) / suspended (restricted view) /
+approved (CTA → /seller); R-M01 24h SLA note; submitted_at display. Data via
+getOwnSellerApplication (T03, self-scope RLS). Approved sellers normally never
+land here (middleware routes active → /seller) — render the approved CTA
+defensively for the transition window, do not build a separate flow.
 
-TESTS (integration): rejected seller resubmits → status pending + new docs
-per the confirmed model + old rows retained; non-rejected statuses cannot
-resubmit; cross-user denied. i18n seller.status.* both locales (parity).
-typecheck · lint · 4 guards · test:unit · build · runtime smoke both locales.
-Zero ui/*/shared/* edits. Close-out → commit + push. HOLD.
+RESUBMIT (MW2, rejected-only) — CONFIRM THE STATE MODEL BEFORE WRITING, do NOT
+invent it:
+- R-S08 (pack + UI_SPEC Seller Application Status) says previous documents are
+  RETAINED on rejection. The UI_SPEC entry gives the behavior but NOT the
+  mechanics. Determine from BETK_ERD.md + BETK_DATABASE_SCHEMA.sql:
+  (a) does resubmission INSERT new seller_documents rows (retention = old rows
+      kept alongside), or re-upload to new storage paths with new rows, or
+      overwrite the existing two rows' storage_path + reset review_status?
+  (b) what exactly flips seller_profiles.status back to 'pending' and refreshes
+      submitted_at — and does stores.status mirror it back?
+  (c) is there any DB trigger/constraint governing the rejected→pending
+      transition, or is it app-layer only?
+- STATE the confirmed model WITH CITATIONS (file + line). If the docs do not
+  pin (a)/(b)/(c), STOP-and-flag with the specific ambiguity — do NOT choose a
+  state machine on your own. This is the load-bearing instruction of T05.
+
+Implement per the confirmed model:
+- re-upload via ImageUploader → docs bucket own-prefix (${uid}/… — the T01/T03
+  storage contract; the action re-validates prefix ownership server-side,
+  never accepts a path outside auth.uid()'s prefix).
+- edit-store link points to /seller/store (T06 page — may not exist yet; link
+  target is fine, it's an in-scope route).
+- resubmitSellerApplication action (src/features/seller-onboarding/actions/,
+  "use server", Zod): requireVerifiedPhone() NOT re-required (already a seller)
+  BUT R-A05 status checks apply; rejected-only guard server-side (reject any
+  non-rejected status — do not trust the UI). If the resubmit touches multiple
+  tables (status flip + doc rows), follow the ADR-012 atomicity discipline
+  (INVOKER rpc or the pattern ADR-012 established) — do not hand-roll a
+  non-atomic multi-write that could strand a half-resubmitted state.
+- Sentry ('seller-onboarding', id-only) + PostHog (seller_application_resubmitted
+  or the established event name); NO document paths/filenames in any
+  log/event/error (PII discipline — private bucket).
+
+TESTS (integration, staging, minted users, seeded+cleaned, zero residue):
+rejected seller resubmits → status back to 'pending' + submitted_at refreshed
++ documents per the CONFIRMED model + old rows retained (prove the retention
+directly); non-rejected statuses (pending/active/suspended) CANNOT resubmit
+(server guard, per-status); cross-user denied (B cannot resubmit A's
+application). i18n seller.status.* both locales (paste parity count).
+typecheck · lint · 4 guards · test:unit · build · runtime smoke both locales
+(pending/rejected/approved banner states render; the T02-carry 200 proof).
+Zero ui/*/shared/* edits (diff proof). Close-out → commit + push. HOLD —
+do not start T06.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** every status renders; resubmit follows a CITED state model (or STOPped); R-S08 retention proven; guards green.
 
@@ -517,7 +554,7 @@ and-safe fixes stated, else FLAG).
 | T02 middleware+shell | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Middleware: `/seller/onboarding` → AUTH-ONLY inside the seller gate (buyers reach it; existing sellers bounce per status active→`/seller`, else→`/seller/status`); every other `/seller*` verdict byte-unchanged (runtime gate-regression matrix 5×4×2 pasted — only the 2 onboarding cells differ). Seller shell via `SellerChrome` + `(seller)/layout.tsx` mounting `ConsoleSidebar` (6 in-scope nav items only, no dead routes); `console.*` i18n both locales (parity 318/318). `/seller` empty-state landing (guidance-only CTA, no dead Phase-05 link); chromeless onboarding placeholder in `(seller-onboarding)` group marked for T04; no `/seller/status` page (T05's). Zero `ui/*`/`shared/*` edits. Full CI green (typecheck/lint/4 guards/unit 82/82/build 21 routes both locales) |
 | T03 submit action | Opus | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **ADR-012 = atomic `SECURITY INVOKER` rpc `betk.submit_seller_application`** (NOT sequential+compensation — no `seller_profiles` DELETE policy + non-atomic; NOT `SECURITY DEFINER` — would bypass RLS phone gate REG-10 + add advisor 0029). Migration `20260720083710_seller_application_submit_rpc` (additive, MCP, ledger 23→24 1:1, source-backfilled, advisor sweep byte-identical to baseline). `submitSellerApplication` action: `requireVerifiedPhone` FIRST → server-side prefix-ownership check on both doc paths → atomic rpc (delivery = 3-mode REG-14) → 23505 mapping (`uq_stores_slug`→slug_taken / others→application_exists R-S01→`/seller/status`) → `setUserRole(uid,'seller')` REG-19 helper LAST → Sentry id-only + PostHog, NO doc paths in logs (PII). `getOwnSellerApplication` self-scope query. Integration 7/7 (phone-NULL zero-rows both halves, happy-path exact counts + role flip, **slug-collision NO PARTIAL RESIDUE = ADR-012 rollback proof**, dup R-S01, deactivated R-A05, cross-user isolation); check-zod-coverage green (new action covered); full CI green (23 routes both locales). T02 carries recorded (`/seller/status` 404-until-T05; `(seller-onboarding)` URL-invariance). HOLD — do not start T04 |
 | T04 wizard UI | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | 5-step Stepper wizard at `/seller/onboarding` replacing the T02 placeholder (chromeless `(seller-onboarding)` group, URL unchanged). Composes T00 kit (Stepper/Toggle/Alert/Textarea) + ImageUploader + ui primitives; **zero `ui/*`/`shared/*` edits** (empty diff). Delivery = exactly 3 REG-14 toggles {delivery,pickup,remote} (typed shape, not reshaped); step-5 ID upload → `docs` bucket own-prefix via authenticated browser client (matches T03 prefix re-check), per-file retry, R-S05; slug availability pre-check UX-only (23505 authoritative → field error, stay step 1); per-step Zod = `submitSellerApplicationSchema.pick(...)`; submit routes on typed outcome (ok/application_exists → `/seller/status`). Client-state resume within session (sessionStorage, no draft rows — cross-session FLAGGED as product decision). Non-blocking phone pointer → `/auth/phone` (action gate is hard). i18n `seller.onboarding.*` both locales (parity 392/392) + generateMetadata both locales. VERIFY all green: typecheck · lint · 4 guards · unit 82/82 · build (23 routes both locales) · runtime smoke (forged @supabase/ssr session cookie → both locales 200, dir/lang + Stepper + step-1 + Next). **REG-32 minted (owner T08)** — hand-maintained `betk.Functions` RPC signatures; 5-min types-drift check INCONCLUSIVE in-env (degenerate `gen types --linked` + public-only MCP typegen) → REG-32 stands, hand-edit retained (load-bearing) |
-| T05 status+resubmit | Sonnet | — | — | — | |
+| T05 status+resubmit | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **CLOSES the T02 carry** — `/seller/status` now exists; smoke proves an authenticated pending seller gets 200 (not the prior 404) both locales (`/en/seller/status` + unprefixed `/seller/status` for AR — AR's `/ar/...` 307s to the unprefixed canonical form per `routing.ts` `as-needed`, unrelated to auth). **State model CONFIRMED WITH CITATIONS (not invented)**: `seller_status` enum has no `'rejected'` member (`BETK_DATABASE_SCHEMA.sql` L41, live-verified zero-drift via `pg_enum`) → "rejected" is the COMPOUND state `status='pending' AND rejected_reason IS NOT NULL`, corroborated independently by `BETK_UI_SPEC.md`'s routing rule grouping pending+rejected into one middleware branch. `seller_documents.uq_seller_doc_type` UNIQUE(seller_id,document_type) (L208) makes a second per-type INSERT impossible → resubmission UPDATEs the 2 existing rows in place (storage_path/review_status='pending'/reviewed_at=NULL/uploaded_at=now()), proven directly by the retention test (row count stays 2, prior storage object still downloadable post-resubmit — R-S08 retention lives at the STORAGE layer, own-prefix bucket has no UPDATE/DELETE policy, not a DB row). `stores.status` does NOT mirror back (never had to — rejection never moved `seller_profiles.status` off `'pending'`). No DB trigger governs the transition (live-verified zero user-defined triggers) — entirely app-layer, in the new rpc. Implemented as **ADR-012-consistent** additive migration `20260720095552_seller_application_resubmit_rpc` (`betk.resubmit_seller_application`, `SECURITY INVOKER`, no client-supplied id — only ever acts on caller's own `auth.uid()` rows; rejected-only guard via `UPDATE ... WHERE status='pending' AND rejected_reason IS NOT NULL; IF NOT FOUND THEN RAISE 'BETK_NOT_REJECTED'`), ledger 24→25 (1:1, source-backfilled), advisor sweep byte-identical to baseline (no new security/perf findings from the new rpc). New `requireActiveUser()` helper (R-A05 status checks, no phone re-check) added to `features/auth`. `resubmitSellerApplication` action: Zod → `requireActiveUser` → server-side prefix-ownership re-check on both doc paths → rpc → `BETK_NOT_REJECTED` mapped to `not_rejected`; Sentry id-only + PostHog `seller_application_resubmitted`, NO doc paths in logs (PII). `/seller/status` RSC page (seller shell): banner per resolved display-status (approved defensive CTA→`/seller` / pending + R-M01 24h SLA badge / rejected + reason + `ResubmitPanel` / suspended restricted / banned defensive) + `submitted_at` display; composes T00 kit (`Alert`/`SLABadge`/`EmptyState`) + `ImageUploader`, **zero `ui/*`/`shared/*` edits** (empty diff). `ResubmitPanel` (client): re-upload via `ImageUploader` → docs bucket own-prefix new timestamped paths (old objects untouched); edit-store link → `/seller/store` (T06, in-scope target). i18n `seller.status.*` both locales (parity 427/427, +35 keys exact match). Integration 7/7 (rejected happy-path incl. **retention proof** [row count=2 + prior objects still downloadable], 4× non-rejected-status guards [never-reviewed pending/active/suspended/banned → `not_rejected` + zero writes], deactivated R-A05 blocked, cross-user isolation [no id param exists — B's call can only ever touch B's own rows, A untouched]). Full CI green: typecheck · lint · 4 guards · unit 82/82 · build (25 routes both locales, `/seller/status` ● SSG-shell/dynamic-per-request like `/account`+`/seller`) · runtime smoke both locales × 4 banner states (pending/rejected/approved/suspended, minted users, real HTML assertions) + T02-carry 200 proof. HOLD — do not start T06 |
 | T06 store profile | Sonnet | — | — | — | |
 | T07 settings ×3 | Sonnet | — | — | — | |
 | T08 exit gate | Opus | — | — | — | |

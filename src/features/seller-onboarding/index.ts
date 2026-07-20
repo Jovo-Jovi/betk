@@ -19,3 +19,11 @@ export type {
 // T03 — own-application read (status / resume; T05 consumes it).
 export { getOwnSellerApplication } from "./queries/getOwnSellerApplication";
 export type { OwnSellerApplication } from "./queries/getOwnSellerApplication";
+
+// T05 — rejected-only resubmit Server Action (MW2, R-S08). Same ADR-012
+// atomicity discipline as submitSellerApplication (one SECURITY INVOKER rpc).
+export { resubmitSellerApplication } from "./actions/resubmitSellerApplication";
+export type {
+  ResubmitSellerApplicationInput,
+  ResubmitSellerApplicationResult,
+} from "@/validations/sellerOnboarding";

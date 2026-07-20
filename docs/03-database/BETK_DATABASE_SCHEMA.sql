@@ -1520,3 +1520,86 @@ REVOKE ALL ON FUNCTION betk.submit_seller_application(
 GRANT EXECUTE ON FUNCTION betk.submit_seller_application(
   TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT, NUMERIC, TEXT, TEXT
 ) TO authenticated;
+
+-- ============================================================
+-- SELLER APPLICATION RESUBMIT RPC (Phase 04 / T05, ADR-012 pattern)
+-- Migration 20260720095552_seller_application_resubmit_rpc.sql.
+--
+-- CONFIRMED STATE MODEL (T05 citations):
+--   * seller_status enum = {pending, active, suspended, banned} ONLY (see the
+--     CREATE TYPE above) -- no 'rejected' member, live-verified via pg_enum
+--     with zero drift. "Rejected" is therefore the COMPOUND state
+--     status='pending' AND rejected_reason IS NOT NULL. BETK_UI_SPEC.md's
+--     routing rule ("pending/rejected -> /seller/status", distinct from
+--     "suspended/banned -> restricted view") groups pending+rejected into one
+--     branch, corroborating this reading independently of the DB. Resubmit
+--     therefore does NOT change `status` (it never left 'pending'); it only
+--     clears rejected_reason back to NULL and refreshes submitted_at.
+--   * seller_documents' UNIQUE (seller_id, document_type) (uq_seller_doc_type
+--     above) makes a second per-doc-type INSERT impossible (unique_violation
+--     -- the same exception submit_seller_application maps to
+--     BETK_APPLICATION_EXISTS). Resubmission therefore UPDATEs the two
+--     existing rows in place: overwrite storage_path, reset
+--     review_status='pending', clear reviewed_at, refresh uploaded_at.
+--   * No DB trigger/constraint governs this transition (live-verified: zero
+--     user-defined triggers on seller_profiles/seller_documents/stores) --
+--     entirely app-layer, implemented here.
+--   * stores.status is NOT touched -- it only ever mirrors seller status at
+--     submit time ('pending' literal above) and a rejection never moves
+--     seller_profiles.status away from 'pending', so nothing to mirror back.
+--   * Storage-OBJECT retention (R-S08) happens at the STORAGE layer (docs
+--     bucket has no UPDATE/DELETE policy -- see "docs = PRIVATE" above): each
+--     resubmit upload lands at a NEW object path under the same own-prefix;
+--     the prior object is intentionally left in place. This rpc only
+--     repoints the DB row's storage_path to the new object.
+--
+-- SECURITY INVOKER: no client-supplied id anywhere -- the function only ever
+-- acts on the caller's own auth.uid() rows (sp_update / sdoc_own enforce
+-- ownership naturally); cross-user access has no code path to attempt.
+-- ============================================================
+CREATE OR REPLACE FUNCTION betk.resubmit_seller_application(
+  p_doc_front_path TEXT,
+  p_doc_back_path  TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = betk, public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'BETK_NOT_AUTHENTICATED';
+  END IF;
+
+  -- Rejected-only guard, SERVER-SIDE (never trust the caller): only a row
+  -- that is status='pending' AND rejected_reason IS NOT NULL qualifies.
+  UPDATE betk.seller_profiles
+  SET rejected_reason = NULL,
+      submitted_at = now()
+  WHERE id = v_uid
+    AND status = 'pending'
+    AND rejected_reason IS NOT NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BETK_NOT_REJECTED';
+  END IF;
+
+  UPDATE betk.seller_documents
+  SET storage_path = p_doc_front_path,
+      review_status = 'pending',
+      reviewed_at = NULL,
+      uploaded_at = now()
+  WHERE seller_id = v_uid AND document_type = 'national_id_front';
+
+  UPDATE betk.seller_documents
+  SET storage_path = p_doc_back_path,
+      review_status = 'pending',
+      reviewed_at = NULL,
+      uploaded_at = now()
+  WHERE seller_id = v_uid AND document_type = 'national_id_back';
+END;
+$$;
+REVOKE ALL ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) TO authenticated;

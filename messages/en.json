@@ -569,6 +569,57 @@
         "message": "You'll need a verified phone number to complete your store setup.",
         "link": "Add your phone number"
       }
+    },
+    "status": {
+      "metaTitle": "Application status",
+      "title": "Application status",
+      "submittedAtLabel": "Submitted on {date}",
+      "empty": {
+        "message": "No application found",
+        "hint": "Start your seller application to open a store on BETK."
+      },
+      "approved": {
+        "title": "Your store is live",
+        "message": "Your application has been approved. Head to your dashboard to start managing your store.",
+        "cta": "Go to dashboard"
+      },
+      "pending": {
+        "title": "Under review",
+        "message": "Your application is being reviewed. We'll let you know as soon as there's an update.",
+        "slaNote": "Applications are typically reviewed within 24 hours.",
+        "slaRemaining": "{hours}h remaining",
+        "slaBreached": "Review is taking longer than usual — thanks for your patience."
+      },
+      "rejected": {
+        "title": "Changes needed",
+        "reasonLabel": "Reason",
+        "message": "Your application wasn't approved this time. Review the reason below, update your documents if needed, and resubmit."
+      },
+      "suspended": {
+        "title": "Store suspended",
+        "message": "Your store has been temporarily suspended. Contact support for more information."
+      },
+      "banned": {
+        "title": "Store banned",
+        "message": "Your store has been permanently banned from BETK."
+      },
+      "resubmit": {
+        "title": "Resubmit your documents",
+        "intro": "Upload your national ID again (front and back) to request a new review.",
+        "frontLabel": "National ID — front",
+        "frontHint": "A clear photo of the front of the card.",
+        "backLabel": "National ID — back",
+        "backHint": "A clear photo of the back of the card.",
+        "uploadLabel": "Tap to choose an image",
+        "uploaded": "Uploaded",
+        "uploadError": "Upload failed, please try again.",
+        "retry": "Retry",
+        "bothRequired": "Both ID photos (front and back) are required before resubmitting.",
+        "editStore": "Edit store details",
+        "submit": "Resubmit for review",
+        "submitting": "Resubmitting…",
+        "failed": "Couldn't resubmit your application, please try again."
+      }
     }
   }
 }

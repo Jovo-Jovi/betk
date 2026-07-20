@@ -117,3 +117,38 @@ export type SubmitSellerApplicationResult =
         | "invalid"
         | "error";
     };
+
+/**
+ * Resubmit payload (Phase 04 / T05, MW2) — re-upload only. The confirmed state
+ * model (see `resubmit_seller_application` rpc, BETK_DATABASE_SCHEMA.sql)
+ * UPDATEs the caller's own two existing `seller_documents` rows in place
+ * (uq_seller_doc_type forbids a second INSERT per doc_type); no store/profile
+ * fields are re-submitted here — the "edit store" link is a separate route
+ * (/seller/store, T06). Both paths must be under the caller's OWN prefix
+ * (re-verified server-side, same discipline as `submitSellerApplicationSchema`).
+ */
+export const resubmitSellerApplicationSchema = z.object({
+  docFrontPath: storageObjectPathSchema,
+  docBackPath: storageObjectPathSchema,
+});
+
+export type ResubmitSellerApplicationInput = z.input<typeof resubmitSellerApplicationSchema>;
+export type ResubmitSellerApplicationParsed = z.infer<typeof resubmitSellerApplicationSchema>;
+
+/**
+ * Discriminated result of `resubmitSellerApplication`. Never throws to the
+ * client; the T05 status page routes on `reason`:
+ *   - unauthenticated  → /auth/login
+ *   - blocked          → /blocked (R-A05 deactivated/suspended)
+ *   - not_rejected     → the server-side rejected-only guard bit (status
+ *                         changed underneath the caller, e.g. already
+ *                         resubmitted in another tab) — refresh the page
+ *   - invalid          → inline validation error (Zod / path ownership)
+ *   - error            → generic inline error
+ */
+export type ResubmitSellerApplicationResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "unauthenticated" | "blocked" | "not_rejected" | "invalid" | "error";
+    };
