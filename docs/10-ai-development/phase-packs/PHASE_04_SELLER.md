@@ -493,25 +493,59 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 - **Prompt:**
 ```
 Read SESSION_CONTEXT.md, then execute Phase 04 / T07 — the three store
-settings pages. Branch feature/phase-04-seller. One window, three sibling
-forms, one action file each (Zod, stores_manage RLS, own-row).
+settings pages. Branch feature/phase-04-seller (continue; git pull first —
+on top of bcfbf75). One window, three sibling forms, one action file each
+(Zod, stores_manage RLS, own-row, authenticated cookie client). Compose-only;
+seller shell + kit; missing state → STOP-and-flag to Claude Design.
 
-/seller/store/delivery: 4 mode toggles (REG-14-verified StoreDeliveryOptions
-shape — consume the typed interface, no reshaping), per-governorate est days,
-default fee; disabling ALL modes → warning (spec edge), still saveable if the
-spec doesn't forbid it — state which. /seller/store/returns: return_policy
-text editor, NULL allowed, placeholder template suggestion, "shown publicly on
-your storefront" note (T06-Phase-03 accordion renders it). /seller/store/
-payments: instapay/vodafone/orange handles + COD toggle; "add a payment
-method to start selling" warning banner while all empty; R-S09 enforcement
-itself is the Phase 05 publish gate — here it's config + banner ONLY (say so
-in a code comment at the banner).
+FLAGGED EXPANSION (justified by repo state, supersedes the pack's canonical
+line): the pack says "4 mode toggles" for delivery, but T01 live-verified the
+schema — the delivery_preference enum + StoreDeliveryOptions type are exactly
+THREE modes {delivery, pickup, remote} (REG-14, closed with evidence). The
+self_deliver/bosta/pickup/remote 4-value wording is a doc-vs-schema divergence
+owned by T08's docs sync. Build 3 toggles, consume the typed
+StoreDeliveryOptions interface, do NOT reshape it.
 
-i18n: extend seller.store.* both locales (parity count). TESTS: each form
-round-trips its JSONB/text under RLS; cross-user denied; delivery shape
-matches the REG-14 interface exactly. typecheck · lint · 4 guards ·
-test:unit · build · smoke: all three pages AR + /en, both themes wiring.
-Zero ui/*/shared/* edits. Close-out → commit + push. HOLD.
+/seller/store/delivery: 3 mode toggles {delivery, pickup, remote} (Toggle
+kit, typed StoreDeliveryOptions shape — no reshaping), per-governorate est
+days, default fee. Disabling ALL modes → warning (Alert kit, spec edge). The
+UI_SPEC Delivery Settings entry says "disabling all delivery methods warning"
+but does NOT say it blocks save — so still SAVEABLE with a warning, unless you
+find a spec line forbidding it; STATE which (saveable-with-warning is the
+default reading). Persists to stores.delivery_options JSONB.
+
+/seller/store/returns: return_policy text editor (Textarea kit), NULL allowed
+(empty → NULL, per schema return_policy TEXT NULL), placeholder template
+suggestion, "shown publicly on your storefront" note (the Phase-03 T06
+storefront accordion renders it). Persists to stores.return_policy TEXT.
+
+/seller/store/payments: instapay_handle / vodafone_cash / orange_cash handles
++ cod_enabled (Toggle) — display handles, not secrets (render the spec note).
+"Add a payment method to start selling" warning banner (Alert kit) while all
+methods empty. R-S09 (≥1 method required) ENFORCEMENT is the Phase-05 publish
+gate, NOT here — this page is config + banner ONLY; state that in a code
+comment at the banner so a future reader doesn't mistake the banner for
+enforcement. Persists to stores.payment_methods JSONB (StorePaymentMethods
+type).
+
+Three action files (src/features/store-management/actions/ or the established
+folder, "use server", Zod each): single-table stores UPDATE, own-row (RLS +
+server-verified uid), Sentry (id-only) + PostHog + save toast (Toaster kit).
+Single-table updates → atomically fine, no rpc.
+
+i18n: extend seller.store.* BOTH locales (paste parity count). generateMetadata
+each page both locales. VERIFY: typecheck · lint · 4 guards · test:unit ·
+build (both locales). Runtime smoke: all three pages AR + /en → 200, correct
+dir/lang, seller shell rendered, both themes wiring; delivery shows exactly 3
+toggles; all-modes-off warning renders; payments empty-state banner renders.
+TESTS (integration, staging, seeded+cleaned): each form round-trips its exact
+schema shape under RLS (delivery JSONB matches StoreDeliveryOptions EXACTLY —
+3 keys, no extra/missing; payments JSONB matches StorePaymentMethods;
+return_policy text + NULL round-trip); cross-user update denied by
+stores_manage RLS. Zero ui/*/shared/* edits (diff proof). Close-out → commit
++ push. HOLD — do not start T08.
+
+Env: Windows/PowerShell — no &&. No credentials in output or chat.
 ```
 - **Done when:** three forms persist their exact schema shapes; R-S09 banner present with enforcement explicitly deferred; parity reported.
 
@@ -589,5 +623,5 @@ and-safe fixes stated, else FLAG).
 | T04 wizard UI | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | 5-step Stepper wizard at `/seller/onboarding` replacing the T02 placeholder (chromeless `(seller-onboarding)` group, URL unchanged). Composes T00 kit (Stepper/Toggle/Alert/Textarea) + ImageUploader + ui primitives; **zero `ui/*`/`shared/*` edits** (empty diff). Delivery = exactly 3 REG-14 toggles {delivery,pickup,remote} (typed shape, not reshaped); step-5 ID upload → `docs` bucket own-prefix via authenticated browser client (matches T03 prefix re-check), per-file retry, R-S05; slug availability pre-check UX-only (23505 authoritative → field error, stay step 1); per-step Zod = `submitSellerApplicationSchema.pick(...)`; submit routes on typed outcome (ok/application_exists → `/seller/status`). Client-state resume within session (sessionStorage, no draft rows — cross-session FLAGGED as product decision). Non-blocking phone pointer → `/auth/phone` (action gate is hard). i18n `seller.onboarding.*` both locales (parity 392/392) + generateMetadata both locales. VERIFY all green: typecheck · lint · 4 guards · unit 82/82 · build (23 routes both locales) · runtime smoke (forged @supabase/ssr session cookie → both locales 200, dir/lang + Stepper + step-1 + Next). **REG-32 minted (owner T08)** — hand-maintained `betk.Functions` RPC signatures; 5-min types-drift check INCONCLUSIVE in-env (degenerate `gen types --linked` + public-only MCP typegen) → REG-32 stands, hand-edit retained (load-bearing) |
 | T05 status+resubmit | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | **CLOSES the T02 carry** — `/seller/status` now exists; smoke proves an authenticated pending seller gets 200 (not the prior 404) both locales (`/en/seller/status` + unprefixed `/seller/status` for AR — AR's `/ar/...` 307s to the unprefixed canonical form per `routing.ts` `as-needed`, unrelated to auth). **State model CONFIRMED WITH CITATIONS (not invented)**: `seller_status` enum has no `'rejected'` member (`BETK_DATABASE_SCHEMA.sql` L41, live-verified zero-drift via `pg_enum`) → "rejected" is the COMPOUND state `status='pending' AND rejected_reason IS NOT NULL`, corroborated independently by `BETK_UI_SPEC.md`'s routing rule grouping pending+rejected into one middleware branch. `seller_documents.uq_seller_doc_type` UNIQUE(seller_id,document_type) (L208) makes a second per-type INSERT impossible → resubmission UPDATEs the 2 existing rows in place (storage_path/review_status='pending'/reviewed_at=NULL/uploaded_at=now()), proven directly by the retention test (row count stays 2, prior storage object still downloadable post-resubmit — R-S08 retention lives at the STORAGE layer, own-prefix bucket has no UPDATE/DELETE policy, not a DB row). `stores.status` does NOT mirror back (never had to — rejection never moved `seller_profiles.status` off `'pending'`). No DB trigger governs the transition (live-verified zero user-defined triggers) — entirely app-layer, in the new rpc. Implemented as **ADR-012-consistent** additive migration `20260720095552_seller_application_resubmit_rpc` (`betk.resubmit_seller_application`, `SECURITY INVOKER`, no client-supplied id — only ever acts on caller's own `auth.uid()` rows; rejected-only guard via `UPDATE ... WHERE status='pending' AND rejected_reason IS NOT NULL; IF NOT FOUND THEN RAISE 'BETK_NOT_REJECTED'`), ledger 24→25 (1:1, source-backfilled), advisor sweep byte-identical to baseline (no new security/perf findings from the new rpc). New `requireActiveUser()` helper (R-A05 status checks, no phone re-check) added to `features/auth`. `resubmitSellerApplication` action: Zod → `requireActiveUser` → server-side prefix-ownership re-check on both doc paths → rpc → `BETK_NOT_REJECTED` mapped to `not_rejected`; Sentry id-only + PostHog `seller_application_resubmitted`, NO doc paths in logs (PII). `/seller/status` RSC page (seller shell): banner per resolved display-status (approved defensive CTA→`/seller` / pending + R-M01 24h SLA badge / rejected + reason + `ResubmitPanel` / suspended restricted / banned defensive) + `submitted_at` display; composes T00 kit (`Alert`/`SLABadge`/`EmptyState`) + `ImageUploader`, **zero `ui/*`/`shared/*` edits** (empty diff). `ResubmitPanel` (client): re-upload via `ImageUploader` → docs bucket own-prefix new timestamped paths (old objects untouched); edit-store link → `/seller/store` (T06, in-scope target). i18n `seller.status.*` both locales (parity 427/427, +35 keys exact match). Integration 7/7 (rejected happy-path incl. **retention proof** [row count=2 + prior objects still downloadable], 4× non-rejected-status guards [never-reviewed pending/active/suspended/banned → `not_rejected` + zero writes], deactivated R-A05 blocked, cross-user isolation [no id param exists — B's call can only ever touch B's own rows, A untouched]). Full CI green: typecheck · lint · 4 guards · unit 82/82 · build (25 routes both locales, `/seller/status` ● SSG-shell/dynamic-per-request like `/account`+`/seller`) · runtime smoke both locales × 4 banner states (pending/rejected/approved/suspended, minted users, real HTML assertions) + T02-carry 200 proof. HOLD — do not start T06 |
 | T06 store profile | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | `/seller/store` profile settings (seller shell, dynamic/authed) — **closes the T05 resubmit "edit store" dangling link**. `getOwnStore` self-scope query (stores_public seller_id branch) + `updateStoreProfile` action (`src/features/store-management/`, "use server", Zod `updateStoreProfileSchema`): `requireActiveUser` (R-A05) → session-uid-pinned own-row (belt+suspenders on top of `stores_manage` RLS) → **SINGLE-TABLE `betk.stores` UPDATE, no rpc** (ADR-012 was for the multi-table submit; one statement = one transaction, stated). **SLUG CHANGE-ONCE (R-S03) server-authoritative:** reads current slug+slug_changed_at, rejects a changed slug when `slug_changed_at IS NOT NULL` BEFORE any write (`slug_locked`), writes `slug`+`slug_changed_at=now()` TOGETHER only when allowed, AND guards the UPDATE with `.is("slug_changed_at", null)` so a race → 0 rows → `slug_locked`; the UI lock is cosmetic. 23505 on `uq_stores_slug` → field-level `slug_taken` (authoritative, R-S02; pre-check UX-only). **REG-33 minted (R-S03 app-only guard):** live DB has NO trigger/CHECK enforcing change-once on `betk.stores` (only chk_store_slug_fmt/uq_stores_slug/uq_stores_seller) — app layer is the sole guard; candidate hardening = a trigger rejecting a slug UPDATE when slug_changed_at IS NOT NULL (no DB object added this task). **MEDIA:** avatar (≥200×200) + cover (≥1200×400) validated client-side (`meetsMinDimensions`, undersized rejected pre-upload) → MEDIA bucket own-prefix (`${uid}/…`) via authenticated browser client → PUBLIC URL stored on `stores.avatar_url/cover_url`; the public URL embeds the uid (accepted id-not-PII posture, T08 SECURITY_GUIDELINES media line). Category primary/secondary → FREE-TEXT columns (picker value as text). Sentry `'store-management'` id-only + PostHog `store_profile_updated`; save toast via `sonner`/Toaster (kit). Composes kit (`Alert`/`ImageUploader`) + ui primitives (Input/Textarea/Button/native select) + a local structural `Field`; **zero `ui/*`/`shared/*` edits** (`git diff d9e480e -- src/components/ui src/components/shared` EMPTY). i18n `seller.store.*` both locales (parity **475/475**, +48 keys each). generateMetadata both locales. VERIFY all green: typecheck · lint (pre-existing warnings only) · 4 guards (i18n 475/475) · unit 82/82 · build (27 routes both locales; `/seller/store` prerendered-shell/dynamic-per-request like `/seller/status`) · integration `store.profile` 5/5 (2 pure dimension + own-row persists every field + cross-user UPDATE denied by stores_manage RLS 0-rows + **SECOND slug change rejected server-side even when the client sends it**) · runtime smoke both locales (minted seller w/ slug_changed_at set → `/seller/store`+`/en/…` 200, dir/lang, seller shell, slug lock indicator rendered, theme wiring). HOLD — do not start T07 |
-| T07 settings ×3 | Sonnet | — | — | — | |
+| T07 settings ×3 | Sonnet | ✅ DONE | `feature/phase-04-seller` | HOLD (review) | Three sibling pages `/seller/store/{delivery,returns,payments}` (seller shell, dynamic/authed), each with a dedicated lean query + client form + single-table `betk.stores` UPDATE action (no rpc — single-table UPDATE is atomically fine, stated). **Delivery:** exactly 3 REG-14 mode toggles {delivery,pickup,remote} (typed `StoreDeliveryOptions`, not reshaped) + min/max days + fee + free threshold + pickup governorate + a separate "ships nationwide" toggle (not a 4th mode); all-modes-off → live `Alert` warning but SAVEABLE (not a save-block — stated + integration-proven); per-governorate est. days flagged (schema has one min/max range, not per-governorate — built the schema's actual shape). **Returns:** `return_policy` Textarea, empty→true NULL (a `?? null` vs `\|\| null` bug was caught by the integration test and fixed); "shown publicly" note (T06's storefront accordion already renders it). **Payments:** instapay/vodafone/orange handles + COD toggle, all-empty → `Alert` banner with a code comment stating R-S09 enforcement is the Phase-05 publish gate, NOT this page. Zod schemas reused verbatim from T04's `storeDeliveryOptionsSchema`/`storePaymentMethodsSchema`. Zero `ui/*`/`shared/*` edits (empty diff vs `bcfbf75`). i18n `seller.store.{delivery,returns,payments}.*` both locales (parity 524/524). Full CI green (typecheck/lint/4 guards/unit 82/82/build 33 routes both locales) + integration `store.settings` 8/8 (exact-shape JSONB round-trips incl. NULL discipline + cross-user RLS denial on all 3 columns) + runtime smoke 24/24 (both locales × 3 pages: 200/dir/lang/shell/exactly-3-mode-toggles/both warning banners). |
 | T08 exit gate | Opus | — | — | — | |

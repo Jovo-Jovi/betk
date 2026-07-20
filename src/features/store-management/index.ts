@@ -9,3 +9,14 @@
 export { getOwnStore } from "./queries/getOwnStore";
 export type { OwnStore, StoreManagementClient } from "./queries/getOwnStore";
 export { updateStoreProfile } from "./actions/updateStoreProfile";
+
+// T07 — delivery / returns / payments settings.
+export { getOwnStoreDelivery } from "./queries/getOwnStoreDelivery";
+export type { OwnStoreDelivery } from "./queries/getOwnStoreDelivery";
+export { getOwnStoreReturns } from "./queries/getOwnStoreReturns";
+export type { OwnStoreReturns } from "./queries/getOwnStoreReturns";
+export { getOwnStorePayments } from "./queries/getOwnStorePayments";
+export type { OwnStorePayments } from "./queries/getOwnStorePayments";
+export { updateStoreDelivery } from "./actions/updateStoreDelivery";
+export { updateStoreReturns } from "./actions/updateStoreReturns";
+export { updateStorePayments } from "./actions/updateStorePayments";

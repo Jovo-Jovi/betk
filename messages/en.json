@@ -675,6 +675,69 @@
         "taken": "This link is already in use — pick another",
         "tooSmall": "Image is too small — use a larger one.",
         "uploadFailed": "Upload failed, please try again."
+      },
+      "delivery": {
+        "metaTitle": "Delivery settings",
+        "title": "Delivery settings",
+        "intro": "Choose the delivery methods available for your store and their default fees.",
+        "modesTitle": "Delivery methods",
+        "modes": {
+          "delivery": "Delivery",
+          "pickup": "Pickup from store",
+          "remote": "Remote service"
+        },
+        "minDaysLabel": "Min delivery time (days)",
+        "maxDaysLabel": "Max delivery time (days)",
+        "feeLabel": "Default delivery fee (EGP)",
+        "feeHint": "Leave empty if delivery is free.",
+        "freeThresholdLabel": "Free delivery threshold (EGP)",
+        "freeThresholdHint": "Delivery becomes free once the order total passes this amount. Optional.",
+        "pickupGovLabel": "Pickup governorate",
+        "pickupGovHint": "For pickup from your store.",
+        "pickupGovPlaceholder": "Choose a governorate",
+        "shipsNationwideLabel": "Ships to all governorates",
+        "allModesOffWarning": "No delivery method is enabled — buyers won't be able to receive their orders. You can still save now and enable a method later.",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Delivery settings saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
+      },
+      "returns": {
+        "metaTitle": "Return policy",
+        "title": "Return policy",
+        "label": "Return policy text",
+        "hint": "This policy is shown publicly on your storefront page.",
+        "placeholder": "e.g. Items can be returned within 7 days of delivery, provided they're in original condition…",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Return policy saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
+      },
+      "payments": {
+        "metaTitle": "Payment methods",
+        "title": "Payment methods",
+        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "instapayLabel": "InstaPay handle",
+        "instapayPlaceholder": "Username or number",
+        "vodafoneLabel": "Vodafone Cash",
+        "vodafonePlaceholder": "01xxxxxxxxx",
+        "orangeLabel": "Orange Cash",
+        "orangePlaceholder": "01xxxxxxxxx",
+        "codLabel": "Cash on delivery",
+        "emptyWarning": "Add at least one payment method to start selling.",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Payment methods saved",
+        "saveFailed": "Couldn't save your changes, please try again.",
+        "errors": {
+          "invalid": "Invalid value"
+        }
       }
     }
   }
