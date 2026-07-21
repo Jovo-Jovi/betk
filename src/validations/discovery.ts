@@ -140,3 +140,30 @@ export function decodeListingCursor(raw: string | undefined): ListingCursor | nu
     return null;
   }
 }
+
+/* ── Category-listings API request (GET /api/category-listings) — PERF-02 ────
+ * The `/category/[slug]` page is ISR-cached (revalidate 60) and renders page 1
+ * only; the "load more" control is an in-place client append that calls this
+ * public, anon, read-only handler. Inputs are validated here BEFORE any DB
+ * call — the handler file imports this schema (CI check-zod-coverage), and the
+ * validation is the real defensive boundary for a public URL.
+ *
+ * `cursor` is OPAQUE to callers but MUST decode to a well-formed keyset cursor:
+ * a garbage/tampered cursor fails validation here → the handler returns 400,
+ * rather than silently degrading to "page 1" (which would mask client bugs and
+ * make the append loop repeat the first page forever). `locale` is validated
+ * for contract completeness; the handler returns raw bilingual rows and the
+ * client localizes with its own `useLocale()`.
+ */
+export const categoryListingsRequestSchema = z.object({
+  category: z.string().uuid(),
+  cursor: z
+    .string()
+    .min(1)
+    .optional()
+    .refine((c) => c === undefined || decodeListingCursor(c) !== null, {
+      message: "malformed cursor",
+    }),
+  locale: z.enum(["ar", "en"]).optional(),
+});
+export type CategoryListingsRequest = z.infer<typeof categoryListingsRequestSchema>;

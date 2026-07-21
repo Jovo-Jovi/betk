@@ -64,6 +64,8 @@ Authorization is enforced in the database via RLS (`BETK_ERD.md §3`), not only 
 
 PgBouncer (Supabase pooler) from day 1, TRANSACTION mode for requests / SESSION mode for jobs. Cache homepage endpoint 60s and `rating_aggregates` 5-min (Edge/Redis). All 41 non-constraint indexes live (`BETK_ERD.md §4`; over-provisioned vs the original 34 estimate, none missing). Section-level degradation (independent homepage strips). Search safe to ~500K listings on tsvector+GIN; revisit at scale.
 
+**Per-route caching posture (static / ISR-60 / dynamic), the anon-vs-cookie client rule, the middleware guest fast-path contract, and the standing REG-37 items → [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md)** (PERF-01/02). Note: the "`rating_aggregates` 5-min" line above is the C3 design target; in the implemented Next App-Router caching it inherits the page's 60s ISR TTL (no separate window) — REG-37, tracked there.
+
 ## 8. Pre-launch architecture conditions (mandatory — C3 §8.5)
 
 1. Address all 5 security risks (§8.2). 2. PgBouncer enabled. 3. `seller_documents` bucket PRIVATE. 4. All pg_cron jobs tested in staging. 5. `notifications` 90-day archive policy scheduled. These are gates in `LAUNCH_CHECKLIST.md`.

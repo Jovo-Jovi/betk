@@ -46,8 +46,25 @@
  * service-role reach-around.
  *
  * Reads go through the stateless anon client (no `cookies()`), consistent
- * with the rest of the discovery read layer; `revalidate` keeps this
- * ISR-cacheable per id.
+ * with the rest of the discovery read layer; `revalidate = 60` keeps this
+ * ISR-cacheable per id. IDENTITY-FREE by design (Phase-03 T06 decision): the
+ * detail page deliberately does NOT hydrate per-user wishlist state — the
+ * action buttons route a guest/authed click to /auth/login — so there is no
+ * `cookies()` dependency to force dynamic.
+ *
+ * PERF-02: this route is ISR (`revalidate = 60`). Locale is threaded
+ * EXPLICITLY from the validated `[locale]` segment param — every
+ * `getTranslations({locale})` here (and in generateMetadata) is passed the
+ * locale rather than reading it from next-intl's request store. That store
+ * (`setRequestLocale`) is only guaranteed inside pages/layouts, and during
+ * runtime on-demand ISR generation of a NON-default locale it is not resolved,
+ * so a store-based `getTranslations()`/`getLocale()` would fall back to
+ * `headers()` and abort generation with DYNAMIC_SERVER_USAGE (the default
+ * locale is silently masked by next-intl's fallback). `setRequestLocale(locale)`
+ * is still called to prime the client provider, but the render path does not
+ * depend on it. The streamed `MoreFromStoreRail` already takes `locale` as a
+ * prop and calls no next-intl server API. Under ISR an unknown/invalid id stays
+ * a hard 404 on first AND repeat hits (the 404 verdict is cached per path).
  *
  * CD-DELTA-2 (T06): `ImageGallery` is now consumed DIRECTLY from
  * `@/components/shared` — the T05 `ListingImageGallery` client wrapper (which
@@ -59,7 +76,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getListingById, listingIdSchema } from "@/features/discovery";
 import type { ListingDetail } from "@/features/discovery";
 import { createAnonClient } from "@/lib/supabase/anon";
@@ -90,7 +107,20 @@ import { deriveStockDisplayProps, isListingSoldOut } from "@/features/discovery/
 
 export const revalidate = 60;
 
+/**
+ * PERF-02: enable ISR for this dynamic segment. We prerender NO specific ids at
+ * build (ids are unbounded + runtime-created); with the default
+ * `dynamicParams = true`, each `/listing/<id>` is generated on its first hit and
+ * then cached per `revalidate` (60s). Without a `generateStaticParams` export, a
+ * dynamic segment renders per-request (`ƒ`) even with `revalidate` set — the
+ * PERF-01 build proved the page was `ƒ` despite the `revalidate = 60` above.
+ */
+export function generateStaticParams(): { id: string }[] {
+  return [];
+}
+
 interface RouteParams {
+  locale: string;
   id: string;
 }
 
@@ -118,16 +148,19 @@ export async function generateMetadata({
 }: {
   params: Promise<RouteParams>;
 }): Promise<Metadata> {
-  const { id } = await params;
-  const locale = (await getLocale()) as AppLocale;
-  const t = await getTranslations("listing");
+  const { locale, id } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "listing" });
 
   const listing = await resolveListing(id).catch(() => null);
   if (!listing) {
     return { title: t("metaTitleFallback") };
   }
 
-  const title = localizedName({ ar: listing.titleAr, en: listing.titleEn }, locale);
+  const title = localizedName(
+    { ar: listing.titleAr, en: listing.titleEn },
+    locale as AppLocale,
+  );
   return {
     title: t("metaTitle", { title }),
     description: t("metaDescription", { title }),
@@ -139,10 +172,11 @@ export default async function ListingDetailPage({
 }: {
   params: Promise<RouteParams>;
 }) {
-  const { id } = await params;
-  const locale = (await getLocale()) as AppLocale;
-  const t = await getTranslations("listing");
-  const catalogT = await getTranslations("catalog");
+  const { locale: localeParam, id } = await params;
+  setRequestLocale(localeParam);
+  const locale = localeParam as AppLocale;
+  const t = await getTranslations({ locale, namespace: "listing" });
+  const catalogT = await getTranslations({ locale, namespace: "catalog" });
 
   const listing = await resolveListing(id);
   if (!listing) {

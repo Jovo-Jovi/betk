@@ -131,6 +131,35 @@ function localize(locale: string, path: string): string {
   return path === "/" ? `/${locale}` : `/${locale}${path}`;
 }
 
+/**
+ * PERF-02 — Supabase auth-cookie name prefix, DERIVED from the configured
+ * project URL (never hardcode the ref). `@supabase/ssr` stores the session as
+ * `sb-<project-ref>-auth-token` (chunked variants append `.0`/`.1`/…, and the
+ * PKCE flow adds `sb-<project-ref>-auth-token-code-verifier`) — all share this
+ * prefix. A missing/malformed URL degrades to the broad `sb-` prefix, which can
+ * only OVER-match (→ never wrongly skips getUser), so the fast-path stays safe.
+ */
+const SUPABASE_AUTH_COOKIE_PREFIX = ((): string => {
+  try {
+    const ref = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split(".")[0];
+    return ref ? `sb-${ref}-auth-token` : "sb-";
+  } catch {
+    return "sb-";
+  }
+})();
+
+/**
+ * True iff the request carries at least one Supabase auth cookie. When FALSE
+ * the caller is provably a guest (no session to refresh) and the getUser()
+ * GoTrue round-trip can be skipped. A present-but-invalid cookie returns TRUE
+ * here so it still flows through getUser() and fails closed.
+ */
+function requestHasAuthCookies(request: NextRequest): boolean {
+  return request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith(SUPABASE_AUTH_COOKIE_PREFIX));
+}
+
 const intlMiddleware = createIntlMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
@@ -142,6 +171,30 @@ export async function middleware(request: NextRequest) {
   // (do NOT recreate the response, or the locale rewrite/cookie would be lost).
   const response = intlMiddleware(request);
 
+  // ── 2. Normalize locale BEFORE gating (security invariant) ─────────────────
+  // Done before any auth work so the guest fast-path below shares the exact
+  // same gate verdict the full path would compute.
+  const { locale, path } = splitLocale(pathname);
+  const gate = gateFor(path);
+
+  // ── 3. GUEST FAST-PATH (PERF-02) ───────────────────────────────────────────
+  // No Supabase auth cookie → the caller is provably a guest: there is no
+  // session to refresh, so skip the getUser() GoTrue network hop AND the DB
+  // profile read entirely. Verdicts are IDENTICAL to the full path's guest
+  // outcome:
+  //   • public route → pass (keep the locale rewrite/cookie response)
+  //   • protected    → /auth/login?returnUrl=… (locale-preserving)
+  // This triggers ONLY on ABSENT auth cookies. A PRESENT-but-invalid cookie is
+  // NOT fast-pathed — it flows through getUser() below and fails closed exactly
+  // as before (proven by the garbage-cookie row of the gate-regression matrix).
+  if (!requestHasAuthCookies(request)) {
+    if (gate === "public") {
+      return response;
+    }
+    return loginRedirect(request, response, locale, path);
+  }
+
+  // ── 4. Auth cookie present: refresh session (unchanged pre-PERF-02 path) ────
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -164,33 +217,22 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // ── 2. Refresh session ─────────────────────────────────────────────────────
   // IMPORTANT: getUser() revalidates the token with the Auth server and refreshes
   // cookies — do not trust getSession() in middleware. Keep this before gating.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ── 3. Normalize locale BEFORE gating (security invariant) ─────────────────
-  const { locale, path } = splitLocale(pathname);
-  const gate = gateFor(path);
-
   // Public routes: keep the locale response (rewrite + refreshed cookies). No DB
-  // read (keeps homepage lean).
+  // read (keeps the public hot path lean).
   if (gate === "public") {
     return response;
   }
 
-  // All remaining gates require an authenticated session.
+  // All remaining gates require an authenticated session. A present-but-invalid
+  // cookie yields no user → fail closed to login (identical to a guest).
   if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = localize(locale, LOGIN_ROUTE);
-    url.search = "";
-    // Preserve the original (locale-stripped) destination; sanitizeReturnUrl
-    // guards against open-redirect (only local single-'/'-prefixed paths).
-    const raw = `${path}${request.nextUrl.search}`;
-    url.searchParams.set("returnUrl", sanitizeReturnUrl(raw));
-    return copyCookies(response, NextResponse.redirect(url));
+    return loginRedirect(request, response, locale, path);
   }
 
   // Single indexed lookup (PK on users.id) for block + role. RLS `users_self`
@@ -204,12 +246,7 @@ export async function middleware(request: NextRequest) {
 
   // No profile row (or read error) → cannot establish role/status → login.
   if (error || !profile) {
-    const url = request.nextUrl.clone();
-    url.pathname = localize(locale, LOGIN_ROUTE);
-    url.search = "";
-    const raw2 = `${path}${request.nextUrl.search}`;
-    url.searchParams.set("returnUrl", sanitizeReturnUrl(raw2));
-    return copyCookies(response, NextResponse.redirect(url));
+    return loginRedirect(request, response, locale, path);
   }
 
   // R-A05 block check: suspended / banned / pending / soft-deleted → /blocked.
@@ -288,6 +325,27 @@ export async function middleware(request: NextRequest) {
 function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
   from.cookies.getAll().forEach((cookie) => to.cookies.set(cookie));
   return to;
+}
+
+/**
+ * Build the locale-preserving `/auth/login?returnUrl=…` redirect for an
+ * unauthenticated request to a protected route. Extracted (PERF-02) so the
+ * guest fast-path and the full path produce a byte-identical redirect. The
+ * `returnUrl` is the original locale-stripped destination + query, sanitised
+ * against open-redirect (only local single-'/'-prefixed paths).
+ */
+function loginRedirect(
+  request: NextRequest,
+  response: NextResponse,
+  locale: string,
+  path: string,
+): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = localize(locale, LOGIN_ROUTE);
+  url.search = "";
+  const raw = `${path}${request.nextUrl.search}`;
+  url.searchParams.set("returnUrl", sanitizeReturnUrl(raw));
+  return copyCookies(response, NextResponse.redirect(url));
 }
 
 /** Build a same-origin redirect that preserves locale + refreshed auth cookies. */
