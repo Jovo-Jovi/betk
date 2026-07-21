@@ -26,37 +26,38 @@
  * delivery enum is owned by Phase 04/07 — the About tab renders delivery modes
  * DEFENSIVELY (known modes → localized labels, unknown modes degrade to their
  * raw string, never throw); it does NOT "fix" the JSONB shape here.
+ *
+ * PERF-01: the Listings tab's own query (`getActiveListings` scoped to this
+ * store) is streamed via `StoreListingsSection` wrapped in `<Suspense>`
+ * (`SkeletonGrid` fallback) — same pattern as `/category/[slug]`'s
+ * `CategoryListingsSection`. Reviews/About render from data already resolved
+ * by the top-level `getStoreBySlug` read, so only the Listings tab benefits;
+ * the hard-404 `notFound()` decision above stays untouched, outside Suspense.
  */
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import {
-  getActiveListings,
-  getStoreBySlug,
-  getStoreFollowState,
-} from "@/features/discovery";
-import type { ListingPage, StoreDetail } from "@/features/discovery";
+import { getStoreBySlug, getStoreFollowState } from "@/features/discovery";
+import type { StoreDetail } from "@/features/discovery";
 import { createClient } from "@/lib/supabase/server";
 import { localizedName } from "@/i18n/localizedName";
 import type { AppLocale } from "@/i18n/routing";
 import { GOVERNORATES } from "@/constants/governorates";
-import { routes } from "@/constants/routes";
 import {
   catalogRatingReviewsLabel,
   catalogSellerResponseLabel,
-  catalogListingBoostLabel,
   catalogFollowButtonLabels,
   catalogVerifiedLabel,
   catalogLevelLabels,
   type CatalogTranslator,
 } from "@/i18n/catalogLabels";
-import { RatingSummary, StarRating, VerifiedBadge, LevelBadge } from "@/components/shared";
+import { RatingSummary, StarRating, VerifiedBadge, LevelBadge, SkeletonGrid } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ListingCardLink } from "@/features/discovery/components/ListingCardLink";
-import { CategoryLoadMore } from "@/features/discovery/components/CategoryLoadMore";
 import { StoreFollowButton } from "@/features/discovery/components/StoreFollowButton";
 import { StorefrontTabs } from "@/features/discovery/components/StorefrontTabs";
+import { StoreListingsSection } from "@/features/discovery/components/StoreListingsSection";
 
 interface RouteParams {
   slug: string;
@@ -112,7 +113,6 @@ export default async function StorePage({
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations("store");
   const catalogT = await getTranslations("catalog");
-  const tListing = await getTranslations("listing");
 
   const supabase = await createClient();
 
@@ -128,10 +128,8 @@ export default async function StorePage({
   const following = await getStoreFollowState(store.id, user?.id ?? null, supabase);
 
   const name = localizedName({ ar: store.nameAr, en: store.nameEn }, locale);
-  const boostLabel = catalogListingBoostLabel(catalogT);
   const followLabels = catalogFollowButtonLabels(catalogT);
   const levelLabels = catalogLevelLabels(catalogT);
-  const wishlistLabels = { addLabel: tListing("wishlist.add"), removeLabel: tListing("wishlist.remove") };
 
   const avgResponseHours = store.seller?.avgResponseHours ?? undefined;
   const responseLabel =
@@ -143,54 +141,25 @@ export default async function StorePage({
     governorateLabel(store.governorate, locale) + (store.city ? ` · ${store.city}` : "");
 
   // ── Listings tab (cursor-paginated over this store's active listings) ───────
+  // PERF-01: streamed via StoreListingsSection (Suspense), not fetched here.
   const cursor = first(sp.cursor);
   const defaultTab = first(sp.tab);
-  let listingsPage: ListingPage = { items: [], nextCursor: null };
-  let listingsError = false;
-  try {
-    listingsPage = await getActiveListings({ store: store.id, cursor }, supabase);
-  } catch {
-    listingsError = true;
-  }
 
   const distribution = store.rating?.distribution ?? undefined;
 
-  const listingsContent =
-    listingsError ? (
-      <p className="text-sm text-destructive">{t("error")}</p>
-    ) : listingsPage.items.length === 0 ? (
-      <p className="text-sm text-muted-foreground">{t("listingsEmpty")}</p>
-    ) : (
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-          {listingsPage.items.map((listing) => (
-            <ListingCardLink
-              key={listing.id}
-              id={listing.id}
-              title={localizedName({ ar: listing.titleAr, en: listing.titleEn }, locale)}
-              image={listing.heroImageUrl}
-              price={listing.price}
-              priceType={listing.priceType}
-              storeName={name}
-              rating={store.rating?.averageRating ?? null}
-              reviews={store.rating?.totalReviews ?? null}
-              boostLabel={boostLabel}
-              wishlistAddLabel={wishlistLabels.addLabel}
-              wishlistRemoveLabel={wishlistLabels.removeLabel}
-              stockQty={listing.stockQty}
-              isMadeToOrder={listing.isMadeToOrder}
-              isService={listing.type === "service"}
-            />
-          ))}
-        </div>
-        {listingsPage.nextCursor && (
-          <CategoryLoadMore
-            href={`${routes.store(slug)}?tab=listings&cursor=${encodeURIComponent(listingsPage.nextCursor)}`}
-            label={t("loadMore")}
-          />
-        )}
-      </div>
-    );
+  const listingsContent = (
+    <Suspense fallback={<SkeletonGrid />}>
+      <StoreListingsSection
+        storeId={store.id}
+        storeSlug={store.slug}
+        storeName={name}
+        ratingAverage={store.rating?.averageRating ?? null}
+        ratingTotal={store.rating?.totalReviews ?? null}
+        locale={locale}
+        cursor={cursor}
+      />
+    </Suspense>
+  );
 
   // ── Reviews tab (visible reviews, photos + seller replies) ──────────────────
   const reviewsContent =

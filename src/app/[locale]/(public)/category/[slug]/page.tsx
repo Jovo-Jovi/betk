@@ -6,9 +6,17 @@
  * RSC: resolves the category by slug (`getCategoryBySlug`, T04) — is_active
  * =false OR unknown slug both resolve to `null` → hard `notFound()` (no
  * existence leak, same convention as `getStoreBySlug`'s R-S07 handling).
- * Then fetches the listing grid (`getActiveListings`, T01 + T04's category
- * OR-match + R-S07 `stores!inner` fix — see that file's header) via a
- * `?cursor=` URL param for forward pagination (see `CategoryLoadMore`).
+ * This decision stays OUTSIDE any Suspense boundary (hard-404 binding rule,
+ * BL-01-FIX/T04) — it commits before any streaming starts.
+ *
+ * PERF-01: the listings-grid fetch (`getActiveListings`, T01 + T04's category
+ * OR-match + R-S07 `stores!inner` fix) is streamed via a separate
+ * `CategoryListingsSection` wrapped in `<Suspense>` (`SkeletonGrid` fallback,
+ * homepage CategoriesSection/HomeStripsSection precedent) — the header +
+ * `SubcategoryChips` paint immediately after the cheap category read instead
+ * of waiting on the listings query too, fixing the "tap feels stuck" UX
+ * finding (DIAG-PERF-01 A2/REG-38). Forward pagination stays a `?cursor=`
+ * URL param (see `CategoryLoadMore`, inside the streamed section).
  *
  * Reads go through the stateless anon client (no `cookies()`), same as the
  * rest of the discovery read layer — no ISR here (the page depends on
@@ -17,21 +25,16 @@
  */
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { getActiveListings, getCategoryBySlug } from "@/features/discovery";
-import type { ListingPage } from "@/features/discovery";
+import { getCategoryBySlug } from "@/features/discovery";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { localizedName } from "@/i18n/localizedName";
 import type { AppLocale } from "@/i18n/routing";
-import { routes } from "@/constants/routes";
-import { Link } from "@/i18n/navigation";
-import { catalogListingBoostLabel } from "@/i18n/catalogLabels";
-import { EmptyState } from "@/components/shared";
+import { SkeletonGrid } from "@/components/shared";
 import { SubcategoryChips } from "@/features/discovery/components/SubcategoryChips";
-import { ListingCardLink } from "@/features/discovery/components/ListingCardLink";
-import { StripErrorCard } from "@/features/discovery/components/StripErrorCard";
-import { CategoryLoadMore } from "@/features/discovery/components/CategoryLoadMore";
+import { CategoryListingsSection } from "@/features/discovery/components/CategoryListingsSection";
 
 interface RouteParams {
   slug: string;
@@ -73,10 +76,6 @@ export default async function CategoryPage({
   const { slug } = await params;
   const sp = await searchParams;
   const locale = (await getLocale()) as AppLocale;
-  const t = await getTranslations("category");
-  const tCommon = await getTranslations("common");
-  const catalogT = await getTranslations("catalog");
-  const tListing = await getTranslations("listing");
 
   const supabase = createAnonClient();
 
@@ -87,17 +86,13 @@ export default async function CategoryPage({
   }
 
   const name = localizedName({ ar: category.nameAr, en: category.nameEn }, locale);
-  const boostLabel = catalogListingBoostLabel(catalogT);
-  const wishlistLabels = { addLabel: tListing("wishlist.add"), removeLabel: tListing("wishlist.remove") };
   const cursor = first(sp.cursor);
-
-  let page: ListingPage = { items: [], nextCursor: null };
-  let isError = false;
-  try {
-    page = await getActiveListings({ category: category.id, cursor }, supabase);
-  } catch {
-    isError = true;
-  }
+  const parent = category.parent
+    ? {
+        slug: category.parent.slug,
+        name: localizedName({ ar: category.parent.nameAr, en: category.parent.nameEn }, locale),
+      }
+    : null;
 
   const subcategoryItems = category.children.map((c) => ({
     id: c.id,
@@ -113,69 +108,15 @@ export default async function CategoryPage({
 
       <SubcategoryChips items={subcategoryItems} />
 
-      {isError ? (
-        <StripErrorCard message={t("error")} retryLabel={tCommon("retry")} />
-      ) : page.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card py-4">
-          <EmptyState variant="default" message={t("empty.message", { name })} />
-          <div className="flex flex-wrap items-center justify-center gap-4 pb-4">
-            {category.parent && (
-              <Link
-                href={routes.category(category.parent.slug)}
-                className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-              >
-                {t("empty.backToParent", {
-                  name: localizedName(
-                    { ar: category.parent.nameAr, en: category.parent.nameEn },
-                    locale,
-                  ),
-                })}
-              </Link>
-            )}
-            <Link
-              href={routes.home}
-              className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              {tCommon("backToHome")}
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-            {page.items.map((listing) => (
-              <ListingCardLink
-                key={listing.id}
-                id={listing.id}
-                title={localizedName({ ar: listing.titleAr, en: listing.titleEn }, locale)}
-                image={listing.heroImageUrl}
-                price={listing.price}
-                priceType={listing.priceType}
-                storeName={
-                  listing.store
-                    ? localizedName({ ar: listing.store.nameAr, en: listing.store.nameEn }, locale)
-                    : null
-                }
-                rating={listing.store?.rating?.averageRating ?? null}
-                reviews={listing.store?.rating?.totalReviews ?? null}
-                boostLabel={boostLabel}
-                wishlistAddLabel={wishlistLabels.addLabel}
-                wishlistRemoveLabel={wishlistLabels.removeLabel}
-                stockQty={listing.stockQty}
-                isMadeToOrder={listing.isMadeToOrder}
-                isService={listing.type === "service"}
-              />
-            ))}
-          </div>
-
-          {page.nextCursor && (
-            <CategoryLoadMore
-              href={`${routes.category(slug)}?cursor=${encodeURIComponent(page.nextCursor)}`}
-              label={t("loadMore")}
-            />
-          )}
-        </div>
-      )}
+      <Suspense fallback={<SkeletonGrid />}>
+        <CategoryListingsSection
+          categoryId={category.id}
+          categorySlug={slug}
+          categoryName={name}
+          parent={parent}
+          cursor={cursor}
+        />
+      </Suspense>
     </div>
   );
 }
