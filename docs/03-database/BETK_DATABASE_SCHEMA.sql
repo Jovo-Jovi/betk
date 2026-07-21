@@ -1139,6 +1139,34 @@ CREATE POLICY listing_tags_public ON betk.listing_tags FOR SELECT
         AND l.deleted_at IS NULL
     )
   );
+-- LISTING-CHILDREN OWNER-WRITE POLICIES (REG-34, migration
+-- 20260721111355_listing_children_owner_write_rls; backfilled here for source
+-- parity). ERD §3 row 48: listing_images/listing_tags INSERT/UPDATE/DELETE =
+-- "own store" was SPECCED but the CREATE POLICY was omitted from this SQL
+-- contract (children carried ONLY their public SELECT policy above -> owner
+-- write default-denied), the 4th instance of the open-issue-#14 / REG-29 /
+-- REG-31 class. Shape mirrors the parent listings_seller (FOR ALL USING,
+-- own store OR admin), scoped to the child via the owning listing. FOR ALL: the
+-- USING clause governs SELECT/UPDATE/DELETE visibility AND is the implicit
+-- WITH CHECK for INSERT/UPDATE; it OR-combines (PERMISSIVE) with the public
+-- SELECT policy above, reconstructing row 48's "follows listing" SELECT.
+-- restock_alerts stays policy-less (Phase 12 / notifications).
+CREATE POLICY listing_images_seller ON betk.listing_images FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.listings l
+      WHERE l.id = listing_images.listing_id
+        AND (l.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY listing_tags_seller ON betk.listing_tags FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.listings l
+      WHERE l.id = listing_tags.listing_id
+        AND (l.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
 CREATE POLICY review_photos_public ON betk.review_photos FOR SELECT
   USING (
     EXISTS (

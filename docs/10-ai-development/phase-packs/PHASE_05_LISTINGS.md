@@ -556,7 +556,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 | Task | Model | Status | Commit | Verdict | Notes |
 |---|---|---|---|---|---|
 | T00 CD-DELTA-4 | CD emit + Sonnet LAND | ✅ LANDED+WIRED (2026-07-21) | `feature/phase-05-listings` | PASS | Tabs (+vanilla `ui/tabs`) + RouteProgress + 3 route skeletons + `langPending` + 8 SVGs; REG-38 & REG-39 CLOSED; kit = 37 shared + 14 ui/*; i18n 530/530; T03–T05 gate OPEN |
-| T01 DB+RLS | Opus | — | — | — | REG-34 |
+| T01 DB+RLS | Opus | ✅ DONE (2026-07-21) | `feature/phase-05-listings` | PASS | REG-34 minted+closed ERD §3-verbatim — migration `20260721111355_listing_children_owner_write_rls` adds `listing_images_seller`/`listing_tags_seller` (FOR ALL, parent-scoped, mirrors `listings_seller`); public SELECT untouched (OR-combines); ledger 25→26 (1:1); schema.sql backfilled; advisor = baseline (0 new). `restock_alerts` verified zero-policy + NOT touched (Phase 12). Storage verified zero-change (media own-prefix reuse; no DELETE policy by design). Integration 7/7 on staging (owner CRUD + own-draft read; cross-seller/anon denied; public read unregressed; draft hidden), zero residue. typecheck·lint·4 guards (i18n 530/530)·unit 82/82·build 34 routes ✓ |
 | T02 write layer | Opus | — | — | — | ADR-013 |
 | T03 listings page | Sonnet | — | — | — | |
 | T04 listing form | Sonnet | — | — | — | REG-15 |
