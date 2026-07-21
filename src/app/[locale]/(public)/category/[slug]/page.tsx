@@ -7,27 +7,42 @@
  * =false OR unknown slug both resolve to `null` → hard `notFound()` (no
  * existence leak, same convention as `getStoreBySlug`'s R-S07 handling).
  * This decision stays OUTSIDE any Suspense boundary (hard-404 binding rule,
- * BL-01-FIX/T04) — it commits before any streaming starts.
+ * BL-01-FIX/T04) — it commits before any streaming starts. Under ISR the 404
+ * verdict is cached per-path (an unknown slug stays a hard 404 on repeat hits).
  *
- * PERF-01: the listings-grid fetch (`getActiveListings`, T01 + T04's category
- * OR-match + R-S07 `stores!inner` fix) is streamed via a separate
- * `CategoryListingsSection` wrapped in `<Suspense>` (`SkeletonGrid` fallback,
- * homepage CategoriesSection/HomeStripsSection precedent) — the header +
- * `SubcategoryChips` paint immediately after the cheap category read instead
- * of waiting on the listings query too, fixing the "tap feels stuck" UX
- * finding (DIAG-PERF-01 A2/REG-38). Forward pagination stays a `?cursor=`
- * URL param (see `CategoryLoadMore`, inside the streamed section).
+ * ── PERF-02: ISR (revalidate 60) + off-URL pagination ─────────────────────
+ * This route is now ISR-cached. Two things were required to flip it from
+ * per-request dynamic to ISR:
+ *   1. Locale is threaded EXPLICITLY, never read from the request store. The
+ *      locale comes from the validated `[locale]` segment param and is passed
+ *      to every `getTranslations({locale})` here + down into
+ *      `CategoryListingsSection`/`SubcategoryChips` (and their `<Link locale>`).
+ *      `setRequestLocale(locale)` is still called (it primes the client
+ *      provider), but the render path does NOT depend on it: next-intl's
+ *      `setRequestLocale` cache() store is only guaranteed inside pages/layouts,
+ *      and during runtime on-demand ISR generation of a NON-default locale the
+ *      streamed Suspense child would otherwise miss it, fall back to `headers()`
+ *      and abort generation with DYNAMIC_SERVER_USAGE (default locale masked by
+ *      next-intl's fallback). Explicit locale is the documented static-render
+ *      escape hatch and works on both the first-hit and revalidation paths.
+ *   2. Removing the page-level `searchParams` read. Reading `searchParams`
+ *      unconditionally forces dynamic rendering (the exact reason `/search`
+ *      stays dynamic). Forward `?cursor=` pagination therefore moved OFF the
+ *      URL: the page renders page 1 only, and `CategoryLoadMore` (client)
+ *      appends further pages in place via `GET /api/category-listings`. An old
+ *      `?cursor=` deep link now simply renders page 1 (the param is ignored) —
+ *      accepted trade-off, recorded in docs/02-architecture/CACHING_STRATEGY.md.
  *
- * Reads go through the stateless anon client (no `cookies()`), same as the
- * rest of the discovery read layer — no ISR here (the page depends on
- * `searchParams.cursor`, so it's dynamic by nature, same rationale as
- * `/search`).
+ * All reads go through the stateless anon client (no `cookies()`), so nothing
+ * in the render path re-forces dynamic (see also REG-37: `rating_aggregates`
+ * inherits this 60s TTL). The PERF-01 Suspense/streaming is intact on the ISR
+ * MISS path (first hit / revalidation); a cache HIT serves complete HTML.
  */
 
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCategoryBySlug } from "@/features/discovery";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { localizedName } from "@/i18n/localizedName";
@@ -36,30 +51,43 @@ import { SkeletonGrid } from "@/components/shared";
 import { SubcategoryChips } from "@/features/discovery/components/SubcategoryChips";
 import { CategoryListingsSection } from "@/features/discovery/components/CategoryListingsSection";
 
-interface RouteParams {
-  slug: string;
+export const revalidate = 60;
+
+/**
+ * PERF-02: enable ISR for this dynamic segment. We prerender NO specific slugs
+ * at build (the catalog is DB-owned and changes at runtime); with the default
+ * `dynamicParams = true`, each `/category/<slug>` is generated on its first hit
+ * and then cached per `revalidate` (60s). Without a `generateStaticParams`
+ * export, a dynamic segment renders per-request (`ƒ`) even with `revalidate`
+ * set — the build route table is the proof (`ƒ` → ISR only once this exists).
+ */
+export function generateStaticParams(): { slug: string }[] {
+  return [];
 }
 
-type RawSearchParams = Record<string, string | string[] | undefined>;
-
-const first = (v: string | string[] | undefined): string | undefined =>
-  Array.isArray(v) ? v[0] : v;
+interface RouteParams {
+  locale: string;
+  slug: string;
+}
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<RouteParams>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = (await getLocale()) as AppLocale;
-  const t = await getTranslations("category");
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "category" });
 
   const category = await getCategoryBySlug(slug, createAnonClient());
   if (!category) {
     return { title: t("metaTitleFallback") };
   }
 
-  const name = localizedName({ ar: category.nameAr, en: category.nameEn }, locale);
+  const name = localizedName(
+    { ar: category.nameAr, en: category.nameEn },
+    locale as AppLocale,
+  );
   return {
     title: t("metaTitle", { name }),
     description: t("metaDescription", { name }),
@@ -68,14 +96,12 @@ export async function generateMetadata({
 
 export default async function CategoryPage({
   params,
-  searchParams,
 }: {
   params: Promise<RouteParams>;
-  searchParams: Promise<RawSearchParams>;
 }) {
-  const { slug } = await params;
-  const sp = await searchParams;
-  const locale = (await getLocale()) as AppLocale;
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+  const appLocale = locale as AppLocale;
 
   const supabase = createAnonClient();
 
@@ -85,19 +111,21 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const name = localizedName({ ar: category.nameAr, en: category.nameEn }, locale);
-  const cursor = first(sp.cursor);
+  const name = localizedName({ ar: category.nameAr, en: category.nameEn }, appLocale);
   const parent = category.parent
     ? {
         slug: category.parent.slug,
-        name: localizedName({ ar: category.parent.nameAr, en: category.parent.nameEn }, locale),
+        name: localizedName(
+          { ar: category.parent.nameAr, en: category.parent.nameEn },
+          appLocale,
+        ),
       }
     : null;
 
   const subcategoryItems = category.children.map((c) => ({
     id: c.id,
     slug: c.slug,
-    name: localizedName({ ar: c.nameAr, en: c.nameEn }, locale),
+    name: localizedName({ ar: c.nameAr, en: c.nameEn }, appLocale),
   }));
 
   return (
@@ -106,15 +134,14 @@ export default async function CategoryPage({
         <h1 className="font-display text-h2 font-bold text-foreground">{name}</h1>
       </div>
 
-      <SubcategoryChips items={subcategoryItems} />
+      <SubcategoryChips items={subcategoryItems} locale={appLocale} />
 
       <Suspense fallback={<SkeletonGrid />}>
         <CategoryListingsSection
           categoryId={category.id}
-          categorySlug={slug}
           categoryName={name}
           parent={parent}
-          cursor={cursor}
+          locale={appLocale}
         />
       </Suspense>
     </div>

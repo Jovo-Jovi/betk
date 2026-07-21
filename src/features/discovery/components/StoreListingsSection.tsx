@@ -26,7 +26,7 @@ import type { AppLocale } from "@/i18n/routing";
 import { routes } from "@/constants/routes";
 import { catalogListingBoostLabel } from "@/i18n/catalogLabels";
 import { ListingCardLink } from "./ListingCardLink";
-import { CategoryLoadMore } from "./CategoryLoadMore";
+import { LoadMoreLink } from "./LoadMoreLink";
 
 export async function StoreListingsSection({
   storeId,
@@ -93,7 +93,7 @@ export async function StoreListingsSection({
         ))}
       </div>
       {page.nextCursor && (
-        <CategoryLoadMore
+        <LoadMoreLink
           href={`${routes.store(storeSlug)}?tab=listings&cursor=${encodeURIComponent(page.nextCursor)}`}
           label={t("loadMore")}
         />
