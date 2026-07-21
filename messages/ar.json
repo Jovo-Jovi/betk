@@ -474,6 +474,16 @@
     }
   },
   "seller": {
+    "listings": {
+      "filter": {
+        "all": "الكل",
+        "active": "نشط",
+        "draft": "مسودة",
+        "paused": "متوقف مؤقتًا",
+        "sold_out": "نفد المخزون",
+        "removed": "محذوف"
+      }
+    },
     "onboarding": {
       "metaTitle": "كن بائعاً — بيتك",
       "metaDescription": "أنشئ متجرك على بيتك في خمس خطوات وابدأ البيع.",

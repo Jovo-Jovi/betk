@@ -17,10 +17,15 @@
  * (listings, orders, inbox, earnings, analytics, …) are intentionally NOT added
  * as dead nav items — they light up when their phases land.
  *
+ * CD-DELTA-4 (REG-38b): mounts the shared `RouteProgress` top bar (renders null
+ * at rest) so the seller shell gets the same global route-transition feedback as
+ * the public/buyer shell; a `useTransition` drives it for in-console navigation
+ * and the locale toggle.
+ *
  * Composition only — no restyle. Zero edits to components/ui or components/shared.
  */
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -37,7 +42,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
-import { ConsoleSidebar } from "@/components/shared";
+import { ConsoleSidebar, RouteProgress } from "@/components/shared";
 import type { SidebarSection } from "@/components/shared";
 import { routes } from "@/constants/routes";
 
@@ -81,7 +86,9 @@ export function SellerChrome() {
   const locale = useLocale() as AppLocale;
   const { resolvedTheme, setTheme } = useTheme();
   const t = useTranslations("console");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
+  const [isRoutePending, startRouteTransition] = useTransition();
 
   const isDark = resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
@@ -99,6 +106,7 @@ export function SellerChrome() {
 
   return (
     <>
+      <RouteProgress active={isRoutePending} ariaLabel={tCommon("loading")} />
       {/* Mobile console header: hamburger opens the off-canvas sidebar (md:hidden). */}
       <header className="sticky top-0 z-30 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-card px-4 md:hidden">
         <button
@@ -113,7 +121,7 @@ export function SellerChrome() {
         <div className="ms-auto flex items-center gap-1">
           <button
             type="button"
-            onClick={() => router.replace(pathname, { locale: otherLocale })}
+            onClick={() => startRouteTransition(() => router.replace(pathname, { locale: otherLocale }))}
             aria-label={t("language")}
             className="flex size-9 items-center justify-center rounded-md text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -136,7 +144,7 @@ export function SellerChrome() {
         activeId={activeId}
         onSelect={(id) => {
           const to = NAV_ROUTES[id];
-          if (to) router.push(to);
+          if (to) startRouteTransition(() => router.push(to));
           setOpen(false);
         }}
         open={open}

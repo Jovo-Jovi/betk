@@ -474,6 +474,16 @@
     }
   },
   "seller": {
+    "listings": {
+      "filter": {
+        "all": "All",
+        "active": "Active",
+        "draft": "Draft",
+        "paused": "Paused",
+        "sold_out": "Sold out",
+        "removed": "Removed"
+      }
+    },
     "onboarding": {
       "metaTitle": "Become a seller — BETK",
       "metaDescription": "Set up your BETK store in five steps and start selling.",

@@ -14,20 +14,18 @@
  * Composition only — no restyle. TODO(Phase 03 T02+): pass real search/notif
  * state + avatar as those data sources land.
  *
- * PERF-01 / REG-38: the locale toggle (`onLanguageToggle` below) drives a full
- * server round-trip (`router.replace` remounts the whole `[locale]` subtree),
- * unlike the theme toggle's pure-client class swap — DIAG-PERF-01 A1 found
- * this "feels dead" with no visible pending state. Wrapped in `useTransition`
- * so `isLocalePending` is true for the duration of that navigation; applied as
- * a token-only `opacity-60` + `aria-busy` on this component's own wrapper (the
- * only DOM this app-layer file owns). **STOP-and-flag (CD-DELTA-4 candidate):**
- * `AppTopbar`'s language-toggle `<button>` (components/shared, frozen) has NO
- * `disabled`/`className` passthrough on that specific button — its
- * `AppTopbarProps` only exposes `onLanguageToggle`/`lang`/`langLabel` — so the
- * button itself cannot render `aria-busy`/`opacity-60`/`cursor-progress`
- * directly from here without editing `components/shared` (forbidden). The
- * click handler still no-ops while pending (no duplicate navigations) and the
- * wrapper dim gives a real, if indirect, pending affordance.
+ * PERF-01 / REG-38 / CD-DELTA-4: the locale toggle (`onLanguageToggle` below)
+ * drives a full server round-trip (`router.replace` remounts the whole
+ * `[locale]` subtree), unlike the theme toggle's pure-client class swap —
+ * DIAG-PERF-01 A1 found this "feels dead" with no visible pending state. It is
+ * wrapped in `useTransition` so `isLocalePending` is true for that navigation's
+ * duration and passed to `AppTopbar` as `langPending` — the CD-DELTA-4 additive
+ * prop that renders the pending affordance (disabled + aria-busy + opacity-60 +
+ * cursor-progress) ON THE BUTTON ITSELF, closing the PERF-01 STOP-and-flag. The
+ * earlier workaround (a dimmed `pointer-events-none` wrapper `<div>` around the
+ * whole chrome) is therefore removed. A second `useTransition` drives the shared
+ * `RouteProgress` top bar (REG-38b) for in-chrome navigations; it renders null
+ * at rest.
  */
 
 import { useState, useTransition } from "react";
@@ -36,10 +34,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Home, Search, Heart, MessageSquare, User } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
-import { AppTopbar, MobileBottomNav } from "@/components/shared";
+import { AppTopbar, MobileBottomNav, RouteProgress } from "@/components/shared";
 import type { BottomNavItem } from "@/components/shared/MobileBottomNav";
 import { routes } from "@/constants/routes";
-import { cn } from "@/lib/utils";
 
 /** Bottom-nav item id → canonical (locale-neutral) route. */
 const NAV_ROUTES: Record<string, string> = {
@@ -76,7 +73,9 @@ export function AppChrome() {
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [isLocalePending, startLocaleTransition] = useTransition();
+  const [isRoutePending, startRouteTransition] = useTransition();
   const t = useTranslations("chrome");
+  const tCommon = useTranslations("common");
 
   const isDark = resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
@@ -97,15 +96,15 @@ export function AppChrome() {
   }
 
   return (
-    <div
-      aria-busy={isLocalePending}
-      className={cn(isLocalePending && "pointer-events-none opacity-60 transition-opacity duration-200")}
-    >
+    <>
+      <RouteProgress active={isLocalePending || isRoutePending} ariaLabel={tCommon("loading")} />
       <AppTopbar
         searchValue={search}
         onSearchChange={setSearch}
         onSearchSubmit={(v) =>
-          router.push(v ? `${routes.search}?q=${encodeURIComponent(v)}` : routes.search)
+          startRouteTransition(() =>
+            router.push(v ? `${routes.search}?q=${encodeURIComponent(v)}` : routes.search)
+          )
         }
         logoSrc="/logo/beh-64.png"
         searchPlaceholder={t("searchPlaceholder")}
@@ -117,18 +116,19 @@ export function AppChrome() {
         lang={locale}
         langLabel={t("language")}
         onLanguageToggle={handleLanguageToggle}
-        onLogoClick={() => router.push(routes.home)}
-        onNotifClick={() => router.push(routes.buyer.notifications)}
-        onAvatarClick={() => router.push(routes.buyer.account)}
+        langPending={isLocalePending}
+        onLogoClick={() => startRouteTransition(() => router.push(routes.home))}
+        onNotifClick={() => startRouteTransition(() => router.push(routes.buyer.notifications))}
+        onAvatarClick={() => startRouteTransition(() => router.push(routes.buyer.account))}
       />
       <MobileBottomNav
         items={navItems}
         activeId={activeId}
         onSelect={(id) => {
           const to = NAV_ROUTES[id];
-          if (to) router.push(to);
+          if (to) startRouteTransition(() => router.push(to));
         }}
       />
-    </div>
+    </>
   );
 }
