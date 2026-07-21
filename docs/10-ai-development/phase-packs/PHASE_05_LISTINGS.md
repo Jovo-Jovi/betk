@@ -102,32 +102,160 @@ Sequence: T00 gates T03–T05 (UI tasks) only; T01→T02 may run before/parallel
 - **Model:** Claude Design (new chat in the existing CD project; standing emit-time self-audit; brief = sole value source)
 - **Prompt (canonical — prepend your standing CD context line + attach the current brief):**
 ```
-CD-DELTA-4 — Phase 05 kit gate. Two parts; the attached BETK_DESIGN_BRIEF.md
-(locked) remains the sole value source.
+CD-DELTA-4 — Phase-05 kit gate + perf-UX polish. Read this state sync first,
+then emit the delta as a standard repo-handoff package.
 
-1. COVERAGE WALK (report only, before emitting): map the three Phase-05
-   screens — Listings Management (table/grid + status filter tabs +
-   row actions), Create/Edit Listing (large form: type toggle, PriceBlock,
-   stock fields, tags, ImageUploader ≤5 ordered), Stock & Inventory (stock
-   table + inline edit) — against the emitted 35-file shared kit + the 13
-   ui/* primitives. Known pre-acknowledged gap: Tabs (§5.12, deferred at
-   CD-DELTA-3). For each screen list composes-✓ vs needs-missing. If a
-   needed component has no authored anatomy in the brief, STOP on that item
-   and ask the designer — do not invent anatomy. Note: a data-table
-   primitive does not exist in ui/* — state whether the brief authors a
-   table anatomy or whether the screens compose existing patterns
-   (the Phase-03 StorefrontTabs hand-rolled-in-feature precedent is NOT
-   available here for Tabs — Tabs is kit-owned this time).
+=== STATE SYNC (bring your context current — authoritative facts) ===
+- Visual source of truth: docs/00-design/BETK_DESIGN_BRIEF.md — LOCKED,
+  self-contained (DESIGN-SYNC rewrite + BRIEF-SYNC addenda). Token names
+  frozen: 41 color tokens incl. the --info pair + 4 footer additives; values
+  change only via the brief. §9 OPEN ITEMS records: font-fallback proposal
+  (unapplied), 4 unrouted footer links, REG-23 repo pointer, LOGO-SYNC.
+- Shared kit on main = 35 files: the 21 catalog components + DS-REGEN's 10
+  (AppTopbar, MobileBottomNav, ConsoleSidebar, Toaster, ConfirmDialog,
+  MessageThread, OrderTimeline, ImageUploader, AddressForm, SLABadge) +
+  Footer (CD-DELTA-1) + Stepper/Toggle/Alert (CD-DELTA-3). ui/* = 13 vanilla
+  shadcn files (button badge card input select skeleton sheet dialog avatar
+  sonner switch alert textarea). All prior deltas landed byte-verified.
+- DS-I18N contract holds: strings arrive as props, Arabic defaults preserved;
+  RTL-canonical logical props only; token-only colors (hsl(var(--…))
+  composition allowed per StoreCard precedent); shadows via --shadow-* scale.
+- Since CD-DELTA-3, ZERO shared/ui edits happened (Phase-04 pages + a PERF
+  batch composed at the app/feature layer only). App now has: streaming
+  Suspense on category/store using CatalogSkeletons; ISR on category/listing;
+  a locale-toggle pending state applied one level ABOVE AppTopbar because its
+  API can't express it (item 4 below fixes that).
+- Consumers coming in Phase 05: Listings Management table/tabs, Create/Edit
+  Listing form, Stock & Inventory. Boosts are Phase 11 — nothing boost-styled.
 
-2. EMIT (repo format, additive-only) after the walk is signed off:
-   Tabs per §5.12 (composing the VANILLA shadcn tabs base — your CHANGELOG
-   instructs Cursor to run the official CLI add at land time, listing the
-   command + any new @radix-ui dep; RTL-canonical keyboard direction,
-   string-prop labels, both themes) + anything else the walk surfaced AND
-   the designer signed off. Barrel strict-superset. Standing self-audit
-   grep pasted per file; four-context AR/EN × light/dark verification;
-   CHANGELOG-DELTA with signatures + Cursor message-key names + deferrals
-   with owners. Zip the delta only — lands at docs/handoff/cd-delta-4/.
+=== DELIVERABLES (additive-only; nothing renamed/removed) ===
+1. Tabs — Brief §5.12. New shared component, frozen API, token-only,
+   RTL-canonical, string-prop labels (id + label per tab), controlled +
+   uncontrolled modes, keyboard nav, badge/count slot per tab (Listings
+   Management shows per-status counts). First consumer: Phase-05 T03 status
+   filter tabs (all/active/draft/paused/sold_out/removed). Decide + document
+   whether it wraps a new ui/tabs (vanilla shadcn CLI add, sanctioned like
+   switch/alert/textarea) or is hand-rolled like StorefrontTabs — state the
+   choice in the CHANGELOG.
+2. REG-38 — route-transition feedback polish: (a) skeleton variants for
+   category / listing-detail / storefront transitions, extending
+   CatalogSkeletons (§5.24) as needed — additive exports only; (b) a design
+   DECISION on a global navigation pending indicator (e.g. top progress bar):
+   if adopted, emit it as a token-only component + anatomy addendum; if
+   declined, record the decline in the CHANGELOG so the item closes either way.
+3. REG-39 — the 8 category icon SVGs at exactly these public paths:
+   /icons/categories/{clothing,food,home,beauty,jewelry,arts,books,services}.svg
+   Constraint: rendered via <img> (CSS vars do NOT reach inside), so design
+   them theme-neutral — a palette that reads on both light --card and dark
+   --card backgrounds (or ship a single-color glyph that works on both).
+   Brand-consistent with the ب mark language. These replace a Lucide fallback
+   currently shipping (REG-39 stopgap).
+4. AppTopbar API addition (additive props only, zero visual change when
+   unset): the language toggle button needs pending-state support —
+   langButtonDisabled?: boolean (or langPending?) that disables the button,
+   sets aria-busy, and applies a token-only pending treatment (opacity-60 +
+   cursor-progress class internally). Existing props/JSX byte-preserved;
+   this lets the app move the PERF-01 pending affordance onto the button
+   itself. Update §5.13 anatomy line accordingly.
+5. OPTIONAL / DECISION-ONLY — REG-18: StatusBadge's flag domain (moderation:
+   pending/reviewed/actioned/dismissed) has tint colors but no Arabic labels
+   (DEFAULT_LABELS is Partial). Decide now while we're here: author the 4 AR
+   labels (component change, additive) or formally keep-partial until the
+   admin phase. Record the decision either way; no pressure to change code.
+
+=== PACKAGE FORMAT ===
+docs/handoff/cd-delta-4/ with: templates/repo-handoff/ (exact final files:
+new shared components, edited AppTopbar, edited/extended CatalogSkeletons,
+barrel index.ts as a strict superset, the 8 SVGs under public/icons/
+categories/), CHANGELOG-DELTA.md (per-file rationale, the Tabs ui-vs-handroll
+decision, the REG-38b indicator decision, REG-18 decision, any message-key
+NAMES Cursor should wire — Cursor owns the ar/en catalog entries), and any
+brief addenda text (§5.12 anatomy, §5.13 update, §5.24 extension) marked
+"addendum — sanctioned CD-DELTA-4". Cursor lands byte-diff-verified and does
+all data/i18n wiring; you never wire.
+```
+**landing prompt:**
+```Read SESSION_CONTEXT.md, then execute Phase 05 T00 — CD-DELTA-4 LAND + wire
+(flagged expansion of the pack's T00: delta scope grew beyond Tabs). Branch
+feature/phase-05-listings (git pull first; confirm on top of 2870f0f).
+Sonnet. Handoff root: docs/handoff/cd-delta-4/pkg/cd-delta-4/ (note the pkg/
+nesting from extraction).
+
+STEP 1 — CLI ADD (vanilla, T00-LAND precedent):
+npx shadcn@latest add tabs → creates exactly src/components/ui/tabs.tsx,
+byte-vanilla, new dep @radix-ui/react-tabs; zero touch to the existing 13
+ui/* files.
+
+STEP 2 — LAND SHARED (byte-diff-verified):
+From <root>/templates/repo-handoff/src/components/shared/ copy Tabs.tsx +
+RouteProgress.tsx (new) and overwrite CatalogSkeletons.tsx + AppTopbar.tsx +
+index.ts (full edited files). git diff --no-index against each template =
+EMPTY for all 5. Then TWO API-freeze checks vs main:
+- git diff main -- AppTopbar.tsx: the ONLY change must be the additive
+  langPending prop + its internal disabled/aria-busy/pending classes — every
+  pre-existing prop/JSX byte preserved. If anything else changed, STOP.
+- CatalogSkeletons.tsx diff vs main: additive exports only (the 3 new
+  route-transition skeletons); nothing renamed/removed.
+
+STEP 3 — LAND ASSETS:
+Copy the 8 SVGs to public/icons/categories/{clothing,food,home,beauty,
+jewelry,arts,books,services}.svg (exact seeded paths). The #1c8d7e literal
+inside the SVGs is SANCTIONED (asset files — CSS vars can't reach <img>);
+do NOT flag it.
+
+STEP 4 — SWEEPS (shared .tsx files only, SVGs exempt):
+Raw-color sweep (#/rgb(/raw hsl(/text-white etc.) + physical-RTL sweep
+(left-/right-/ml-/mr-/pl-/pr-/text-left/right) across Tabs/RouteProgress/
+CatalogSkeletons/AppTopbar = zero matches expected. Any hit → STOP-and-flag.
+
+STEP 5 — APP WIRING (feature/app layer only; this is the expansion):
+(a) RouteProgress: mount per the CHANGELOG's guidance at the app layer (the
+    chrome shells / [locale] layout — state exactly where and why). Renders
+    null at rest; must appear in both public and seller shells.
+(b) langPending: AppChrome passes langPending={isPending} (the PERF-01
+    useTransition state) to AppTopbar; REMOVE the PERF-01 wrapper workaround
+    (opacity-60 + pointer-events-none div) IF the button now fully expresses
+    the pending state — state the decision. LanguageSwitcher (account)
+    unchanged.
+(c) REG-39 close: remove the resolveIconUrl stopgap filter in
+    HomeCategoryGrid so the real icon_url paths render again; delete its
+    REG-39 comment.
+(d) Wire any message-key NAMES the CHANGELOG lists for Tabs/RouteProgress
+    into messages/{ar,en}.json (Cursor owns the ar/en entries) — parity
+    guard must stay green. If the CHANGELOG lists none, state so.
+
+STEP 6 — BRIEF ADDENDA (docs):
+Apply <root>/brief-addenda.md into docs/00-design/BETK_DESIGN_BRIEF.md
+(§5.12 Tabs anatomy, §5.13 langPending line, §5.24 skeleton extension), each
+marked "addendum — sanctioned CD-DELTA-4" (BRIEF-SYNC precedent). Also record
+the REG-18 keep-partial decision where §5.5/§7 references it.
+
+STEP 7 — CLEANUP BEFORE VERIFY:
+Delete docs/handoff/cd-delta-4/ entirely (tsconfig broad-glob shadowing —
+CD-DELTA-1/3 precedent); confirm zero residue in git status.
+
+VERIFY (all green, paste evidence):
+typecheck · lint (no new warnings) · 4 guards (paste new i18n parity count) ·
+test:unit · build (both locales; route count unchanged) · runtime smoke
+(next start): homepage renders the 8 real SVGs — page HTML references
+/icons/categories/*.svg and each returns 200, zero Lucide fallbacks for the
+8 top-level categories; locale toggle pending state now on the button itself
+(aria-busy present when pending — structural proof from code acceptable);
+RouteProgress mounted (present in HTML at rest as null/empty is fine — cite
+the mount point); category-page streaming skeletons unaffected.
+
+GUARDS (git diff origin/main --stat):
+-- src/components/ui → exactly 1 new file (tabs.tsx), zero modified;
+-- src/components/shared → exactly Tabs.tsx + RouteProgress.tsx (new),
+   CatalogSkeletons.tsx + AppTopbar.tsx + index.ts (modified);
+-- src/features + src/app → only the STEP-5 wiring files, each listed.
+
+CLOSE: SESSION_CONTEXT.md — REG-38 CLOSED (leg 1 PERF-01, leg 2 landed+wired
+here incl. the AppTopbar API gap), REG-39 CLOSED (real assets live, stopgap
+removed), kit = 37 shared files + 14 ui/*, T03–T05 gate OPEN; journal append;
+pack tracker T00 row. Commit per logical step (CLI add / land / wiring /
+docs), push. HOLD — do not start T02/T03; T01 runs in its own window if not
+already done.
 ```
 - **Done when:** walk covers all 3 screens; every gap emitted-or-deferred-with-owner; Tabs emitted on the two-layer
   pattern (vanilla base + kit component); paste the walk to the review chat before confirming emission.
@@ -427,7 +555,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 
 | Task | Model | Status | Commit | Verdict | Notes |
 |---|---|---|---|---|---|
-| T00 CD-DELTA-4 | CD | — | — | — | Tabs |
+| T00 CD-DELTA-4 | CD emit + Sonnet LAND | ✅ LANDED+WIRED (2026-07-21) | `feature/phase-05-listings` | PASS | Tabs (+vanilla `ui/tabs`) + RouteProgress + 3 route skeletons + `langPending` + 8 SVGs; REG-38 & REG-39 CLOSED; kit = 37 shared + 14 ui/*; i18n 530/530; T03–T05 gate OPEN |
 | T01 DB+RLS | Opus | — | — | — | REG-34 |
 | T02 write layer | Opus | — | — | — | ADR-013 |
 | T03 listings page | Sonnet | — | — | — | |
