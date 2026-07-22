@@ -154,7 +154,7 @@ Done when: workflow YAML shows conditional-required rls-smoke on migration-touch
 | REG-12 | Handset SMS delivery + sender `3MS EGY` on device | SMS section | **HARD pre-launch gate** | Open (owned) |
 | REG-13 | NTRA/operator sender-ID registration | memory item | **External clock — start NOW**, don't wait for pre-launch | Open — needs a calendar owner |
 | REG-14 | `StoreDeliveryOptions.modes` mirrors store-side enum | #5 | Verify before Phase 04/07 consume | Open (owned) |
-| REG-15 | `title_en` required-in-form decision (Zod layer; DB stays nullable) | OD-7 note | Phase 04 listing form task | Open (owned) |
+| REG-15 | `title_en` required-in-form decision (Zod layer; DB stays nullable) | OD-7 note | Phase 05 T02 (schema) + T04 (form) | **Closed by Phase 05 T02+T04 (2026-07-22)** — `createListingSchema`/`updateListingSchema` require both `titleAr`+`titleEn` (Zod); `ListingForm` renders both as required inputs; `title_en` stays nullable in DB (no schema change) |
 | REG-16 | BL-01 locale-preserving Server-Action redirects | OD-7 carry | Optional cleanup, any Sonnet window | Open (optional) |
 | REG-17 | BL-02 `errorAr` → `errorMessage` rename | OD-7 carry | Optional cleanup (pairs with REG-16) | Open (optional) |
 | REG-18 | StatusBadge `flag`-domain labels (partial map) | OD-7 carry | **Claude Design decision** before any admin moderation badge renders | Open (owned) |
