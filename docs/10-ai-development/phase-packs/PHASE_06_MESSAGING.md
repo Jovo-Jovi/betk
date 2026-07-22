@@ -256,8 +256,8 @@ PR open + held.
 ## Results tracker
 | Task | Model | Status | Branch | Gate | Notes |
 |---|---|---|---|---|---|
-| T00 housekeep+cut | Sonnet | — | — | — | — |
-| T01 DB+RLS | Opus | — | — | — | REG-41 |
+| T00 housekeep+cut | Sonnet | ✅ DONE | feature/phase-06-messaging | — | branch cut @ `acb3f1f`; pack committed |
+| T01 DB+RLS | Opus | ✅ DONE | feature/phase-06-messaging | CI green · integ 13/13 · ledger 27/27 · advisor 0-new | REG-41 closed ERD-verbatim (mig `20260722115026`); REG-42 (unread reader-write) + REG-43 (buyer last_message_at bump) flagged; CONTRACT block pinned |
 | T02 write layer | Opus | — | — | — | ADR-014? / DECISION 2 |
 | T03 buyer inbox | Sonnet | — | — | — | — |
 | T04 seller inbox | Sonnet | — | — | — | — |

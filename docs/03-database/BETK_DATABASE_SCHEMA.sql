@@ -1195,6 +1195,35 @@ CREATE POLICY inq_buyer ON betk.inquiries FOR SELECT
     OR store_id = betk.my_store_id()
     OR betk.is_admin()
   );
+-- REG-41 (Phase 06 / T01): ERD §3 rows 51-52 — inquiries INSERT=buyer, UPDATE=store/admin
+--   (SELECT already covered by inq_buyer above); inquiry_messages SELECT/INSERT=thread parties,
+--   UPDATE=sender, no DELETE. Migration 20260722115026_inquiry_messaging_rls.
+CREATE POLICY inq_insert ON betk.inquiries FOR INSERT
+  WITH CHECK (buyer_id = auth.uid());
+CREATE POLICY inq_update ON betk.inquiries FOR UPDATE
+  USING (store_id = betk.my_store_id() OR betk.is_admin())
+  WITH CHECK (store_id = betk.my_store_id() OR betk.is_admin());
+-- INQUIRY_MESSAGES: thread parties (parent inquiry's buyer or store) read+send; sender edits own
+CREATE POLICY inq_msg_select ON betk.inquiry_messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.inquiries i
+      WHERE i.id = inquiry_messages.inquiry_id
+        AND (i.buyer_id = auth.uid() OR i.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY inq_msg_insert ON betk.inquiry_messages FOR INSERT
+  WITH CHECK (
+    sender_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM betk.inquiries i
+      WHERE i.id = inquiry_messages.inquiry_id
+        AND (i.buyer_id = auth.uid() OR i.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY inq_msg_update ON betk.inquiry_messages FOR UPDATE
+  USING (sender_id = auth.uid())
+  WITH CHECK (sender_id = auth.uid());
 -- ORDERS: buyer sees own; seller sees their store orders
 CREATE POLICY orders_access ON betk.orders FOR SELECT
   USING (
