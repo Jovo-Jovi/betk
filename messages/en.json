@@ -37,6 +37,7 @@
     "language": "Change language",
     "nav": {
       "dashboard": "Dashboard",
+      "listings": "Listings",
       "status": "Application status",
       "store": "Store profile",
       "delivery": "Delivery",
@@ -475,6 +476,9 @@
   },
   "seller": {
     "listings": {
+      "metaTitle": "Listings Management",
+      "title": "Listings Management",
+      "newCta": "New listing",
       "filter": {
         "all": "All",
         "active": "Active",
@@ -482,6 +486,49 @@
         "paused": "Paused",
         "sold_out": "Sold out",
         "removed": "Removed"
+      },
+      "type": {
+        "product": "Product",
+        "service": "Service"
+      },
+      "columns": {
+        "listing": "Listing",
+        "type": "Type",
+        "price": "Price",
+        "stock": "Stock",
+        "status": "Status",
+        "views": "Views",
+        "inquiries": "Inquiries",
+        "actions": "Actions"
+      },
+      "stockNotTracked": "—",
+      "actions": {
+        "edit": "Edit",
+        "pause": "Pause",
+        "unpause": "Activate",
+        "delete": "Delete",
+        "deleteConfirmTitle": "Delete this listing?",
+        "deleteConfirmMessage": "It will move to the Removed tab and will no longer be visible to buyers. This can't be undone from here.",
+        "deleteConfirmConfirm": "Delete",
+        "deleteConfirmCancel": "Cancel",
+        "deleted": "Listing deleted",
+        "deleteFailed": "Couldn't delete the listing, try again",
+        "paused": "Listing paused",
+        "pauseFailed": "Couldn't pause the listing, try again",
+        "activated": "Listing activated",
+        "activateFailed": "Couldn't activate the listing, try again",
+        "notFound": "This listing doesn't exist or isn't yours"
+      },
+      "empty": {
+        "message": "No listings yet",
+        "hint": "Create your first listing to start selling on BETK",
+        "cta": "Create your first listing",
+        "filteredMessage": "No listings in this tab"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "pageInfo": "Page {page} of {totalPages}"
       }
     },
     "onboarding": {

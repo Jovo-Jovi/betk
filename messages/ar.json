@@ -37,6 +37,7 @@
     "language": "تغيير اللغة",
     "nav": {
       "dashboard": "لوحة التحكم",
+      "listings": "الإعلانات",
       "status": "حالة الطلب",
       "store": "ملف المتجر",
       "delivery": "التوصيل",
@@ -475,6 +476,9 @@
   },
   "seller": {
     "listings": {
+      "metaTitle": "إدارة الإعلانات",
+      "title": "إدارة الإعلانات",
+      "newCta": "إعلان جديد",
       "filter": {
         "all": "الكل",
         "active": "نشط",
@@ -482,6 +486,49 @@
         "paused": "متوقف مؤقتًا",
         "sold_out": "نفد المخزون",
         "removed": "محذوف"
+      },
+      "type": {
+        "product": "منتج",
+        "service": "خدمة"
+      },
+      "columns": {
+        "listing": "الإعلان",
+        "type": "النوع",
+        "price": "السعر",
+        "stock": "المخزون",
+        "status": "الحالة",
+        "views": "المشاهدات",
+        "inquiries": "الاستفسارات",
+        "actions": "إجراءات"
+      },
+      "stockNotTracked": "—",
+      "actions": {
+        "edit": "تعديل",
+        "pause": "إيقاف مؤقت",
+        "unpause": "تفعيل",
+        "delete": "حذف",
+        "deleteConfirmTitle": "حذف هذا الإعلان؟",
+        "deleteConfirmMessage": "سينتقل إلى تبويب \"محذوف\" ولن يظهر للعملاء بعد الآن. لا يمكن التراجع عن هذا من هنا.",
+        "deleteConfirmConfirm": "حذف",
+        "deleteConfirmCancel": "إلغاء",
+        "deleted": "تم حذف الإعلان",
+        "deleteFailed": "تعذّر حذف الإعلان، حاول مرة أخرى",
+        "paused": "تم إيقاف الإعلان مؤقتًا",
+        "pauseFailed": "تعذّر إيقاف الإعلان، حاول مرة أخرى",
+        "activated": "تم تفعيل الإعلان",
+        "activateFailed": "تعذّر تفعيل الإعلان، حاول مرة أخرى",
+        "notFound": "هذا الإعلان غير موجود أو لا يخصك"
+      },
+      "empty": {
+        "message": "لا توجد إعلانات بعد",
+        "hint": "أنشئ أول إعلان لك لتبدأ البيع على بيتك",
+        "cta": "إنشاء أول إعلان",
+        "filteredMessage": "لا توجد إعلانات في هذا التبويب"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "pageInfo": "صفحة {page} من {totalPages}"
       }
     },
     "onboarding": {

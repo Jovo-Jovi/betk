@@ -11,11 +11,13 @@
  * routes under [locale]; NOT bare next/link) so the current locale is preserved.
  * `activeId` derives from the current (locale-stripped) pathname.
  *
- * Nav items are ONLY the Phase-04 seller routes that exist in this phase's scope
- * (dashboard-landing, application status, store profile + delivery/returns/
- * payments sub-settings) from `@/constants/routes`. Later-phase console routes
- * (listings, orders, inbox, earnings, analytics, …) are intentionally NOT added
- * as dead nav items — they light up when their phases land.
+ * Nav items are ONLY the seller routes that exist in the current phase's scope
+ * from `@/constants/routes`: the Phase-04 set (dashboard-landing, application
+ * status, store profile + delivery/returns/payments sub-settings) plus Phase-05
+ * T03's `listings` (Listings Management, `/seller/listings` — live as of this
+ * task). `inventory` (T05) is intentionally NOT added yet — it doesn't exist
+ * until its own task lands (no dead nav items). Later-phase console routes
+ * (orders, inbox, earnings, analytics, …) light up when their phases land.
  *
  * CD-DELTA-4 (REG-38b): mounts the shared `RouteProgress` top bar (renders null
  * at rest) so the seller shell gets the same global route-transition feedback as
@@ -30,6 +32,7 @@ import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import {
   LayoutDashboard,
+  Package,
   ClipboardList,
   Store,
   Truck,
@@ -46,9 +49,10 @@ import { ConsoleSidebar, RouteProgress } from "@/components/shared";
 import type { SidebarSection } from "@/components/shared";
 import { routes } from "@/constants/routes";
 
-/** Nav id → canonical (locale-neutral) route. Phase-04 scope ONLY. */
+/** Nav id → canonical (locale-neutral) route. Phase-04 + Phase-05 T03 scope. */
 const NAV_ROUTES: Record<string, string> = {
   dashboard: routes.seller.dashboard,
+  listings: routes.seller.listings,
   status: routes.seller.status,
   store: routes.seller.store,
   delivery: routes.seller.storeDelivery,
@@ -59,6 +63,7 @@ const NAV_ROUTES: Record<string, string> = {
 /** Nav icons by id (label text is supplied by next-intl, below). */
 const NAV_ICONS: Record<string, React.ReactNode> = {
   dashboard: <LayoutDashboard className="size-5" />,
+  listings: <Package className="size-5" />,
   status: <ClipboardList className="size-5" />,
   store: <Store className="size-5" />,
   delivery: <Truck className="size-5" />,
@@ -66,8 +71,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   payments: <Wallet className="size-5" />,
 };
 
-/** Ordered nav ids — dashboard, status, then the store settings cluster. */
-const NAV_IDS = ["dashboard", "status", "store", "delivery", "returns", "payments"] as const;
+/** Ordered nav ids — dashboard, listings, status, then the store settings cluster. */
+const NAV_IDS = ["dashboard", "listings", "status", "store", "delivery", "returns", "payments"] as const;
 
 /** Derive the active nav id from the locale-stripped pathname (longest match). */
 function activeIdFromPath(pathname: string): string {
@@ -75,6 +80,7 @@ function activeIdFromPath(pathname: string): string {
   if (pathname.startsWith(routes.seller.storeReturns)) return "returns";
   if (pathname.startsWith(routes.seller.storePayments)) return "payments";
   if (pathname.startsWith(routes.seller.store)) return "store";
+  if (pathname.startsWith(routes.seller.listings)) return "listings";
   if (pathname.startsWith(routes.seller.status)) return "status";
   if (pathname === routes.seller.dashboard) return "dashboard";
   return "";

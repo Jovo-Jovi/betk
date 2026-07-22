@@ -19,6 +19,10 @@ export { getOwnListings } from "./queries/getOwnListings";
 export { getOwnListingById } from "./queries/getOwnListingById";
 export { getOwnInventory } from "./queries/getOwnInventory";
 
+// ── T03 query (status-filter tab counts) ────────────────────────────────────
+export { getOwnListingsStatusCounts } from "./queries/getOwnListingsStatusCounts";
+export type { OwnListingsStatusCounts } from "./queries/getOwnListingsStatusCounts";
+
 // ── T02 Server Actions (write layer) ────────────────────────────────────────
 export { createListing } from "./actions/createListing";
 export { updateListing } from "./actions/updateListing";
