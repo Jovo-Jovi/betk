@@ -2,11 +2,12 @@
  * Messaging feature — typed return shapes for the read layer. Phase 06 / T02.
  * Hand-typed camelCase wrappers over `Database["betk"]["Tables"]` rows.
  *
- * REG-42 (DECISION 3 — DEFER): NO unread state is surfaced. The unread column
- * (`inquiry_messages.is_read`) exists but the reader-driven mark-read WRITE is
- * not RLS-achievable additively under ERD §3 row 52 (sender-only UPDATE), so
- * T02 builds no `markInquiryRead` and the queries expose no unread flag — T03/T04
- * do NOT render an unread indicator (the flag stands; see SESSION_CONTEXT REG-42).
+ * REG-42 (CLOSED, T02-FIX — DECISION 3 REVISED, was DEFER): the unread mechanism
+ * is `inquiry_messages.is_read` and it is now RECEIVER-writable (authorized ERD §3
+ * row-52 amendment + migration 20260722124510). The inbox summaries carry
+ * `unreadCount` (messages from the OTHER party not yet read by the caller) and the
+ * thread carries per-message `isRead` + a thread-level `unreadCount`; the
+ * `markInquiryRead` action flips them on view. See SESSION_CONTEXT REG-42.
  *
  * REG-43 (DECISION 4 — DERIVE-AT-READ): `lastActivityAt` is DERIVED from the
  * latest message (or the inquiry's createdAt when the thread is empty), NOT read
@@ -49,6 +50,12 @@ export interface InquirySummary {
   store: InquiryStoreContext | null;
   /** Present on the SELLER inbox; the buyer's display name is RLS-unreachable (REG-44). */
   buyerId: string | null;
+  /**
+   * REG-42 (T02-FIX): count of messages from the OTHER party not yet read by the
+   * caller — the inbox-row unread badge. 0 when the thread is fully read (or has
+   * no reply-thread messages yet; the buyer's opening message is not a message row).
+   */
+  unreadCount: number;
 }
 
 /** One message bubble in a thread. */
@@ -79,4 +86,10 @@ export interface InquiryThread {
   createdAt: string;
   listing: InquiryListingContext | null;
   messages: InquiryMessage[];
+  /**
+   * REG-42 (T02-FIX): count of messages from the OTHER party the caller has not
+   * read yet — drives the "mark read on view" call (markInquiryRead) and any
+   * thread-level unread affordance. Derived from `messages` + the caller's uid.
+   */
+  unreadCount: number;
 }

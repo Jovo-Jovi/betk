@@ -259,6 +259,7 @@ PR open + held.
 | T00 housekeep+cut | Sonnet | ✅ DONE | feature/phase-06-messaging | — | branch cut @ `acb3f1f`; pack committed |
 | T01 DB+RLS | Opus | ✅ DONE | feature/phase-06-messaging | CI green · integ 13/13 · ledger 27/27 · advisor 0-new | REG-41 closed ERD-verbatim (mig `20260722115026`); REG-42 (unread reader-write) + REG-43 (buyer last_message_at bump) flagged; CONTRACT block pinned |
 | T02 write layer | Opus | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 14/14 · advisor baseline (0 mig) | ADR-014 (single-table create, no rpc); DEC2=A (avg_response_hours app-layer recompute); DEC3=(a) DEFER REG-42; DEC4=(a) DERIVE-AT-READ REG-43; declineInquiry built (UI_SPEC L481); REG-44 minted (buyer-name RLS gap) |
+| T02-FIX REG-42 | Opus | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 37/37 (readReceipt 10 + rls 13 + writeLayer 14) · ledger 28/28 · advisor post-T01 baseline (13), 0 new | **REG-42 CLOSED** — DECISION 3 REVISED (3a superseded) under AUTHORIZED ERD §3 row-52 amendment; mig `20260722124510` (column GRANT `UPDATE(is_read)` + `inq_msg_read_receipt` policy); `markInquiryRead` + `unreadCount` wired into 3 queries; ADR-015; body-edit denied by grant (42501) |
 | T03 buyer inbox | Sonnet | — | — | — | — |
 | T04 seller inbox | Sonnet | — | — | — | — |
 | T05 exit gate | Opus | — | — | — | PR held for human |

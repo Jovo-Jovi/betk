@@ -12,7 +12,8 @@
  * precedent) so requireActiveUser() + every write run as the minted actor;
  * getUserRowById-style service reads use the real service client.
  *
- * Proves (ADR-014 single-table create; DEC2=A metric; DEC3 REG-42 no mark-read;
+ * Proves (ADR-014 single-table create; DEC2=A metric; DEC3 REG-42 now REVISED
+ * and CLOSED by T02-FIX — mark-read proven in inquiry.readReceipt.test.ts;
  * DEC4 REG-43 derive-at-read):
  *   • createInquiry → single-table inquiries row (status 'open', opening on
  *     buyer_first_message); unreadable listing → listing_unavailable

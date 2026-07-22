@@ -11,15 +11,16 @@
  * The opening bubble is the inquiry's `buyerFirstMessage` (ADR-014); `messages`
  * are the reply thread ordered sent_at ASC.
  *
- * REG-42 (DECISION 3 — DEFER): `isRead` is surfaced as stored, but NO mark-read
- * write exists (the reader cannot flip the other party's is_read under ERD §3
- * row 52) — T03/T04 do not render an unread indicator.
+ * REG-42 (T02-FIX — CLOSED): `isRead` is surfaced per message AND the thread
+ * carries `unreadCount` = messages from the OTHER party the caller hasn't read.
+ * T03/T04 render the read state and call `markInquiryRead` on view to flip the
+ * other party's messages (authorized receiver write, migration 20260722124510).
  */
 
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { InquiryThread } from "../types";
-import type { MessagingClient } from "./_shared";
+import { resolveCallerUserId, type MessagingClient } from "./_shared";
 
 const THREAD_SELECT = `
   id, buyer_id, store_id, status, quantity, delivery_preference, special_requests,
@@ -79,6 +80,7 @@ export async function getInquiryThread(
   client?: MessagingClient,
 ): Promise<InquiryThread | null> {
   const supabase = client ?? (await createClient());
+  const callerUserId = await resolveCallerUserId(supabase);
 
   const { data, error } = await supabase
     .schema("betk")
@@ -109,6 +111,11 @@ export async function getInquiryThread(
       isRead: m.is_read,
     }));
 
+  // REG-42 (T02-FIX): unread = the OTHER party's messages this caller hasn't read.
+  const unreadCount = callerUserId
+    ? messages.filter((m) => m.senderId !== callerUserId && !m.isRead).length
+    : 0;
+
   return {
     id: row.id,
     buyerId: row.buyer_id,
@@ -129,5 +136,6 @@ export async function getInquiryThread(
         }
       : null,
     messages,
+    unreadCount,
   };
 }

@@ -7,10 +7,12 @@
  * Model:   thread reads/writes under the cookie client (RLS inq_buyer /
  *          inq_insert / inq_update + inq_msg_select / inq_msg_insert /
  *          inq_msg_update [T01 REG-41] + a server-verified participation pin).
- *          NO service-role. NO new RLS/migration (ADR-014 single-table create;
- *          DECISION 3 REG-42 unread DEFERRED; DECISION 4 REG-43 last_message_at
- *          DERIVE-AT-READ). `requireActiveUser` gates (NOT requireVerifiedPhone —
- *          inquiries are pre-transaction).
+ *          NO service-role. (ADR-014 single-table create; DECISION 3 REVISED —
+ *          REG-42 unread CLOSED by T02-FIX: receiver-writable is_read via the
+ *          authorized ERD §3 row-52 amendment + migration 20260722124510
+ *          [receiver policy + column-level is_read GRANT]; DECISION 4 REG-43
+ *          last_message_at DERIVE-AT-READ). `requireActiveUser` gates (NOT
+ *          requireVerifiedPhone — inquiries are pre-transaction).
  *
  * CONFIRM→CHECKOUT CONTRACT (T01-pinned): confirmInquiry writes
  * status='confirmed' (the checkout-enablement state Phase 07 gates on);
@@ -32,6 +34,7 @@ export { createInquiry } from "./actions/createInquiry";
 export { sendInquiryMessage } from "./actions/sendInquiryMessage";
 export { confirmInquiry } from "./actions/confirmInquiry";
 export { declineInquiry } from "./actions/declineInquiry";
+export { markInquiryRead } from "./actions/markInquiryRead";
 
 // ── Pure rules (unit-tested) ────────────────────────────────────────────────
 export {
@@ -70,5 +73,6 @@ export type {
   SendInquiryMessageResult,
   ConfirmInquiryResult,
   DeclineInquiryResult,
+  MarkInquiryReadResult,
   DeliveryPreference,
 } from "@/validations/messaging";

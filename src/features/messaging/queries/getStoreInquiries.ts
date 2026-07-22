@@ -16,7 +16,10 @@
  * service-role reach-around); T04 renders a neutral label. See SESSION_CONTEXT
  * REG-44.
  *
- * REG-42 (DECISION 3 — DEFER): no unread flag.
+ * REG-42 (T02-FIX — CLOSED): each row carries `unreadCount` = messages from the
+ * OTHER party (the buyer) not yet read by this seller (`sender_id != self AND
+ * is_read = false`). T04 renders the unread badge; the thread view flips them via
+ * `markInquiryRead`.
  *
  * Returns an empty list when the caller isn't a seller with a store.
  */
@@ -34,7 +37,7 @@ import { resolveCallerScope, type MessagingClient } from "./_shared";
 const STORE_INQUIRY_SELECT = `
   id, buyer_id, status, buyer_first_message, converted_to_order_id, created_at,
   listings ( id, title_ar, title_en, listing_images ( url, sort_order ) ),
-  inquiry_messages ( body, sent_at )
+  inquiry_messages ( body, sent_at, sender_id, is_read )
 `;
 
 interface RawImage {
@@ -55,7 +58,7 @@ interface RawStoreInquiryRow {
   converted_to_order_id: string | null;
   created_at: string;
   listings: RawListing | RawListing[] | null;
-  inquiry_messages: { body: string; sent_at: string }[] | null;
+  inquiry_messages: { body: string; sent_at: string; sender_id: string; is_read: boolean }[] | null;
 }
 
 function asSingle<T>(v: T | T[] | null | undefined): T | null {
@@ -71,9 +74,13 @@ function pickHero(images: RawImage[] | null): string | null {
   return [...list].sort((a, b) => a.sort_order - b.sort_order)[0]?.url ?? null;
 }
 
-function mapRow(row: RawStoreInquiryRow): InquirySummary {
+function mapRow(row: RawStoreInquiryRow, callerUserId: string): InquirySummary {
   const listing = asSingle(row.listings);
-  const messages = (row.inquiry_messages ?? []).map((m) => ({ body: m.body, sentAt: m.sent_at }));
+  const rawMessages = row.inquiry_messages ?? [];
+  const messages = rawMessages.map((m) => ({ body: m.body, sentAt: m.sent_at }));
+  const unreadCount = rawMessages.filter(
+    (m) => m.sender_id !== callerUserId && !m.is_read,
+  ).length;
   return {
     id: row.id,
     status: row.status,
@@ -94,6 +101,7 @@ function mapRow(row: RawStoreInquiryRow): InquirySummary {
       : null,
     store: null,
     buyerId: row.buyer_id, // REG-44: buyer name is RLS-unreachable; id only.
+    unreadCount,
   };
 }
 
@@ -124,6 +132,6 @@ export async function getStoreInquiries(
 
   const rows = (data ?? []) as unknown as RawStoreInquiryRow[];
   return rows
-    .map(mapRow)
+    .map((row) => mapRow(row, scope.userId))
     .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt));
 }

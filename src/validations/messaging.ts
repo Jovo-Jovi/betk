@@ -52,7 +52,7 @@ export const sendInquiryMessageSchema = z.object({
 });
 export type SendInquiryMessageInput = z.input<typeof sendInquiryMessageSchema>;
 
-/** confirmInquiry / declineInquiry — seller-only status transitions. */
+/** confirmInquiry / declineInquiry / markInquiryRead — id-only inputs. */
 export const inquiryIdInputSchema = z.object({ inquiryId: z.string().uuid() });
 export type InquiryIdInput = z.input<typeof inquiryIdInputSchema>;
 
@@ -105,3 +105,14 @@ export type ConfirmInquiryResult =
 export type DeclineInquiryResult =
   | { ok: true; alreadyDeclined: boolean }
   | { ok: false; reason: BaseFailReason | "invalid_state" };
+
+/**
+ * markInquiryRead — Phase 06 / T02-FIX (REG-42 CLOSED). The RECEIVER flips
+ * `is_read=true` on every message in the inquiry NOT sent by the caller.
+ * Idempotent: already-read (or nothing to mark) → `{ ok: true, markedCount: 0 }`
+ * (zero rows is NOT an error). An outsider → `not_found`. `markedCount` is the
+ * number of messages newly flipped (for optimistic UI / telemetry).
+ */
+export type MarkInquiryReadResult =
+  | { ok: true; markedCount: number }
+  | { ok: false; reason: BaseFailReason };

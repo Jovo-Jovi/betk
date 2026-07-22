@@ -13,7 +13,10 @@
  * `inquiries.last_message_at`. So a buyer's own newest message re-sorts their
  * thread to the top.
  *
- * REG-42 (DECISION 3 — DEFER): no unread flag is computed or returned.
+ * REG-42 (T02-FIX — CLOSED): each row carries `unreadCount` = messages from the
+ * OTHER party (the seller) not yet read by this buyer (`sender_id != self AND
+ * is_read = false`). T03 renders the unread badge; the thread view flips them via
+ * `markInquiryRead`.
  *
  * Returns an empty list when the caller has no session.
  */
@@ -28,7 +31,7 @@ const OWN_INQUIRY_SELECT = `
   id, status, buyer_first_message, converted_to_order_id, created_at,
   listings ( id, title_ar, title_en, listing_images ( url, sort_order ) ),
   stores ( id, name_ar, name_en, slug ),
-  inquiry_messages ( body, sent_at )
+  inquiry_messages ( body, sent_at, sender_id, is_read )
 `;
 
 interface RawImage {
@@ -55,7 +58,7 @@ interface RawInquiryRow {
   created_at: string;
   listings: RawListing | RawListing[] | null;
   stores: RawStore | RawStore[] | null;
-  inquiry_messages: { body: string; sent_at: string }[] | null;
+  inquiry_messages: { body: string; sent_at: string; sender_id: string; is_read: boolean }[] | null;
 }
 
 function asSingle<T>(v: T | T[] | null | undefined): T | null {
@@ -71,10 +74,14 @@ function pickHero(images: RawImage[] | null): string | null {
   return [...list].sort((a, b) => a.sort_order - b.sort_order)[0]?.url ?? null;
 }
 
-function mapRow(row: RawInquiryRow): InquirySummary {
+function mapRow(row: RawInquiryRow, callerUserId: string): InquirySummary {
   const listing = asSingle(row.listings);
   const store = asSingle(row.stores);
-  const messages = (row.inquiry_messages ?? []).map((m) => ({ body: m.body, sentAt: m.sent_at }));
+  const rawMessages = row.inquiry_messages ?? [];
+  const messages = rawMessages.map((m) => ({ body: m.body, sentAt: m.sent_at }));
+  const unreadCount = rawMessages.filter(
+    (m) => m.sender_id !== callerUserId && !m.is_read,
+  ).length;
   return {
     id: row.id,
     status: row.status,
@@ -97,6 +104,7 @@ function mapRow(row: RawInquiryRow): InquirySummary {
       ? { id: store.id, nameAr: store.name_ar, nameEn: store.name_en, slug: store.slug }
       : null,
     buyerId: null,
+    unreadCount,
   };
 }
 
@@ -117,6 +125,6 @@ export async function getOwnInquiries(client?: MessagingClient): Promise<Inquiry
 
   const rows = (data ?? []) as unknown as RawInquiryRow[];
   return rows
-    .map(mapRow)
+    .map((row) => mapRow(row, userId))
     .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt));
 }

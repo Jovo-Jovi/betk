@@ -19,7 +19,10 @@
  *   ANON     (-)  anon read → zero rows                                         (DENY)
  *   THREAD   (+)  both parties INSERT messages into their thread + both read    (PASS)
  *   OUTSIDER (-)  non-party message INSERT denied                              (DENY)
- *   SENDER   (+/-) sender UPDATEs own message; other party's UPDATE → 0 rows    (PASS/DENY)
+ *   SENDER   (+)  sender UPDATEs own message's is_read                          (PASS)
+ *   RECEIVER (+)  other party flips is_read on the sender's message             (PASS)
+ *                 [REG-42 CLOSED by T02-FIX mig 20260722124510 + ERD §3 row-52
+ *                  amendment; full tamper proof in inquiry.readReceipt.test.ts]
  *   DELETE   (-)  no DELETE path — message delete → 0 rows, row survives        (DENY)
  *   STATUS   (+/-) seller UPDATEs inquiry status; buyer status UPDATE → 0 rows  (PASS/DENY)
  */
@@ -367,7 +370,7 @@ describeOrSkip("Phase 06 / T01 — inquiries + inquiry_messages RLS (staging)", 
   // -------------------------------------------------------------------------
   // SENDER-only UPDATE (+/-) and NO DELETE (-)
   // -------------------------------------------------------------------------
-  it("SENDER (+/-): sender UPDATEs own message; the OTHER party's UPDATE → 0 rows", async () => {
+  it("SENDER (+) own is_read; RECEIVER (+) flips the sender's is_read [REG-42 CLOSED]", async () => {
     // Buyer's own message.
     const { data: bMsg } = await svc()
       .from("inquiry_messages")
@@ -376,7 +379,7 @@ describeOrSkip("Phase 06 / T01 — inquiries + inquiry_messages RLS (staging)", 
       .eq("sender_id", buyer.id)
       .single();
 
-    // Sender updates own row → allowed.
+    // Sender updates own row's is_read → allowed (inq_msg_update, column-confined).
     const ownUpd = await buyer.client
       .from("inquiry_messages")
       .update({ is_read: true })
@@ -385,22 +388,27 @@ describeOrSkip("Phase 06 / T01 — inquiries + inquiry_messages RLS (staging)", 
     expect(ownUpd.error).toBeNull();
     expect(ownUpd.data?.[0]?.is_read).toBe(true);
 
-    // The OTHER party (seller) cannot flip is_read on the buyer's message → 0 rows.
-    // (This is the REG-42 flag: the reader cannot mark the other party's message read
-    // under ERD §3 row 52 sender-only UPDATE.)
+    // The OTHER party (seller = the RECEIVER of the buyer's message) may now flip
+    // is_read on it. REG-42 CLOSED by T02-FIX (migration 20260722124510 +
+    // authorized ERD §3 row-52 amendment): inq_msg_read_receipt authorizes the row
+    // (party AND sender <> caller), the column GRANT confines it to is_read. The
+    // full tamper proof (both directions + body-edit GRANT denial) lives in
+    // inquiry.readReceipt.test.ts.
     const otherUpd = await sellerA.client
       .from("inquiry_messages")
       .update({ is_read: false })
       .eq("id", bMsg!.id)
-      .select("id");
-    expect(otherUpd.data?.length ?? 0).toBe(0);
+      .select("id, is_read");
+    expect(otherUpd.error).toBeNull();
+    expect(otherUpd.data?.length ?? 0).toBe(1);
+    expect(otherUpd.data?.[0]?.is_read).toBe(false);
 
     const { data: after } = await svc()
       .from("inquiry_messages")
       .select("is_read")
       .eq("id", bMsg!.id)
       .single();
-    expect(after?.is_read).toBe(true); // unchanged by the seller's attempt
+    expect(after?.is_read).toBe(false); // flipped by the receiver (seller)
   });
 
   it("DELETE (-): no DELETE policy — message delete → 0 rows, row survives", async () => {

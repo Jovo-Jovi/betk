@@ -1224,6 +1224,31 @@ CREATE POLICY inq_msg_insert ON betk.inquiry_messages FOR INSERT
 CREATE POLICY inq_msg_update ON betk.inquiry_messages FOR UPDATE
   USING (sender_id = auth.uid())
   WITH CHECK (sender_id = auth.uid());
+-- REG-42 (Phase 06 / T02-FIX): receiver read-receipt write, under the AUTHORIZED ERD §3 row-52
+--   amendment (2026-07-22) — RECEIVER may flip is_read on the OTHER party's messages. Column
+--   safety = GRANT (authenticated's table UPDATE re-scoped to is_read only, the REVOKE/GRANT
+--   below — narrows the schema-wide grant from 0013_grants for this one table), row safety =
+--   this policy. inq_msg_update (sender) left intact but now column-confined to is_read.
+--   service_role/postgres/anon grants unchanged. Migration 20260722124510_inquiry_read_receipt_rls.
+REVOKE UPDATE ON betk.inquiry_messages FROM authenticated;
+GRANT UPDATE (is_read) ON betk.inquiry_messages TO authenticated;
+CREATE POLICY inq_msg_read_receipt ON betk.inquiry_messages FOR UPDATE TO authenticated
+  USING (
+    sender_id <> auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM betk.inquiries i
+      WHERE i.id = inquiry_messages.inquiry_id
+        AND (i.buyer_id = auth.uid() OR i.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  )
+  WITH CHECK (
+    sender_id <> auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM betk.inquiries i
+      WHERE i.id = inquiry_messages.inquiry_id
+        AND (i.buyer_id = auth.uid() OR i.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
 -- ORDERS: buyer sees own; seller sees their store orders
 CREATE POLICY orders_access ON betk.orders FOR SELECT
   USING (
