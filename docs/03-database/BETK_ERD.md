@@ -49,7 +49,7 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 | wishlists | self or admin | self | self | self | `wishlist_own` |
 | restock_alerts | self or admin | self | service (notified_at) | self | self-scope |
 | inquiries | buyer or store or admin | buyer | store/admin | — | `inq_buyer` |
-| inquiry_messages | thread parties | thread parties | sender | — | via inquiry |
+| inquiry_messages | thread parties | thread parties | sender (content) + receiver (`is_read`) ‡ | — | via inquiry |
 | order_messages | order parties | order parties/system | sender | — | via order |
 | orders | buyer or store or admin | buyer | store/admin | — | `orders_access` |
 | order_items | follows order | system (checkout) | — | — | via order |
@@ -73,6 +73,10 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 | admin_settings | admin | admin | admin | — | `settings_admin` |
 | betk_analytics.seller_snapshots | own store or admin | cron | cron | — | `seller_snap_own` |
 | betk_analytics.platform_snapshots | admin | cron | cron | — | `platform_snap_admin` |
+
+> ‡ **`inquiry_messages` UPDATE — amendment (authorized 2026-07-22, REG-42).** The original cell read "sender". It is refined to two distinct write rights that do not overlap in scope:
+> - **sender — content (theoretical).** A message author editing their own message body. There is **no edit surface for this in the MVP** (`BETK_UI_SPEC.md` draws no message-edit affordance); the right exists only as the row's original policy (`inq_msg_update`, `sender_id = auth.uid()`) and is now further narrowed by the column-level GRANT below to the point of being a no-op on content.
+> - **RECEIVER — `is_read` only, enforced by column-level GRANT (not by policy).** The mark-as-read write is **definitionally receiver-driven** — the party who did *not* send a message is the one who reads it, and a sender flipping the read-state on their *own* message is a semantic no-op. The original row wording ("sender") described **content-edit rights**, which is why it did not contemplate the receiver's read-receipt write; it was never intended to forbid it. Rather than broaden the row policy to a general receiver UPDATE (which would expose `body`), the receiver's write is confined to the `is_read` column by `REVOKE UPDATE … / GRANT UPDATE(is_read) … TO authenticated`, with a permissive `inq_msg_read_receipt` policy (thread-party AND `sender_id <> auth.uid()`) authorizing the row. Column safety is thus the GRANT's job, row safety the policy's. This mirrors the `notifications` row's "self(read)" UPDATE intent (row: notifications) for the messaging thread.
 
 ## 4. Index justifications (41 indexes)
 

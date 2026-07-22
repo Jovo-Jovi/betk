@@ -24,6 +24,7 @@ import type {
   ListingStatus,
   FlagStatus,
   PayoutStatus,
+  InquiryStatus,
 } from "@/constants/enums";
 
 export type StatusColorPair = {
@@ -100,6 +101,18 @@ export const payoutStatusColors: Record<PayoutStatus, StatusColorPair> = {
   rejected:   { bg: "bg-destructive/[0.12]", fg: "text-destructive" },
 };
 
+/* ── inquiry_status (Phase 06 / T03) ─────────────────────────
+ * open/replied are in-progress (info/warning tints); confirmed is the
+ * checkout-enablement state (success); declined/expired are terminal
+ * read-only states (destructive/muted). */
+export const inquiryStatusColors: Record<InquiryStatus, StatusColorPair> = {
+  open:      { bg: "bg-warning/15",      fg: "text-warning-text" },
+  replied:   { bg: "bg-info/[0.12]",     fg: "text-info" },
+  confirmed: { bg: "bg-success/15",      fg: "text-success" },
+  declined:  { bg: "bg-destructive/[0.12]", fg: "text-destructive" },
+  expired:   { bg: "bg-muted/80",        fg: "text-muted-foreground" },
+};
+
 /* ── Unified lookup (for StatusBadge component, Phase 02+) ── */
 export type StatusDomain =
   | "order"
@@ -109,7 +122,8 @@ export type StatusDomain =
   | "boost"
   | "listing"
   | "flag"
-  | "payout";
+  | "payout"
+  | "inquiry";
 
 export const statusColorMap: Record<StatusDomain, Record<string, StatusColorPair>> = {
   order:   orderStatusColors,
@@ -120,4 +134,5 @@ export const statusColorMap: Record<StatusDomain, Record<string, StatusColorPair
   listing: listingStatusColors,
   flag:    flagStatusColors,
   payout:  payoutStatusColors,
+  inquiry: inquiryStatusColors,
 };

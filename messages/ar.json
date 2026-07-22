@@ -39,6 +39,7 @@
       "dashboard": "لوحة التحكم",
       "listings": "الإعلانات",
       "inventory": "المخزون",
+      "inbox": "الرسائل",
       "status": "حالة الطلب",
       "store": "ملف المتجر",
       "delivery": "التوصيل",
@@ -416,8 +417,25 @@
     },
     "cta": {
       "inquiry": "استفسر الآن",
+      "inquiryOwnListingReason": "لا يمكنك الاستفسار عن إعلانك الخاص",
       "notifyMe": "أعلمني عند التوفر",
       "share": "مشاركة عبر واتساب"
+    },
+    "composer": {
+      "title": "استفسار عن هذا الإعلان",
+      "messageLabel": "رسالتك",
+      "messagePlaceholder": "اكتب استفسارك عن المنتج أو الخدمة…",
+      "quantityLabel": "الكمية (اختياري)",
+      "deliveryLabel": "طريقة التوصيل (اختياري)",
+      "deliveryPlaceholder": "اختر طريقة التوصيل",
+      "specialRequestsLabel": "طلبات خاصة (اختياري)",
+      "specialRequestsPlaceholder": "أي تفاصيل إضافية تريد إخبار البائع بها",
+      "submit": "إرسال الاستفسار",
+      "submitting": "جارٍ الإرسال…",
+      "cancel": "إلغاء",
+      "errorRequired": "يرجى كتابة رسالتك",
+      "errorGeneric": "تعذر إرسال الاستفسار، حاول مرة أخرى",
+      "errorUnavailable": "هذا الإعلان غير متاح حاليًا"
     },
     "shareText": "{title} على بيتك:",
     "reviews": {
@@ -472,6 +490,46 @@
         "freeThreshold": "توصيل مجاني للطلبات فوق {amount} ج.م",
         "pickupGovernorate": "الاستلام من: {governorate}",
         "shipsNationwide": "التوصيل لكل المحافظات"
+      }
+    }
+  },
+  "inbox": {
+    "pageTitle": "الرسائل",
+    "backToList": "الرجوع إلى الرسائل",
+    "status": {
+      "open": "بانتظار الرد",
+      "replied": "تم الرد",
+      "confirmed": "مؤكد",
+      "declined": "مرفوض",
+      "expired": "منتهي"
+    },
+    "list": {
+      "unreadAria": "{count} رسالة غير مقروءة",
+      "storeFallback": "متجر",
+      "listingFallback": "إعلان محذوف"
+    },
+    "empty": {
+      "message": "لا توجد استفسارات حتى الآن",
+      "hint": "استفسر عن أي منتج أو خدمة من صفحته لتظهر محادثتك هنا",
+      "cta": "تصفح المنتجات"
+    },
+    "thread": {
+      "quantityLabel": "الكمية",
+      "deliveryLabel": "طريقة التوصيل",
+      "specialRequestsLabel": "طلبات خاصة",
+      "emptyMessage": "ابدأ المحادثة",
+      "composerPlaceholder": "اكتب رسالتك…",
+      "sendLabel": "إرسال",
+      "sendError": "تعذر إرسال الرسالة، حاول مرة أخرى",
+      "confirmedBanner": {
+        "title": "تم تأكيد الاستفسار",
+        "message": "أكّد البائع طلبك. سيتم تفعيل صفحة الدفع لهذا الاستفسار قريبًا."
+      },
+      "closedBanner": {
+        "declinedTitle": "تم رفض الاستفسار",
+        "declinedMessage": "رفض البائع هذا الاستفسار، ولا يمكن إرسال رسائل جديدة فيه",
+        "expiredTitle": "انتهت صلاحية الاستفسار",
+        "expiredMessage": "انتهت صلاحية هذا الاستفسار، ولا يمكن إرسال رسائل جديدة فيه"
       }
     }
   },
@@ -917,6 +975,48 @@
         "saveFailed": "تعذّر حفظ التغييرات، حاول مرة أخرى.",
         "errors": {
           "invalid": "قيمة غير صحيحة"
+        }
+      }
+    },
+    "inbox": {
+      "metaTitle": "رسائل البائع",
+      "title": "الرسائل",
+      "buyerLabel": "مشتري",
+      "filter": {
+        "all": "الكل"
+      },
+      "responseTime": {
+        "noData": "لا توجد بيانات كافية بعد"
+      },
+      "empty": {
+        "message": "لا توجد استفسارات حتى الآن"
+      },
+      "thread": {
+        "confirmedBanner": {
+          "title": "تم تأكيد الاستفسار",
+          "message": "يمكن للمشتري الآن إتمام الشراء لهذا الاستفسار."
+        },
+        "confirmAction": {
+          "label": "تأكيد",
+          "dialogTitle": "تأكيد هذا الاستفسار؟",
+          "dialogMessage": "سيتمكن المشتري من إتمام الشراء لهذا الاستفسار بعد التأكيد.",
+          "confirmLabel": "تأكيد",
+          "cancelLabel": "إلغاء",
+          "success": "تم تأكيد الاستفسار",
+          "failed": "تعذّر تأكيد الاستفسار، حاول مرة أخرى",
+          "notFound": "هذا الاستفسار غير موجود أو لا يخصك",
+          "invalidState": "لا يمكن تأكيد هذا الاستفسار بعد الآن"
+        },
+        "declineAction": {
+          "label": "رفض",
+          "dialogTitle": "رفض هذا الاستفسار؟",
+          "dialogMessage": "سيتم إشعار المشتري ولن يمكن إرسال رسائل جديدة هنا بعد ذلك.",
+          "confirmLabel": "رفض",
+          "cancelLabel": "إلغاء",
+          "success": "تم رفض الاستفسار",
+          "failed": "تعذّر رفض الاستفسار، حاول مرة أخرى",
+          "notFound": "هذا الاستفسار غير موجود أو لا يخصك",
+          "invalidState": "لا يمكن رفض هذا الاستفسار بعد الآن"
         }
       }
     }

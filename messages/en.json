@@ -39,6 +39,7 @@
       "dashboard": "Dashboard",
       "listings": "Listings",
       "inventory": "Inventory",
+      "inbox": "Inbox",
       "status": "Application status",
       "store": "Store profile",
       "delivery": "Delivery",
@@ -416,8 +417,25 @@
     },
     "cta": {
       "inquiry": "Inquire now",
+      "inquiryOwnListingReason": "You can't inquire about your own listing",
       "notifyMe": "Notify me when back",
       "share": "Share on WhatsApp"
+    },
+    "composer": {
+      "title": "Inquire about this listing",
+      "messageLabel": "Your message",
+      "messagePlaceholder": "Write your question about this product or service…",
+      "quantityLabel": "Quantity (optional)",
+      "deliveryLabel": "Delivery preference (optional)",
+      "deliveryPlaceholder": "Choose a delivery method",
+      "specialRequestsLabel": "Special requests (optional)",
+      "specialRequestsPlaceholder": "Any extra details for the seller",
+      "submit": "Send inquiry",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "errorRequired": "Please write your message",
+      "errorGeneric": "Couldn't send the inquiry, try again",
+      "errorUnavailable": "This listing is no longer available"
     },
     "shareText": "{title} on BETK:",
     "reviews": {
@@ -472,6 +490,46 @@
         "freeThreshold": "Free delivery on orders over EGP {amount}",
         "pickupGovernorate": "Pickup from: {governorate}",
         "shipsNationwide": "Ships nationwide"
+      }
+    }
+  },
+  "inbox": {
+    "pageTitle": "Inbox",
+    "backToList": "Back to inbox",
+    "status": {
+      "open": "Awaiting reply",
+      "replied": "Replied",
+      "confirmed": "Confirmed",
+      "declined": "Declined",
+      "expired": "Expired"
+    },
+    "list": {
+      "unreadAria": "{count} unread message(s)",
+      "storeFallback": "Store",
+      "listingFallback": "Removed listing"
+    },
+    "empty": {
+      "message": "No inquiries yet",
+      "hint": "Inquire about any product or service from its page to see your conversation here",
+      "cta": "Browse listings"
+    },
+    "thread": {
+      "quantityLabel": "Quantity",
+      "deliveryLabel": "Delivery preference",
+      "specialRequestsLabel": "Special requests",
+      "emptyMessage": "Start the conversation",
+      "composerPlaceholder": "Write your message…",
+      "sendLabel": "Send",
+      "sendError": "Couldn't send the message, try again",
+      "confirmedBanner": {
+        "title": "Inquiry confirmed",
+        "message": "The seller confirmed your request. Checkout for this inquiry will be enabled soon."
+      },
+      "closedBanner": {
+        "declinedTitle": "Inquiry declined",
+        "declinedMessage": "The seller declined this inquiry — no new messages can be sent here",
+        "expiredTitle": "Inquiry expired",
+        "expiredMessage": "This inquiry has expired — no new messages can be sent here"
       }
     }
   },
@@ -917,6 +975,48 @@
         "saveFailed": "Couldn't save your changes, please try again.",
         "errors": {
           "invalid": "Invalid value"
+        }
+      }
+    },
+    "inbox": {
+      "metaTitle": "Seller Inbox",
+      "title": "Inbox",
+      "buyerLabel": "Buyer",
+      "filter": {
+        "all": "All"
+      },
+      "responseTime": {
+        "noData": "Not enough data yet"
+      },
+      "empty": {
+        "message": "No inquiries yet"
+      },
+      "thread": {
+        "confirmedBanner": {
+          "title": "Inquiry confirmed",
+          "message": "The buyer can now check out for this inquiry."
+        },
+        "confirmAction": {
+          "label": "Confirm",
+          "dialogTitle": "Confirm this inquiry?",
+          "dialogMessage": "The buyer will be able to check out for this inquiry once confirmed.",
+          "confirmLabel": "Confirm",
+          "cancelLabel": "Cancel",
+          "success": "Inquiry confirmed",
+          "failed": "Couldn't confirm the inquiry, try again",
+          "notFound": "This inquiry doesn't exist or isn't yours",
+          "invalidState": "This inquiry can no longer be confirmed"
+        },
+        "declineAction": {
+          "label": "Decline",
+          "dialogTitle": "Decline this inquiry?",
+          "dialogMessage": "The buyer will be notified and no new messages can be sent here afterwards.",
+          "confirmLabel": "Decline",
+          "cancelLabel": "Cancel",
+          "success": "Inquiry declined",
+          "failed": "Couldn't decline the inquiry, try again",
+          "notFound": "This inquiry doesn't exist or isn't yours",
+          "invalidState": "This inquiry can no longer be declined"
         }
       }
     }

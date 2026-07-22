@@ -17,8 +17,9 @@
  * `listings` (T03, Listings Management, `/seller/listings`) and `inventory`
  * (T05, Stock & Inventory, `/seller/inventory` — the T03 deliberate deferral is
  * now CLOSED: the route exists as of this task, so the nav item lands with it,
- * no dead link). Later-phase console routes (orders, inbox, earnings,
- * analytics, …) light up when their phases land.
+ * no dead link), plus Phase-06 `inbox` (T04, Seller Inbox, `/seller/inbox` —
+ * deferral CLOSED: the route exists as of this task). Later-phase console
+ * routes (orders, earnings, analytics, …) light up when their phases land.
  *
  * CD-DELTA-4 (REG-38b): mounts the shared `RouteProgress` top bar (renders null
  * at rest) so the seller shell gets the same global route-transition feedback as
@@ -35,6 +36,7 @@ import {
   LayoutDashboard,
   Package,
   Boxes,
+  Inbox,
   ClipboardList,
   Store,
   Truck,
@@ -56,6 +58,7 @@ const NAV_ROUTES: Record<string, string> = {
   dashboard: routes.seller.dashboard,
   listings: routes.seller.listings,
   inventory: routes.seller.inventory,
+  inbox: routes.seller.inbox,
   status: routes.seller.status,
   store: routes.seller.store,
   delivery: routes.seller.storeDelivery,
@@ -68,6 +71,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   dashboard: <LayoutDashboard className="size-5" />,
   listings: <Package className="size-5" />,
   inventory: <Boxes className="size-5" />,
+  inbox: <Inbox className="size-5" />,
   status: <ClipboardList className="size-5" />,
   store: <Store className="size-5" />,
   delivery: <Truck className="size-5" />,
@@ -75,8 +79,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   payments: <Wallet className="size-5" />,
 };
 
-/** Ordered nav ids — dashboard, listings, inventory, status, then the store settings cluster. */
-const NAV_IDS = ["dashboard", "listings", "inventory", "status", "store", "delivery", "returns", "payments"] as const;
+/** Ordered nav ids — dashboard, listings, inventory, inbox, status, then the store settings cluster. */
+const NAV_IDS = ["dashboard", "listings", "inventory", "inbox", "status", "store", "delivery", "returns", "payments"] as const;
 
 /** Derive the active nav id from the locale-stripped pathname (longest match). */
 function activeIdFromPath(pathname: string): string {
@@ -85,6 +89,7 @@ function activeIdFromPath(pathname: string): string {
   if (pathname.startsWith(routes.seller.storePayments)) return "payments";
   if (pathname.startsWith(routes.seller.store)) return "store";
   if (pathname.startsWith(routes.seller.inventory)) return "inventory";
+  if (pathname.startsWith(routes.seller.inbox)) return "inbox";
   if (pathname.startsWith(routes.seller.listings)) return "listings";
   if (pathname.startsWith(routes.seller.status)) return "status";
   if (pathname === routes.seller.dashboard) return "dashboard";
