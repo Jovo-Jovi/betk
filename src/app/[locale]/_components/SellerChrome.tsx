@@ -11,20 +11,30 @@
  * routes under [locale]; NOT bare next/link) so the current locale is preserved.
  * `activeId` derives from the current (locale-stripped) pathname.
  *
- * Nav items are ONLY the Phase-04 seller routes that exist in this phase's scope
- * (dashboard-landing, application status, store profile + delivery/returns/
- * payments sub-settings) from `@/constants/routes`. Later-phase console routes
- * (listings, orders, inbox, earnings, analytics, …) are intentionally NOT added
- * as dead nav items — they light up when their phases land.
+ * Nav items are ONLY the seller routes that exist in the current phase's scope
+ * from `@/constants/routes`: the Phase-04 set (dashboard-landing, application
+ * status, store profile + delivery/returns/payments sub-settings) plus Phase-05
+ * `listings` (T03, Listings Management, `/seller/listings`) and `inventory`
+ * (T05, Stock & Inventory, `/seller/inventory` — the T03 deliberate deferral is
+ * now CLOSED: the route exists as of this task, so the nav item lands with it,
+ * no dead link). Later-phase console routes (orders, inbox, earnings,
+ * analytics, …) light up when their phases land.
+ *
+ * CD-DELTA-4 (REG-38b): mounts the shared `RouteProgress` top bar (renders null
+ * at rest) so the seller shell gets the same global route-transition feedback as
+ * the public/buyer shell; a `useTransition` drives it for in-console navigation
+ * and the locale toggle.
  *
  * Composition only — no restyle. Zero edits to components/ui or components/shared.
  */
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import {
   LayoutDashboard,
+  Package,
+  Boxes,
   ClipboardList,
   Store,
   Truck,
@@ -37,13 +47,15 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
-import { ConsoleSidebar } from "@/components/shared";
+import { ConsoleSidebar, RouteProgress } from "@/components/shared";
 import type { SidebarSection } from "@/components/shared";
 import { routes } from "@/constants/routes";
 
-/** Nav id → canonical (locale-neutral) route. Phase-04 scope ONLY. */
+/** Nav id → canonical (locale-neutral) route. Phase-04 + Phase-05 (T03+T05) scope. */
 const NAV_ROUTES: Record<string, string> = {
   dashboard: routes.seller.dashboard,
+  listings: routes.seller.listings,
+  inventory: routes.seller.inventory,
   status: routes.seller.status,
   store: routes.seller.store,
   delivery: routes.seller.storeDelivery,
@@ -54,6 +66,8 @@ const NAV_ROUTES: Record<string, string> = {
 /** Nav icons by id (label text is supplied by next-intl, below). */
 const NAV_ICONS: Record<string, React.ReactNode> = {
   dashboard: <LayoutDashboard className="size-5" />,
+  listings: <Package className="size-5" />,
+  inventory: <Boxes className="size-5" />,
   status: <ClipboardList className="size-5" />,
   store: <Store className="size-5" />,
   delivery: <Truck className="size-5" />,
@@ -61,8 +75,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   payments: <Wallet className="size-5" />,
 };
 
-/** Ordered nav ids — dashboard, status, then the store settings cluster. */
-const NAV_IDS = ["dashboard", "status", "store", "delivery", "returns", "payments"] as const;
+/** Ordered nav ids — dashboard, listings, inventory, status, then the store settings cluster. */
+const NAV_IDS = ["dashboard", "listings", "inventory", "status", "store", "delivery", "returns", "payments"] as const;
 
 /** Derive the active nav id from the locale-stripped pathname (longest match). */
 function activeIdFromPath(pathname: string): string {
@@ -70,6 +84,8 @@ function activeIdFromPath(pathname: string): string {
   if (pathname.startsWith(routes.seller.storeReturns)) return "returns";
   if (pathname.startsWith(routes.seller.storePayments)) return "payments";
   if (pathname.startsWith(routes.seller.store)) return "store";
+  if (pathname.startsWith(routes.seller.inventory)) return "inventory";
+  if (pathname.startsWith(routes.seller.listings)) return "listings";
   if (pathname.startsWith(routes.seller.status)) return "status";
   if (pathname === routes.seller.dashboard) return "dashboard";
   return "";
@@ -81,7 +97,9 @@ export function SellerChrome() {
   const locale = useLocale() as AppLocale;
   const { resolvedTheme, setTheme } = useTheme();
   const t = useTranslations("console");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
+  const [isRoutePending, startRouteTransition] = useTransition();
 
   const isDark = resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
@@ -99,6 +117,7 @@ export function SellerChrome() {
 
   return (
     <>
+      <RouteProgress active={isRoutePending} ariaLabel={tCommon("loading")} />
       {/* Mobile console header: hamburger opens the off-canvas sidebar (md:hidden). */}
       <header className="sticky top-0 z-30 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-card px-4 md:hidden">
         <button
@@ -113,7 +132,7 @@ export function SellerChrome() {
         <div className="ms-auto flex items-center gap-1">
           <button
             type="button"
-            onClick={() => router.replace(pathname, { locale: otherLocale })}
+            onClick={() => startRouteTransition(() => router.replace(pathname, { locale: otherLocale }))}
             aria-label={t("language")}
             className="flex size-9 items-center justify-center rounded-md text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -136,7 +155,7 @@ export function SellerChrome() {
         activeId={activeId}
         onSelect={(id) => {
           const to = NAV_ROUTES[id];
-          if (to) router.push(to);
+          if (to) startRouteTransition(() => router.push(to));
           setOpen(false);
         }}
         open={open}

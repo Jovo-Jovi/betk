@@ -71,3 +71,74 @@ export function SkeletonTable({ rows = 5, cols = 4, className }: { rows?: number
     </div>
   );
 }
+
+/* ── CD-DELTA-4 (REG-38a): route-transition skeletons ────────────────────────
+ * Full-page fallbacks that match each route's final layout, for streaming
+ * Suspense on the category / listing-detail / storefront transitions. Additive
+ * exports only — compose the section-level skeletons above.
+ */
+
+/** Category / listing-index transition: header row + filter-pill row + grid. */
+export function CategoryPageSkeleton({ count = 12, className }: { count?: number; className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-4", className)}>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-6 w-[40%]" />
+        <Skeleton className="h-3 w-[24%]" />
+      </div>
+      <div className="flex gap-2 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-20 shrink-0 rounded-full" />)}
+      </div>
+      <SkeletonGrid count={count} />
+    </div>
+  );
+}
+
+/** Listing-detail transition: gallery (main + thumb row) + info column. */
+export function ListingDetailSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("grid gap-6 md:grid-cols-2", className)}>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="size-16 rounded-md" />)}
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-3 w-[35%]" />
+        <Skeleton className="h-6 w-[80%]" />
+        <Skeleton className="h-7 w-[30%]" />
+        <div className="mt-2 flex items-center gap-3">
+          <Skeleton className="size-12 rounded-full" />
+          <div className="flex flex-1 flex-col gap-1.5">
+            <Skeleton className="h-3 w-[45%]" />
+            <Skeleton className="h-2.5 w-[30%]" />
+          </div>
+        </div>
+        <Skeleton className="mt-2 h-10 w-full rounded-md" />
+        <Skeleton className="h-24 w-full rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+/** Storefront transition: cover banner + store header + tab row + listing grid. */
+export function StorefrontSkeleton({ count = 8, className }: { count?: number; className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-4", className)}>
+      <Skeleton className="h-40 w-full rounded-lg" />
+      <div className="-mt-12 flex items-end gap-4 px-2">
+        <Skeleton className="size-20 rounded-full border-4 border-card" />
+        <div className="flex flex-1 flex-col gap-2 pb-1">
+          <Skeleton className="h-5 w-[45%]" />
+          <Skeleton className="h-2.5 w-[30%]" />
+        </div>
+        <Skeleton className="h-9 w-28 rounded-md" />
+      </div>
+      <div className="flex gap-1 border-b-2 border-border">
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 w-24 rounded-t-md" />)}
+      </div>
+      <SkeletonGrid count={count} />
+    </div>
+  );
+}

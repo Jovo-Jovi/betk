@@ -943,9 +943,9 @@ Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL,
 | Delivery Settings | ✅ | ✅† | ✅ | ✅† |
 | Return Policy Settings | ✅ | ✅† | ✅ | ✅† |
 | Payment Methods Settings | ✅ | ✅† | ✅ | ✅† |
-| Listings Management | ☐ | ☐ | ☐ | ☐ |
-| Create / Edit Listing | ☐ | ☐ | ☐ | ☐ |
-| Stock & Inventory | ☐ | ☐ | ☐ | ☐ |
+| Listings Management | ✅ | ✅† | ✅ | ✅† |
+| Create / Edit Listing | ✅ | ✅† | ✅ | ✅† |
+| Stock & Inventory | ✅ | ✅† | ✅ | ✅† |
 | Boost Listing | ☐ | ☐ | ☐ | ☐ |
 | Boost Management / History | ☐ | ☐ | ☐ | ☐ |
 | Seller Inbox (Inquiries) | ☐ | ☐ | ☐ | ☐ |
@@ -960,6 +960,8 @@ Every screen in the frozen page inventory must pass in **four cells**: `{ar-RTL,
 | Dispute Detail (Seller) | ☐ | ☐ | ☐ | ☐ |
 
 > **† (Phase 04 / T08, 2026-07-20):** the 7 Phase-04 seller screens (Onboarding, Application Status, Dashboard = `/seller` landing, Store Profile, Delivery, Return Policy, Payment Methods) are marked verified for AR-RTL + EN-LTR at the data/render layer — build prerenders both locales for all 7, i18n Guard D parity 524/524, runtime smoke confirmed `<html lang/dir>` + keyed copy per task. **`✅†` (dark columns) = wiring-verified only**: `next-themes` `.dark` class strategy + `suppressHydrationWarning` are in place, but the interactive light↔dark flip is asserted by code/build, not a live browser toggle — the interactive flip stays in the pre-launch Playwright basket (BL-03/REG-11 precedent). Same honest footnote as the Phase-03 Public/Guest rows.
+>
+> **† (Phase 05 / T06, 2026-07-22):** the 3 Phase-05 seller screens (**Listings Management** `/seller/listings`, **Create / Edit Listing** `/seller/listings/new`+`/[id]/edit`, **Stock & Inventory** `/seller/inventory`) are marked verified for AR-RTL + EN-LTR at the data/render layer — build prerenders both locales (40-route table), i18n Guard D parity 668/668, per-task runtime smoke (T03 6-tab filter / T04 16/16 create+publish+checklist / T05 20/20 stock-state matrix + inline-edit + restock) confirmed `<html lang/dir>` + keyed copy live. **`✅†` (dark columns) = wiring-verified only** — same `next-themes` `.dark`/`suppressHydrationWarning` code/build assertion as above; interactive flip stays in the pre-launch Playwright basket. **Boost Listing / Boost Management stay `☐` — Phase 11 (FR-SEL-11/12), no boost surface shipped in Phase 05.**
 
 ### Admin (17 headings — incl. WhatsApp Templates as a merged tab)
 | Screen | ar-RTL light | ar-RTL dark | en-LTR light | en-LTR dark |

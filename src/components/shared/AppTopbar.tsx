@@ -38,13 +38,19 @@ export interface AppTopbarProps {
   /** aria-label for the language toggle. Default "تغيير اللغة". */
   langLabel?: string;
   onLanguageToggle?: () => void;
+  /**
+   * CD-DELTA-4 (§5.13 addendum, PERF-01): when true the language toggle is
+   * disabled, gets aria-busy, and shows a token-only pending treatment
+   * (opacity-60 + cursor-progress). Zero visual change when unset.
+   */
+  langPending?: boolean;
 }
 
 export function AppTopbar({
   searchValue = "", onSearchChange, onSearchSubmit, searchPlaceholder = "ابحث في بيتك…", showSearch = true,
   logoSrc = "/logo/beh.png", notifCount = 0, onNotifClick, avatar, onAvatarClick, isDark = false, onThemeToggle, onLogoClick,
   notifLabel = "الإشعارات", themeLabel = "تبديل المظهر", accountLabel = "حسابي", className,
-  lang = "ar", langLabel = "تغيير اللغة", onLanguageToggle,
+  lang = "ar", langLabel = "تغيير اللغة", onLanguageToggle, langPending = false,
 }: AppTopbarProps) {
   return (
     <header className={cn("sticky top-0 z-50 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-card px-4 shadow-sm", className)}>
@@ -62,7 +68,7 @@ export function AppTopbar({
         </form>
       )}
       <div className="ms-auto flex items-center gap-2">
-        <button type="button" onClick={onLanguageToggle} aria-label={langLabel} className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <button type="button" onClick={onLanguageToggle} aria-label={langLabel} disabled={langPending} aria-busy={langPending || undefined} className={cn("flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", langPending && "cursor-progress opacity-60")}>
           <span className="text-[13px] font-bold leading-none">{lang === "ar" ? "EN" : "ع"}</span>
         </button>
         <button type="button" onClick={onThemeToggle} aria-label={themeLabel} className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

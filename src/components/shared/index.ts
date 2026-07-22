@@ -61,6 +61,9 @@ export {
   CategoryGridSkeleton,
   ListingCardSkeleton,
   StoreCardSkeleton,
+  CategoryPageSkeleton,
+  ListingDetailSkeleton,
+  StorefrontSkeleton,
 } from "./CatalogSkeletons";
 
 // ── DS-REGEN net-new (brief §5/§7) ──────────────────────────
@@ -97,3 +100,11 @@ export { Toggle } from "./Toggle";
 export type { ToggleProps } from "./Toggle";
 export { Alert } from "./Alert";
 export type { AlertProps, AlertVariant } from "./Alert";
+
+// ── CD-DELTA-4 (Phase-05 kit gate; signed off 2026-07-21) ───
+// Tabs wraps the vanilla ui/tabs (Radix) base — CLI add, byte-vanilla (see CHANGELOG).
+export { Tabs, TabsContent } from "./Tabs";
+export type { TabsProps, TabItem } from "./Tabs";
+// RouteProgress — token-only global route-transition bar (REG-38b, adopted).
+export { RouteProgress } from "./RouteProgress";
+export type { RouteProgressProps } from "./RouteProgress";

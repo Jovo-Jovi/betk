@@ -37,6 +37,8 @@
     "language": "تغيير اللغة",
     "nav": {
       "dashboard": "لوحة التحكم",
+      "listings": "الإعلانات",
+      "inventory": "المخزون",
       "status": "حالة الطلب",
       "store": "ملف المتجر",
       "delivery": "التوصيل",
@@ -474,6 +476,184 @@
     }
   },
   "seller": {
+    "listings": {
+      "metaTitle": "إدارة الإعلانات",
+      "title": "إدارة الإعلانات",
+      "newCta": "إعلان جديد",
+      "filter": {
+        "all": "الكل",
+        "active": "نشط",
+        "draft": "مسودة",
+        "paused": "متوقف مؤقتًا",
+        "sold_out": "نفد المخزون",
+        "removed": "محذوف"
+      },
+      "type": {
+        "product": "منتج",
+        "service": "خدمة"
+      },
+      "columns": {
+        "listing": "الإعلان",
+        "type": "النوع",
+        "price": "السعر",
+        "stock": "المخزون",
+        "status": "الحالة",
+        "views": "المشاهدات",
+        "inquiries": "الاستفسارات",
+        "actions": "إجراءات"
+      },
+      "stockNotTracked": "—",
+      "actions": {
+        "edit": "تعديل",
+        "pause": "إيقاف مؤقت",
+        "unpause": "تفعيل",
+        "delete": "حذف",
+        "deleteConfirmTitle": "حذف هذا الإعلان؟",
+        "deleteConfirmMessage": "سينتقل إلى تبويب \"محذوف\" ولن يظهر للعملاء بعد الآن. لا يمكن التراجع عن هذا من هنا.",
+        "deleteConfirmConfirm": "حذف",
+        "deleteConfirmCancel": "إلغاء",
+        "deleted": "تم حذف الإعلان",
+        "deleteFailed": "تعذّر حذف الإعلان، حاول مرة أخرى",
+        "paused": "تم إيقاف الإعلان مؤقتًا",
+        "pauseFailed": "تعذّر إيقاف الإعلان، حاول مرة أخرى",
+        "activated": "تم تفعيل الإعلان",
+        "activateFailed": "تعذّر تفعيل الإعلان، حاول مرة أخرى",
+        "notFound": "هذا الإعلان غير موجود أو لا يخصك"
+      },
+      "empty": {
+        "message": "لا توجد إعلانات بعد",
+        "hint": "أنشئ أول إعلان لك لتبدأ البيع على بيتك",
+        "cta": "إنشاء أول إعلان",
+        "filteredMessage": "لا توجد إعلانات في هذا التبويب"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "pageInfo": "صفحة {page} من {totalPages}"
+      },
+      "form": {
+        "newMetaTitle": "إعلان جديد",
+        "editMetaTitle": "تعديل الإعلان",
+        "newTitle": "إعلان جديد",
+        "editTitle": "تعديل الإعلان",
+        "typeLabel": "خدمة؟",
+        "titleArLabel": "العنوان بالعربية",
+        "titleArPlaceholder": "مثال: فستان صيفي قطن",
+        "titleEnLabel": "العنوان بالإنجليزية",
+        "titleEnHint": "يظهر للعملاء الذين يفضلون الإنجليزية",
+        "titleEnPlaceholder": "e.g. Summer cotton dress",
+        "descriptionLabel": "الوصف",
+        "descriptionPlaceholder": "صف المنتج أو الخدمة بالتفصيل…",
+        "categoryLabel": "التصنيف",
+        "categoryPlaceholder": "اختر تصنيفًا",
+        "subcategoryLabel": "التصنيف الفرعي",
+        "subcategoryNone": "بدون تصنيف فرعي",
+        "priceTypeLabel": "نوع السعر",
+        "priceType": {
+          "fixed": "سعر ثابت",
+          "per_hour": "بالساعة",
+          "starting_from": "يبدأ من",
+          "quote_only": "السعر عند الطلب"
+        },
+        "priceLabel": "السعر (ج.م)",
+        "pricePlaceholder": "0.00",
+        "priceHiddenHint": "السعر مخفي — سيطلب العملاء عرض سعر منك مباشرة",
+        "stockQtyLabel": "الكمية المتوفرة",
+        "stockQtyHint": "اتركه فارغًا لكمية غير محدودة",
+        "isMadeToOrderLabel": "يُصنّع عند الطلب",
+        "lowStockThresholdLabel": "حد المخزون المنخفض",
+        "lowStockThresholdHint": "تنبيه عندما تقل الكمية عن هذا الحد",
+        "serviceStockHiddenHint": "لا يوجد مخزون للخدمات",
+        "customOrderToggleLabel": "يقبل طلبات مخصصة",
+        "customOrderNotesLabel": "ملاحظات الطلب المخصص",
+        "customOrderNotesPlaceholder": "اشرح ما يمكن تخصيصه…",
+        "tagsLabel": "الوسوم",
+        "tagsHint": "حتى 5 وسوم لتحسين ظهور الإعلان في البحث",
+        "tagsPlaceholder": "أضف وسمًا واضغط Enter",
+        "tagsAdd": "إضافة",
+        "tagsRemove": "إزالة وسم {tag}",
+        "delivery": {
+          "title": "إعدادات التوصيل لهذا الإعلان",
+          "hint": "اختياري — اتركه فارغًا لاستخدام إعدادات المتجر الافتراضية",
+          "modesTitle": "طرق التوصيل",
+          "modes": {
+            "delivery": "توصيل",
+            "pickup": "استلام من المتجر",
+            "remote": "عن بُعد"
+          },
+          "minDaysLabel": "أقل عدد أيام",
+          "maxDaysLabel": "أكثر عدد أيام",
+          "feeLabel": "رسوم التوصيل (ج.م)",
+          "freeThresholdLabel": "التوصيل مجاني فوق (ج.م)",
+          "pickupGovLabel": "محافظة الاستلام",
+          "pickupGovPlaceholder": "اختر محافظة",
+          "shipsNationwideLabel": "شحن لكل المحافظات"
+        },
+        "images": {
+          "title": "الصور",
+          "hint": "حتى 5 صور — الصورة الأولى هي الصورة الرئيسية",
+          "uploadLabel": "اسحب الصور هنا أو اضغط للاختيار",
+          "uploadHint": "PNG أو JPG أو WebP",
+          "hero": "رئيسية",
+          "remove": "حذف الصورة",
+          "retry": "إعادة المحاولة",
+          "moveUp": "تحريك للأعلى",
+          "moveDown": "تحريك للأسفل",
+          "maxReached": "تم الوصول للحد الأقصى (5 صور)",
+          "uploadFailed": "تعذّر رفع الصورة، حاول مرة أخرى",
+          "addFailed": "تعذّر حفظ الصورة، حاول مرة أخرى",
+          "removeFailed": "تعذّر حذف الصورة، حاول مرة أخرى",
+          "reorderFailed": "تعذّر إعادة ترتيب الصور، حاول مرة أخرى",
+          "needsDraftHint": "احفظ المسودة أولاً لتتمكن من إضافة الصور"
+        },
+        "saveDraft": "حفظ كمسودة",
+        "saving": "جارٍ الحفظ…",
+        "draftSaved": "تم حفظ المسودة",
+        "saveChanges": "حفظ التغييرات",
+        "changesSaved": "تم حفظ التغييرات",
+        "publish": "نشر الإعلان",
+        "publishing": "جارٍ النشر…",
+        "publishSuccess": "تم نشر الإعلان",
+        "publishFailed": "تعذّر نشر الإعلان، حاول مرة أخرى",
+        "invalidState": "لا يمكن نشر هذا الإعلان في حالته الحالية",
+        "publishRequirementsTitle": "أكمل هذه الخطوات قبل النشر",
+        "publishRequirement": {
+          "image": "أضف صورة واحدة على الأقل",
+          "title_ar": "أضف عنوانًا بالعربية",
+          "category": "اختر تصنيفًا",
+          "payment_method": "أضف طريقة دفع واحدة على الأقل لمتجرك"
+        },
+        "paymentMethodLink": "إضافة طريقة دفع",
+        "saveFailed": "تعذّر الحفظ، حاول مرة أخرى",
+        "errors": {
+          "required": "هذا الحقل مطلوب",
+          "invalid": "قيمة غير صحيحة",
+          "priceRequired": "أدخل سعرًا صحيحًا أكبر من صفر",
+          "tagsMax": "5 وسوم كحد أقصى",
+          "tagsDuplicate": "هذا الوسم مضاف من قبل"
+        }
+      }
+    },
+    "inventory": {
+      "metaTitle": "المخزون",
+      "title": "المخزون",
+      "columns": {
+        "threshold": "حد التنبيه"
+      },
+      "actions": {
+        "save": "حفظ",
+        "saving": "جارٍ الحفظ…",
+        "restock": "إعادة تخزين",
+        "stockUpdated": "تم تحديث المخزون",
+        "restocked": "تمت إعادة التخزين — الإعلان نشط الآن",
+        "updateFailed": "تعذّر تحديث المخزون، حاول مرة أخرى",
+        "invalidQty": "أدخل كمية صحيحة (رقم صحيح 0 أو أكبر)"
+      },
+      "empty": {
+        "servicesOnlyMessage": "لا يوجد مخزون لتتبعه",
+        "servicesOnlyHint": "متجرك يقدّم خدمات فقط، والخدمات لا تحتاج إلى تتبع مخزون"
+      }
+    },
     "onboarding": {
       "metaTitle": "كن بائعاً — بيتك",
       "metaDescription": "أنشئ متجرك على بيتك في خمس خطوات وابدأ البيع.",
