@@ -15,6 +15,23 @@
  * carries `unreadCount` = messages from the OTHER party the caller hasn't read.
  * T03/T04 render the read state and call `markInquiryRead` on view to flip the
  * other party's messages (authorized receiver write, migration 20260722124510).
+ *
+ * T03 FINDING (query-layer merge, additive, no action change): T02 shipped
+ * `buyerFirstMessage` as a SEPARATE field from `messages` (ADR-014 said "T03/T04
+ * render the opening bubble from buyerFirstMessage" — i.e. compose it at the UI
+ * layer). Composing `MessageThread` AS-IS against a flat `ThreadMessage[]` prop
+ * means a UI-layer composition would have to splice the opening bubble in by
+ * hand at every consumer (T03 buyer + T04 seller) — easy to forget, and the
+ * T02 integration test asserted `messages.length === 0` on a zero-reply inquiry,
+ * proving the opening text is NOT in `messages` today. So the opening message IS
+ * merged HERE, once, as the synthetic first entry of `messages` (id
+ * `"<inquiryId>-opening"`, senderType `'buyer'`, sentAt = the inquiry's
+ * `created_at` — always earliest, since no reply can predate the inquiry that
+ * opens the thread). `unreadCount` is computed from the REAL `inquiry_messages`
+ * rows BEFORE the merge (buyer_first_message has no `is_read` column and was
+ * never part of the unread mechanism — REG-42 — so this must not change that).
+ * `buyerFirstMessage` stays on the return shape too (non-breaking, still the
+ * ADR-014-cited raw field) — `messages[0]` is the rendering-ready duplicate.
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -99,7 +116,7 @@ export async function getInquiryThread(
 
   const row = data as unknown as RawThreadRow;
   const listing = asSingle(row.listings);
-  const messages = (row.inquiry_messages ?? [])
+  const replyMessages = (row.inquiry_messages ?? [])
     .slice()
     .sort((a, b) => Date.parse(a.sent_at) - Date.parse(b.sent_at))
     .map((m) => ({
@@ -111,10 +128,25 @@ export async function getInquiryThread(
       isRead: m.is_read,
     }));
 
-  // REG-42 (T02-FIX): unread = the OTHER party's messages this caller hasn't read.
+  // REG-42 (T02-FIX): unread = the OTHER party's REAL messages this caller
+  // hasn't read. Computed BEFORE the opening-bubble merge below — the merged
+  // synthetic entry has no is_read column and must never enter this count.
   const unreadCount = callerUserId
-    ? messages.filter((m) => m.senderId !== callerUserId && !m.isRead).length
+    ? replyMessages.filter((m) => m.senderId !== callerUserId && !m.isRead).length
     : 0;
+
+  // T03 query-layer merge (see the header note): the opening bubble is
+  // ALWAYS earliest (no message predates the inquiry that opens the thread),
+  // so prepending is a safe merge, not a re-sort.
+  const openingMessage = {
+    id: `${row.id}-opening`,
+    senderId: row.buyer_id,
+    senderType: "buyer" as const,
+    body: row.buyer_first_message,
+    sentAt: row.created_at,
+    isRead: true, // not a trackable unread item — excluded from unreadCount above
+  };
+  const messages = [openingMessage, ...replyMessages];
 
   return {
     id: row.id,

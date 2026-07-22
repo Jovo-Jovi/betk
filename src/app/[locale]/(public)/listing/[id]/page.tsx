@@ -239,11 +239,13 @@ export default async function ListingDetailPage({
 
           <ListingActionButtons
             listingId={listing.id}
+            storeId={listing.storeId}
             shareText={t("shareText", { title })}
             isSoldOut={soldOut}
             wishlistAddLabel={wishlistLabels.addLabel}
             wishlistRemoveLabel={wishlistLabels.removeLabel}
             inquiryLabel={t("cta.inquiry")}
+            inquiryOwnListingReason={t("cta.inquiryOwnListingReason")}
             notifyMeLabel={t("cta.notifyMe")}
             shareLabel={t("cta.share")}
           />

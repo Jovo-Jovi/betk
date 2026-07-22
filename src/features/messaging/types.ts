@@ -69,9 +69,15 @@ export interface InquiryMessage {
 }
 
 /**
- * Full thread (`/inbox/[id]`, `/seller/inbox/[id]`). The opening bubble is the
- * inquiry's `buyerFirstMessage` (ADR-014) followed by `messages` (ASC). Returned
- * only to participants; `getInquiryThread` returns null for outsiders (→ 404).
+ * Full thread (`/inbox/[id]`, `/seller/inbox/[id]`). Returned only to
+ * participants; `getInquiryThread` returns null for outsiders (→ 404).
+ *
+ * T03 query-layer merge (additive, no action change): `messages[0]` is always
+ * a synthetic entry carrying the inquiry's `buyerFirstMessage` (ADR-014,
+ * senderType `'buyer'`, sentAt = `createdAt`) — `MessageThread` can therefore
+ * be composed AS-IS against the flat `messages` list without any UI-layer
+ * splicing. `buyerFirstMessage` remains on this shape too (the raw ADR-014
+ * field), for any consumer that wants it standalone.
  */
 export interface InquiryThread {
   id: string;

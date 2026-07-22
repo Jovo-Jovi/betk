@@ -270,7 +270,12 @@ describeOrSkip("Phase 06 / T02 — messaging write layer (staging)", () => {
     const asBuyer = await getInquiryThread(inquiry1, buyer.client);
     expect(asBuyer?.id).toBe(inquiry1);
     expect(asBuyer?.buyerFirstMessage).toBe(`مرحبا ${RUN}`);
-    expect(asBuyer?.messages.length).toBe(0); // valid empty-thread resting state (ADR-014)
+    // T03 query-layer merge: messages[0] is the synthetic opening bubble
+    // (buyer_first_message) even with zero real inquiry_messages rows — a
+    // valid empty-reply-thread resting state (ADR-014).
+    expect(asBuyer?.messages.length).toBe(1);
+    expect(asBuyer?.messages[0]?.senderType).toBe("buyer");
+    expect(asBuyer?.messages[0]?.body).toBe(`مرحبا ${RUN}`);
 
     const asSeller = await getInquiryThread(inquiry1, sellerA.client);
     expect(asSeller?.id).toBe(inquiry1);
@@ -332,11 +337,13 @@ describeOrSkip("Phase 06 / T02 — messaging write layer (staging)", () => {
     });
   });
 
-  it("getInquiryThread: both parties' messages present, ordered ASC", async () => {
+  it("getInquiryThread: both parties' messages present, ordered ASC (opening bubble merged first)", async () => {
     const thread = await getInquiryThread(inquiry1, buyer.client);
-    expect(thread?.messages.map((m) => m.senderType)).toEqual(["buyer", "seller"]);
+    // messages[0] = the merged opening bubble; then the buyer's reply, then the seller's.
+    expect(thread?.messages.map((m) => m.senderType)).toEqual(["buyer", "buyer", "seller"]);
     const times = thread?.messages.map((m) => Date.parse(m.sentAt)) ?? [];
     expect(times[0]!).toBeLessThanOrEqual(times[1]!);
+    expect(times[1]!).toBeLessThanOrEqual(times[2]!);
   });
 
   // ── REG-43 ordering proof (buyer's newest message sorts the thread to top) ───
