@@ -39,6 +39,7 @@
       "dashboard": "Dashboard",
       "listings": "Listings",
       "inventory": "Inventory",
+      "inbox": "Inbox",
       "status": "Application status",
       "store": "Store profile",
       "delivery": "Delivery",
@@ -974,6 +975,48 @@
         "saveFailed": "Couldn't save your changes, please try again.",
         "errors": {
           "invalid": "Invalid value"
+        }
+      }
+    },
+    "inbox": {
+      "metaTitle": "Seller Inbox",
+      "title": "Inbox",
+      "buyerLabel": "Buyer",
+      "filter": {
+        "all": "All"
+      },
+      "responseTime": {
+        "noData": "Not enough data yet"
+      },
+      "empty": {
+        "message": "No inquiries yet"
+      },
+      "thread": {
+        "confirmedBanner": {
+          "title": "Inquiry confirmed",
+          "message": "The buyer can now check out for this inquiry."
+        },
+        "confirmAction": {
+          "label": "Confirm",
+          "dialogTitle": "Confirm this inquiry?",
+          "dialogMessage": "The buyer will be able to check out for this inquiry once confirmed.",
+          "confirmLabel": "Confirm",
+          "cancelLabel": "Cancel",
+          "success": "Inquiry confirmed",
+          "failed": "Couldn't confirm the inquiry, try again",
+          "notFound": "This inquiry doesn't exist or isn't yours",
+          "invalidState": "This inquiry can no longer be confirmed"
+        },
+        "declineAction": {
+          "label": "Decline",
+          "dialogTitle": "Decline this inquiry?",
+          "dialogMessage": "The buyer will be notified and no new messages can be sent here afterwards.",
+          "confirmLabel": "Decline",
+          "cancelLabel": "Cancel",
+          "success": "Inquiry declined",
+          "failed": "Couldn't decline the inquiry, try again",
+          "notFound": "This inquiry doesn't exist or isn't yours",
+          "invalidState": "This inquiry can no longer be declined"
         }
       }
     }

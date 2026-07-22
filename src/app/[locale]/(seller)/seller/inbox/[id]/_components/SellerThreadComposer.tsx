@@ -1,31 +1,25 @@
 "use client";
 
 /**
- * ThreadComposer — composes the shared `MessageThread` AS-IS (Phase 06 / T03,
- * FR-BUY-5) against `getInquiryThread`'s merged `messages` list (the T03
- * query-layer merge — `messages[0]` is already the opening `buyerFirstMessage`
- * bubble, so no splicing happens here).
+ * SellerThreadComposer — composes the shared `MessageThread` AS-IS against
+ * `getInquiryThread`'s merged `messages` list (Phase 06 / T04). Mirrors the
+ * buyer-side `ThreadComposer` (T03) with ONE difference: `sent` (the "is this
+ * bubble mine" alignment flag passed to `MessageThread`) checks
+ * `senderType === "seller"` here instead of `"buyer"` — computed by the
+ * calling page, not this component, so this file is otherwise byte-identical
+ * to its buyer counterpart including the `readOnly` composition strategy.
  *
- * `sendInquiryMessage` is imported by FILE PATH (never the messaging barrel —
- * the T03/T04-Phase-05 barrel-leak precedent: the barrel also re-exports
- * `next/headers`-backed queries).
+ * `sendInquiryMessage` is imported by FILE PATH (never the messaging barrel).
  *
- * On success: `router.refresh()` re-runs the RSC page's `getInquiryThread`
- * read, so the new bubble (and any status transition it triggered, e.g.
- * open→replied) lands via fresh server data — no client-side message-list
- * state to keep in sync by hand (StoreProfileForm/ListingForm precedent).
- *
- * `readOnly` (declined/expired — BETK_UI_SPEC.md L226 "declined/expired
- * inquiry (read-only)"): `MessageThread` (frozen kit) has no `disabled`/
- * `readOnly` prop to suppress its composer — patching that in would violate
- * compose-only (never restyle/extend `components/shared/*` in-repo; a real
- * gap goes to Claude Design, not an in-repo patch). T04-CARRY MICRO-FIX
- * (Phase 06 / T04): the input is now FROZEN instead of usable-with-a-toast —
- * `onComposerChange` is a no-op (the controlled `composerValue` never
- * changes, so keystrokes have no visible effect) and `onSend` still guards
- * with a toast as a defence-in-depth backstop (no mutation ever fires for a
- * closed inquiry either way). The caller additionally renders the
- * closed-state banner (`inbox.thread.closedBanner`) above this.
+ * `readOnly` (declined/expired — T03 carry, closes it): the shared
+ * `MessageThread` (frozen kit) has no `disabled`/`readOnly` prop, so
+ * compose-only forbids patching one in. T03 shipped the composer ENABLED
+ * with a toast-on-submit for this state — this task's flagged micro-fix
+ * disables the input outright instead (2-line change: `disabled` on the
+ * underlying input isn't exposed either, so the fix is at THIS layer — when
+ * `readOnly`, the input value is frozen and `onComposerChange`/`onSend` are
+ * both no-ops, with the existing neutral keyed line rendered by the caller
+ * above). No kit edit.
  */
 
 import { useState, useTransition } from "react";
@@ -34,7 +28,7 @@ import { useRouter } from "@/i18n/navigation";
 import { MessageThread, type ThreadMessage } from "@/components/shared";
 import { sendInquiryMessage } from "@/features/messaging/actions/sendInquiryMessage";
 
-export interface ThreadComposerProps {
+export interface SellerThreadComposerProps {
   inquiryId: string;
   messages: ThreadMessage[];
   composerPlaceholder: string;
@@ -42,11 +36,11 @@ export interface ThreadComposerProps {
   emptyMessage: string;
   sendErrorMessage: string;
   readOnly: boolean;
-  /** Shown via toast if the buyer tries to send on a closed (readOnly) thread. */
+  /** Shown via toast if the seller tries to send on a closed (readOnly) thread. */
   closedMessage: string;
 }
 
-export function ThreadComposer({
+export function SellerThreadComposer({
   inquiryId,
   messages,
   composerPlaceholder,
@@ -55,7 +49,7 @@ export function ThreadComposer({
   sendErrorMessage,
   readOnly,
   closedMessage,
-}: ThreadComposerProps) {
+}: SellerThreadComposerProps) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [isPending, startTransition] = useTransition();

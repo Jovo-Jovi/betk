@@ -28,6 +28,11 @@
 export { getOwnInquiries } from "./queries/getOwnInquiries";
 export { getInquiryThread } from "./queries/getInquiryThread";
 export { getStoreInquiries } from "./queries/getStoreInquiries";
+export {
+  getStoreInquiriesStatusCounts,
+  type StoreInquiriesStatusCounts,
+} from "./queries/getStoreInquiriesStatusCounts";
+export { getOwnAvgResponseHours } from "./queries/getOwnAvgResponseHours";
 
 // ── Write layer (Server Actions) ────────────────────────────────────────────
 export { createInquiry } from "./actions/createInquiry";
