@@ -38,6 +38,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "listings": "Listings",
+      "inventory": "Inventory",
       "status": "Application status",
       "store": "Store profile",
       "delivery": "Delivery",
@@ -631,6 +632,26 @@
           "tagsMax": "5 tags maximum",
           "tagsDuplicate": "This tag was already added"
         }
+      }
+    },
+    "inventory": {
+      "metaTitle": "Inventory",
+      "title": "Inventory",
+      "columns": {
+        "threshold": "Threshold"
+      },
+      "actions": {
+        "save": "Save",
+        "saving": "Saving…",
+        "restock": "Restock",
+        "stockUpdated": "Stock updated",
+        "restocked": "Restocked — listing is active again",
+        "updateFailed": "Couldn't update stock, try again",
+        "invalidQty": "Enter a valid quantity (a whole number, 0 or more)"
+      },
+      "empty": {
+        "servicesOnlyMessage": "No stock to track",
+        "servicesOnlyHint": "Your store only offers services, and services don't need stock tracking"
       }
     },
     "onboarding": {

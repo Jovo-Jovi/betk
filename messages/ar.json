@@ -38,6 +38,7 @@
     "nav": {
       "dashboard": "لوحة التحكم",
       "listings": "الإعلانات",
+      "inventory": "المخزون",
       "status": "حالة الطلب",
       "store": "ملف المتجر",
       "delivery": "التوصيل",
@@ -631,6 +632,26 @@
           "tagsMax": "5 وسوم كحد أقصى",
           "tagsDuplicate": "هذا الوسم مضاف من قبل"
         }
+      }
+    },
+    "inventory": {
+      "metaTitle": "المخزون",
+      "title": "المخزون",
+      "columns": {
+        "threshold": "حد التنبيه"
+      },
+      "actions": {
+        "save": "حفظ",
+        "saving": "جارٍ الحفظ…",
+        "restock": "إعادة تخزين",
+        "stockUpdated": "تم تحديث المخزون",
+        "restocked": "تمت إعادة التخزين — الإعلان نشط الآن",
+        "updateFailed": "تعذّر تحديث المخزون، حاول مرة أخرى",
+        "invalidQty": "أدخل كمية صحيحة (رقم صحيح 0 أو أكبر)"
+      },
+      "empty": {
+        "servicesOnlyMessage": "لا يوجد مخزون لتتبعه",
+        "servicesOnlyHint": "متجرك يقدّم خدمات فقط، والخدمات لا تحتاج إلى تتبع مخزون"
       }
     },
     "onboarding": {
