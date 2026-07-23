@@ -26,7 +26,8 @@
  * surface. So NO row is written here. A payment-audit mechanism (a widened enum or
  * a dedicated payment-audit table) is a human-authorized decision, out of T02b
  * scope. The policy is landed for the Phase-10/14 moderation writers that DO fit
- * the enum.
+ * the enum. Record-only: **REG-70** (minted Phase 07 / T03) — Phase 14 owns any
+ * enum amendment; a new member is a schema change, not invented here.
  *
  * R-N04: capture "deposit_confirmed" (the buyer + seller are notified — delivery
  * is Phase 12; NO notifications-table write / send here).

@@ -14,3 +14,9 @@ export type { UpdateProfileResult } from "./actions/updateProfile";
 // T06: account deactivation (OD-2).
 export { deactivateAccount } from "./actions/deactivateAccount";
 export type { DeactivateAccountResult } from "./actions/deactivateAccount";
+
+// Phase 07 / T03: minimal address select-or-create for CHECKOUT (NOT the full
+// /account/addresses Address Book — that page still owns edit/delete/set-default).
+export { getOwnAddresses } from "./queries/getOwnAddresses";
+export type { AddressListItem } from "./queries/getOwnAddresses";
+export { createAddress } from "./actions/createAddress";

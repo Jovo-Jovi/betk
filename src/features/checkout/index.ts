@@ -17,6 +17,7 @@
 
 // ── Read layer (queries) ────────────────────────────────────────────────────
 export { getCheckoutContext } from "./queries/getCheckoutContext";
+export { getDepositHandles } from "./queries/getDepositHandles";
 
 // ── Write layer (Server Actions) ────────────────────────────────────────────
 export { createOrderFromInquiry } from "./actions/createOrderFromInquiry";

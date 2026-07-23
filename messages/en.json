@@ -515,13 +515,102 @@
       "sendError": "Couldn't send the message, try again",
       "confirmedBanner": {
         "title": "Inquiry confirmed",
-        "message": "The seller confirmed your request. Checkout for this inquiry will be enabled soon."
+        "message": "The seller confirmed your request. Complete payment to place your order.",
+        "cta": "Continue to checkout",
+        "viewOrderCta": "View order details"
       },
       "closedBanner": {
         "declinedTitle": "Inquiry declined",
         "declinedMessage": "The seller declined this inquiry — no new messages can be sent here",
         "expiredTitle": "Inquiry expired",
         "expiredMessage": "This inquiry has expired — no new messages can be sent here"
+      }
+    }
+  },
+  "checkout": {
+    "metaTitle": "Checkout",
+    "title": "Checkout",
+    "submit": "Place order",
+    "submitting": "Submitting…",
+    "summary": {
+      "title": "Order summary",
+      "quantity": "Quantity",
+      "subtotal": "Subtotal",
+      "deliveryFee": "Delivery fee",
+      "total": "Total",
+      "depositNow": "Deposit due now",
+      "balanceOnDelivery": "Balance on delivery",
+      "currency": "EGP"
+    },
+    "address": {
+      "title": "Delivery address",
+      "noAddresses": "No saved addresses",
+      "addNew": "Add a new address",
+      "save": "Save address",
+      "cancel": "Cancel",
+      "errors": {
+        "required": "Please enter the governorate, city, and street address",
+        "saveFailed": "Couldn't save the address, try again"
+      }
+    },
+    "delivery": {
+      "title": "Delivery method"
+    },
+    "deposit": {
+      "title": "Deposit method",
+      "methods": {
+        "instapay": "InstaPay",
+        "vodafone_cash": "Vodafone Cash",
+        "orange_cash": "Orange Cash"
+      },
+      "configMissing": {
+        "title": "Payment isn't available yet",
+        "message": "BETK hasn't set up a payment handle yet. Please try again later."
+      }
+    },
+    "errors": {
+      "addressRequired": "Please select or add an address",
+      "deliveryRequired": "Please select a delivery method",
+      "depositRequired": "Please select a deposit method",
+      "generic": "Something went wrong, try again"
+    },
+    "confirmation": {
+      "metaTitle": "Order confirmation",
+      "title": "Your order was created",
+      "refLabel": "BETK reference",
+      "balanceNote": "The remaining balance is paid in cash on delivery.",
+      "deposit": {
+        "title": "Deposit payment instructions",
+        "amountLabel": "Amount due",
+        "currency": "EGP",
+        "handleLabels": {
+          "instapay": "InstaPay number",
+          "vodafone_cash": "Vodafone Cash number",
+          "orange_cash": "Orange Cash number"
+        },
+        "uploadLabel": "Transfer screenshot",
+        "uploadHint": "JPG or PNG, up to 5MB",
+        "uploadError": "Couldn't upload the image, try again",
+        "referenceLabel": "Transfer reference (optional)",
+        "referencePlaceholder": "e.g. 123456789",
+        "submit": "Submit proof",
+        "reupload": "Re-upload proof",
+        "submitting": "Submitting…",
+        "attachError": "Couldn't submit the proof, try again"
+      },
+      "state": {
+        "noProof": {
+          "title": "Awaiting your transfer screenshot",
+          "message": "Please upload a screenshot of your deposit transfer to complete your order."
+        },
+        "pendingReview": {
+          "title": "Awaiting BETK verification",
+          "message": "We received your proof and BETK will verify it shortly."
+        },
+        "confirmed": {
+          "title": "Payment verified",
+          "message": "Your payment is confirmed, and your order is now awaiting seller acceptance."
+        }
       }
     }
   },
