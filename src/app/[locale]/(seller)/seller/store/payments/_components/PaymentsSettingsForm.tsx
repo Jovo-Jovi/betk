@@ -9,6 +9,14 @@
  * Handles are DISPLAY values surfaced to buyers at checkout, NOT secrets —
  * the UI_SPEC note is rendered up top (info Alert).
  *
+ * ⚠️ REG-64 (flagged, NOT fixed here — out of CORRECTION-02B's explicit
+ * scope, which named only the storefront render + publish gate + onboarding
+ * step 3): under OD-8 §7 this column — and this page's copy — describe the
+ * BETK→seller SETTLEMENT destination, not a buyer-facing pay-to surface. The
+ * `t("payments.note")` string below is stale (still says "shown to buyers at
+ * checkout"). A dedicated task should reword it the same way StepPayment's
+ * i18n was reworded.
+ *
  * R-S09 ENFORCEMENT NOTE (read before touching this banner): the warning
  * below is CONFIG + BANNER ONLY. It never blocks this save, and this page/
  * action never checks "≥1 method" as a hard gate — that enforcement is the

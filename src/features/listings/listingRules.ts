@@ -49,16 +49,18 @@ export function ownsMediaPrefix(url: string, uid: string): boolean {
   return path.split("/")[0] === uid;
 }
 
-/** R-S09: a store "has a payment method" when ANY handle is set or COD is on. */
+/**
+ * R-S09 (REG-61, OD-8 §3.2/§7): a store "can be paid" when ANY BETK→seller
+ * SETTLEMENT handle is set — instapay_handle / vodafone_cash / orange_cash.
+ * `cod_enabled` no longer satisfies this gate: under custody the deposit and
+ * the COD balance both settle to BETK's own rails (§3.2, no pure-COD path),
+ * not to the store, so `cod_enabled` alone leaves BETK with no way to pay the
+ * seller. (Previously: "≥1 handle set OR cod_enabled" — REG-61 closes that.)
+ */
 export function hasPaymentMethod(pm: StorePaymentMethods | null | undefined): boolean {
   if (!pm) return false;
   const nonEmpty = (v: string | undefined) => typeof v === "string" && v.trim().length > 0;
-  return (
-    nonEmpty(pm.instapay_handle) ||
-    nonEmpty(pm.vodafone_cash) ||
-    nonEmpty(pm.orange_cash) ||
-    pm.cod_enabled === true
-  );
+  return nonEmpty(pm.instapay_handle) || nonEmpty(pm.vodafone_cash) || nonEmpty(pm.orange_cash);
 }
 
 /**
@@ -67,7 +69,8 @@ export function hasPaymentMethod(pm: StorePaymentMethods | null | undefined): bo
  *   • image         — R-L02: ≥1 listing_images row
  *   • title_ar      — R-L03: a non-empty Arabic title
  *   • category      — R-L04: a category is set
- *   • payment_method — R-S09: the owning store has ≥1 payment method
+ *   • payment_method — R-S09: the owning store has ≥1 settlement handle set
+ *                       (REG-61 — cod_enabled no longer satisfies this)
  *
  * REG-15 note: title_en is NOT a publish gate — bilingual title is enforced at
  * the create/edit Zod layer (both titles required). Only title_ar (R-L03) gates

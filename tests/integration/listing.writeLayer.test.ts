@@ -168,7 +168,7 @@ const describeOrSkip = HAS_CREDS ? describe : describe.skip;
 let categoryId: string;
 
 describeOrSkip("Phase 05 / T02 — listing write layer (staging)", () => {
-  let sellerA: Seller; // store WITH a payment method → publish can pass
+  let sellerA: Seller; // store WITH a settlement handle → publish can pass
   let sellerB: Seller; // store WITHOUT payment methods → R-S09 blocks publish
 
   beforeAll(async () => {
@@ -186,7 +186,9 @@ describeOrSkip("Phase 05 / T02 — listing write layer (staging)", () => {
     if (catErr || !cat) throw new Error(`no active category: ${catErr?.message}`);
     categoryId = cat.id;
 
-    sellerA = await createSeller("a", { cod_enabled: true });
+    // REG-61: cod_enabled alone no longer satisfies R-S09 (OD-8 §3.2/§7) — seed
+    // sellerA with a real settlement handle, not a COD-only fixture.
+    sellerA = await createSeller("a", { instapay_handle: "01000000000" });
     sellerB = await createSeller("b", {});
   });
 

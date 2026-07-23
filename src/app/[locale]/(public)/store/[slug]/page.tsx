@@ -205,10 +205,15 @@ export default async function StorePage({
       </div>
     );
 
-  // ── About tab (payment_methods + delivery_options — REG-14 defensive) ───────
+  // ── About tab (delivery_options — REG-14 defensive) ─────────────────────────
+  // REG-55: `store.payment_methods` is NO LONGER rendered here. Under OD-8 §7
+  // that column is the BETK→seller SETTLEMENT destination, not a buyer-facing
+  // pay-to handle — showing it to a buyer would let them pay the seller
+  // directly and bypass BETK's custody + commission. Delivery + return policy
+  // stay; there is no other buyer-facing payment surface to repoint to yet
+  // (BETK's own receive handles render at checkout, Phase 07).
   const aboutContent = (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <StorePaymentSection store={store} t={t} />
+    <div className="flex flex-col gap-6">
       <StoreDeliverySection store={store} t={t} locale={locale} />
     </div>
   );
@@ -283,44 +288,6 @@ export default async function StorePage({
         ]}
       />
     </div>
-  );
-}
-
-/** About → payment methods. Renders only the handles/flags the seller set. */
-function StorePaymentSection({
-  store,
-  t,
-}: {
-  store: StoreDetail;
-  t: CatalogTranslator;
-}) {
-  const pm = store.paymentMethods;
-  const rows: { label: string; value?: string }[] = [];
-  if (pm.instapay_handle) rows.push({ label: t("about.payment.instapay"), value: pm.instapay_handle });
-  if (pm.vodafone_cash) rows.push({ label: t("about.payment.vodafoneCash"), value: pm.vodafone_cash });
-  if (pm.orange_cash) rows.push({ label: t("about.payment.orangeCash"), value: pm.orange_cash });
-  if (pm.cod_enabled) rows.push({ label: t("about.payment.cod") });
-
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="font-display text-h3 text-foreground">{t("about.paymentTitle")}</h2>
-      {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("about.paymentEmpty")}</p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {rows.map((row) => (
-            <li key={row.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-foreground">{row.label}</span>
-              {row.value && (
-                <span className="font-mono text-muted-foreground" dir="ltr">
-                  {row.value}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 

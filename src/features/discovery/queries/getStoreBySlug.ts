@@ -8,11 +8,16 @@
  * existence leak) — the page (T06) 404s on null.
  *
  * Runs under the cookie/anon server client.
+ *
+ * REG-55 (CORRECTION-02B): `payment_methods` is DROPPED from this query — it
+ * is the BETK→seller settlement destination under OD-8 §7, not buyer-facing,
+ * and the only consumer of `StoreDetail.paymentMethods` was this route's own
+ * About tab render (now removed). No other caller reads it (grep-verified).
  */
 
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
-import { getTyped, type StoreDeliveryOptions, type StorePaymentMethods } from "@/types/jsonb";
+import { getTyped, type StoreDeliveryOptions } from "@/types/jsonb";
 import { storeSlugSchema } from "@/validations/discovery";
 import type { StoreDetail } from "../types";
 import {
@@ -31,7 +36,7 @@ import {
 
 const STORE_DETAIL_SELECT = `
   id, slug, name_ar, name_en, bio_ar, avatar_url, cover_url, governorate, city,
-  return_policy, min_order_egp, payment_methods, delivery_options, created_at,
+  return_policy, min_order_egp, delivery_options, created_at,
   rating_aggregates ( average_rating, total_reviews, rating_1, rating_2, rating_3, rating_4, rating_5 ),
   seller_profiles ( id, level, is_verified, avg_response_hours )
 `;
@@ -50,7 +55,6 @@ interface RawStoreDetailRow {
   city: string | null;
   return_policy: string | null;
   min_order_egp: number | null;
-  payment_methods: StoreRow["payment_methods"];
   delivery_options: StoreRow["delivery_options"];
   created_at: string;
   rating_aggregates: RawRatingAggregate | RawRatingAggregate[] | null;
@@ -114,7 +118,6 @@ export async function getStoreBySlug(
     city: row.city,
     returnPolicy: row.return_policy,
     minOrderEgp: row.min_order_egp,
-    paymentMethods: getTyped<StorePaymentMethods>(row.payment_methods),
     deliveryOptions: getTyped<StoreDeliveryOptions>(row.delivery_options),
     createdAt: row.created_at,
     seller: mapSellerProfile(asSingle(row.seller_profiles)),

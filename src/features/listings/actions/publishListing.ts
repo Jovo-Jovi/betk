@@ -11,7 +11,9 @@
  *   • R-L03 title_ar       — a non-empty Arabic title
  *   • R-L04 category       — category_id set
  *   • R-S09 payment_method — the OWNING STORE's stores.payment_methods has ≥1
- *     method. THIS is the R-S09 enforcement point the Phase-04 T07 payments-page
+ *     SETTLEMENT handle set (instapay/vodafone_cash/orange_cash; REG-61 —
+ *     cod_enabled no longer satisfies this under OD-8's custodial model, §3.2/
+ *     §7). THIS is the R-S09 enforcement point the Phase-04 T07 payments-page
  *     banner comment cites (the page only configures + warns; publish enforces).
  *
  * REG-15: title_en is NOT gated here — bilingual title is a create/edit Zod
