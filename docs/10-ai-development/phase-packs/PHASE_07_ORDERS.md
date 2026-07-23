@@ -176,12 +176,15 @@ delivery-fee-field mint (kickoff §4, post-Phase-07 onboarding pass). **Phase-07
 
 - **REG-49 — owned by T02.** `payments` INSERT/UPDATE + `orders` UPDATE. Close it there with evidence;
   do not mint it elsewhere.
-- **Pre-reserved mint candidates (mint only if live evidence shows the gap):**
-  - **REG-66** — `moderation_logs` admin INSERT policy absent (would be the 7th #14-class instance).
-    If ERD §3 specs it, close it in T02's migration ERD-verbatim; if not, defer and have T05's admin
-    action skip the log write with a stated reason.
-  - **REG-67** — `admin_settings` buyer-read gap, if TRAP 1 lands as a flagged broadening.
-  - **REG-68** — admin console shell absent (`AdminShell`/`AdminSidebar`), CD-DELTA-owned, REG-59 class.
+- **Mint candidates (mint only if live evidence shows the gap) — mints take the next free number at
+  mint time (currently REG-67); do NOT pre-assign fixed numbers (REG-62/63 collision precedent —
+  REG-66 itself was reassigned off this list to an unrelated T01c finding, proving the fixed
+  pre-assignment doesn't hold):**
+  - `moderation_logs` admin INSERT policy absent (would be the next #14-class instance). If ERD §3
+    specs it, close it in T02's migration ERD-verbatim; if not, defer and have T05's admin action
+    skip the log write with a stated reason.
+  - `admin_settings` buyer-read gap, if TRAP 1 lands as a flagged broadening.
+  - admin console shell absent (`AdminShell`/`AdminSidebar`), CD-DELTA-owned, REG-59 class.
 - **Closes owed at the exit gate:** REG-49 closed with evidence · REG-56 restated as satisfied-by-design
   (no close action built) · REG-44 resolution recorded · Phase-07 entry checklist all-✅ ·
   **Phase-08 entry checklist written** (shipments/tracking WRITE policies, Bosta webhook idempotency,
