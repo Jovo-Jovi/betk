@@ -1399,6 +1399,151 @@ CREATE POLICY shipment_tracking_events_access ON betk.shipment_tracking_events F
         AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
     )
   );
+-- REG-49 (Phase 07 / T02b): payments INSERT/UPDATE + orders UPDATE write layer + the checkout RPC
+--   (create_order_from_inquiry, backfilled with the other RPCs at the tail of §11). ERD §3 rows
+--   54 (orders) / 57 (payments) / 71 (moderation_logs) + the OD-8 † amendment. TRAP-2 three-layer
+--   write model: column GRANT (REG-42 pattern) narrows authenticated's table-wide UPDATE to the
+--   writable columns; a permissive row POLICY scopes the parties; an OLD-aware BEFORE UPDATE DEFINER
+--   trigger enforces actor↔column + transition legality. anon RETAINS its table-wide UPDATE grant
+--   (harmless — both new policies are TO authenticated, RLS is on, auth.uid() is null for anon;
+--   ADR-015): any FUTURE "TO public" UPDATE policy on these tables MUST be TO authenticated or must
+--   first re-scope anon's grant, else it inherits it silently. Trigger fns are search_path-pinned
+--   + EXECUTE-revoked from PUBLIC/anon/authenticated. Migration
+--   20260723140552_order_payment_write_layer_reg49. ADR-018 (checkout rpc) + ADR-019 (three-layer
+--   write model + commission trigger + admin_settings read broadening).
+-- TRAP 1 (ii) / REG-69 (STANDING): buyer reads the 4 payment-config keys at checkout. The key IN (...)
+--   allow-list is LITERAL — never a prefix/pattern (e.g. key LIKE 'betk_%') or a NOT-IN, and NO secret
+--   may EVER be stored under these 4 keys. commission_rate_pct + return_hold_hours are DELIBERATELY
+--   excluded (commission is read server-side by the DEFINER trigger; return_hold_hours is Phase 13).
+CREATE POLICY settings_payment_config_read ON betk.admin_settings FOR SELECT
+  TO authenticated
+  USING (key IN ('betk_instapay_handle','betk_vodafone_cash','betk_orange_cash','delivery_fee_flat_egp'));
+-- payments INSERT — ERD §3 row 57 INSERT = 'system (checkout)': buyer-of-parent only (mirrors
+--   order_items_insert). No admin/seller INSERT branch.
+CREATE POLICY payments_insert ON betk.payments FOR INSERT
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM betk.orders o WHERE o.id = payments.order_id AND o.buyer_id = auth.uid())
+  );
+-- payments UPDATE — three-layer. Layer 1 column GRANT: amount/payment_type/order_id/method/id/
+--   created_at become UNTOUCHABLE (a forbidden write => 42501, not a silent 0-row no-op).
+REVOKE UPDATE ON betk.payments FROM authenticated;
+GRANT  UPDATE (status, confirmed_by, confirmed_at, notes, proof_path, transfer_reference)
+       ON betk.payments TO authenticated;
+-- Layer 2 row policy: parties via the parent order. THE SELLER GETS NO payments UPDATE.
+CREATE POLICY payments_update ON betk.payments FOR UPDATE TO authenticated
+  USING      ( betk.is_admin()
+            OR EXISTS (SELECT 1 FROM betk.orders o WHERE o.id = payments.order_id AND o.buyer_id = auth.uid()) )
+  WITH CHECK ( betk.is_admin()
+            OR EXISTS (SELECT 1 FROM betk.orders o WHERE o.id = payments.order_id AND o.buyer_id = auth.uid()) );
+-- Layer 3 OLD-aware trigger: admin-only columns; F2 transition legality (ONLY pending->confirmed;
+--   refunded/failed = Phase 10/14); buyer proof-attach on own pending deposit row only.
+CREATE OR REPLACE FUNCTION betk.enforce_payment_update()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = betk, public AS $$
+BEGIN
+  IF ( NEW.status IS DISTINCT FROM OLD.status
+    OR NEW.confirmed_by IS DISTINCT FROM OLD.confirmed_by
+    OR NEW.confirmed_at IS DISTINCT FROM OLD.confirmed_at
+    OR NEW.notes IS DISTINCT FROM OLD.notes ) THEN
+    IF NOT betk.is_admin() THEN
+      RAISE EXCEPTION 'BETK_PAYMENT_ADMIN_ONLY';
+    END IF;
+  END IF;
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    IF NOT (OLD.status = 'pending' AND NEW.status = 'confirmed') THEN
+      RAISE EXCEPTION 'BETK_ILLEGAL_PAYMENT_TRANSITION: % -> %', OLD.status, NEW.status;
+    END IF;
+  END IF;
+  IF ( NEW.proof_path IS DISTINCT FROM OLD.proof_path
+    OR NEW.transfer_reference IS DISTINCT FROM OLD.transfer_reference ) THEN
+    IF NOT ( OLD.payment_type = 'deposit' AND OLD.status = 'pending'
+         AND EXISTS (SELECT 1 FROM betk.orders o WHERE o.id = OLD.order_id AND o.buyer_id = auth.uid()) ) THEN
+      RAISE EXCEPTION 'BETK_PAYMENT_PROOF_FORBIDDEN';
+    END IF;
+  END IF;
+  RETURN NEW;
+END; $$;
+REVOKE EXECUTE ON FUNCTION betk.enforce_payment_update() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_enforce_payment_update BEFORE UPDATE ON betk.payments
+  FOR EACH ROW EXECUTE FUNCTION betk.enforce_payment_update();
+-- orders UPDATE — three-layer. Layer 1 column GRANT (F1): only status + cancellation_reason are
+--   client-writable. cancelled_by is trigger-stamped (like confirmed_at); money/betk_ref/buyer_id/
+--   store_id/delivered_at/tracking stay UNTOUCHABLE.
+REVOKE UPDATE ON betk.orders FROM authenticated;
+GRANT  UPDATE (status, cancellation_reason) ON betk.orders TO authenticated;
+-- Layer 2 row policy: buyer own OR store OR admin (ERD row 54 verbatim; SUB-DECISION A KEEPS admin in
+--   the policy — the trigger, not the policy, scopes the Phase-07 transitions).
+CREATE POLICY orders_update ON betk.orders FOR UPDATE TO authenticated
+  USING      ( buyer_id = auth.uid() OR store_id = betk.my_store_id() OR betk.is_admin() )
+  WITH CHECK ( buyer_id = auth.uid() OR store_id = betk.my_store_id() OR betk.is_admin() );
+-- Layer 3 OLD-aware trigger: F1 cancel-metadata guard (outside the status branch); accept (store-only
+--   + AC-SEL-14 deposit-confirmed gate, stamps confirmed_at); preparing (store-only); cancel (R-O03
+--   pending-only, buyer-only, stamps cancelled_by='buyer'). SUB-DECISION A: admin is DROPPED from the
+--   three actor checks (Phase 14 amends this trigger for admin-forced cancellation).
+CREATE OR REPLACE FUNCTION betk.enforce_order_transition()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = betk, public AS $$
+BEGIN
+  IF ( NEW.cancelled_by IS DISTINCT FROM OLD.cancelled_by
+    OR NEW.cancellation_reason IS DISTINCT FROM OLD.cancellation_reason ) THEN
+    IF NOT (OLD.status = 'pending' AND NEW.status = 'cancelled') THEN
+      RAISE EXCEPTION 'BETK_CANCEL_METADATA_FORBIDDEN';
+    END IF;
+  END IF;
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    IF OLD.status = 'pending' AND NEW.status = 'confirmed' THEN
+      IF NOT (OLD.store_id = betk.my_store_id()) THEN
+        RAISE EXCEPTION 'BETK_ORDER_ACCEPT_STORE_ONLY';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM betk.payments p
+                     WHERE p.order_id = OLD.id AND p.payment_type = 'deposit' AND p.status = 'confirmed') THEN
+        RAISE EXCEPTION 'BETK_DEPOSIT_UNCONFIRMED';
+      END IF;
+      NEW.confirmed_at := now();
+    ELSIF OLD.status = 'confirmed' AND NEW.status = 'preparing' THEN
+      IF NOT (OLD.store_id = betk.my_store_id()) THEN
+        RAISE EXCEPTION 'BETK_ORDER_PREPARING_STORE_ONLY';
+      END IF;
+    ELSIF NEW.status = 'cancelled' THEN
+      IF OLD.status <> 'pending' THEN
+        RAISE EXCEPTION 'BETK_NOT_CANCELLABLE';
+      END IF;
+      IF NOT (OLD.buyer_id = auth.uid()) THEN
+        RAISE EXCEPTION 'BETK_ORDER_CANCEL_BUYER_ONLY';
+      END IF;
+      NEW.cancelled_by := 'buyer'::betk.cancelled_by_type;
+    ELSE
+      RAISE EXCEPTION 'BETK_ILLEGAL_ORDER_TRANSITION: % -> %', OLD.status, NEW.status;
+    END IF;
+  END IF;
+  RETURN NEW;
+END; $$;
+REVOKE EXECUTE ON FUNCTION betk.enforce_order_transition() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_enforce_order_transition BEFORE UPDATE ON betk.orders
+  FOR EACH ROW EXECUTE FUNCTION betk.enforce_order_transition();
+-- TRAP 1 (i): commission snapshot via DEFINER BEFORE INSERT (buyer never reads the rate). Commission
+--   on SUBTOTAL (never total_amount). F5: a MISSING commission_rate_pct row RAISEs (config fault);
+--   an explicit '0' (or empty) passes through as 0.
+CREATE OR REPLACE FUNCTION betk.set_order_commission_snapshot()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = betk, public AS $$
+DECLARE v_raw text; v_rate numeric;
+BEGIN
+  SELECT value INTO v_raw FROM betk.admin_settings WHERE key = 'commission_rate_pct';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BETK_COMMISSION_CONFIG_MISSING';
+  END IF;
+  v_rate := COALESCE(NULLIF(v_raw, '')::numeric, 0);
+  NEW.commission_rate   := v_rate;
+  NEW.commission_amount := round(v_rate / 100 * NEW.subtotal, 2);
+  RETURN NEW;
+END; $$;
+REVOKE EXECUTE ON FUNCTION betk.set_order_commission_snapshot() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_set_order_commission_snapshot BEFORE INSERT ON betk.orders
+  FOR EACH ROW EXECUTE FUNCTION betk.set_order_commission_snapshot();
+-- moderation_logs INSERT — ERD §3 row 71 (#14-class; REG-68 minted+CLOSED). F3: admin_id is an actor
+--   column (NOT NULL FK->users), so pin admin_id = auth.uid() per the inq_msg_insert pinned-actor
+--   precedent (a tightening — an admin cannot forge a log attributed to another admin). UPDATE/DELETE
+--   stay unpoliced (append-only RULES no_update_mod_log / no_delete_mod_log rewrite them to no-ops).
+CREATE POLICY modlog_admin_insert ON betk.moderation_logs FOR INSERT
+  WITH CHECK (betk.is_admin() AND admin_id = auth.uid());
 -- REVIEWS: public read visible; buyer writes own
 CREATE POLICY reviews_public ON betk.reviews FOR SELECT
   USING (is_visible = TRUE OR buyer_id = auth.uid() OR betk.is_admin());
@@ -1818,3 +1963,118 @@ END;
 $$;
 REVOKE ALL ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION betk.resubmit_seller_application(TEXT, TEXT) TO authenticated;
+
+-- ============================================================
+-- CHECKOUT RPC — inquiry -> order (ADR-018, REG-49; Phase 07 / T02b)
+-- Migration 20260723140552_order_payment_write_layer_reg49.sql.
+--
+-- SECURITY INVOKER (NOT DEFINER): every INSERT bites THROUGH the buyer, so
+-- orders_insert + the RESTRICTIVE orders_phone_gate (OD-4 verified phone) +
+-- order_items_insert + payments_insert + order_status_history_insert all enforce
+-- naturally with no hand-rolled auth. PostgREST wraps one per-request transaction
+-- => order + item + 2 payments + history commit or roll back together (AC-BUY-6).
+-- A SECURITY DEFINER function granted to authenticated would add advisor 0029 —
+-- forbidden by the "no new advisor findings" bar.
+--
+-- Amounts are SERVER-AUTHORITATIVE, never client-supplied: subtotal = listing.price
+-- * qty; delivery_fee is RE-READ from admin_settings.delivery_fee_flat_egp (via the
+-- settings_payment_config_read policy, invoker=buyer) — it is NEVER an rpc parameter
+-- (the buyer only DISPLAYS it); total = subtotal + delivery_fee (chk_order_total);
+-- 50/50 deposit/balance split computed in SQL. commission_rate/amount are stamped by
+-- the BEFORE INSERT trigger set_order_commission_snapshot (the buyer never reads the
+-- rate). converted_to_order_id is set by ADR-017's AFTER INSERT trigger. status
+-- INSERTs 'pending' — NO auto-confirm (custodial deposit gate lives on the seller's
+-- accept transition). The deposit leg must use a BETK electronic rail; cod is the
+-- balance leg only.
+--
+-- UNPINNED ENGINEERING DECISION (cite-or-flag): nothing in the frozen scope pins
+-- whether the flat delivery fee applies to pickup/remote delivery. This rpc applies
+-- the flat fee UNIFORMLY to all delivery methods (the simplest server-authoritative
+-- rule); revisit if a method-specific fee schedule is ever specced.
+--
+-- F4: the betk_ref (R-O02, BETK-YYYYMMDD-XXXX) uniqueness retry sits inside a plpgsql
+-- BEGIN...EXCEPTION WHEN unique_violation block (implicit savepoint) — a bare retry
+-- would run on an aborted transaction.
+-- ============================================================
+CREATE OR REPLACE FUNCTION betk.create_order_from_inquiry(
+  p_inquiry_id uuid,
+  p_address_id uuid,
+  p_delivery_method betk.delivery_preference,
+  p_deposit_method betk.payment_method
+) RETURNS uuid
+LANGUAGE plpgsql SECURITY INVOKER SET search_path = betk, public AS $$
+DECLARE
+  v_uid      uuid := auth.uid();
+  v_inq      betk.inquiries;
+  v_listing  betk.listings;
+  v_qty      integer;
+  v_unit     numeric;
+  v_subtotal numeric;
+  v_fee      numeric;
+  v_total    numeric;
+  v_deposit  numeric;
+  v_balance  numeric;
+  v_order_id uuid;
+  v_ref      text;
+  v_attempt  int := 0;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'BETK_UNAUTHENTICATED'; END IF;
+
+  SELECT * INTO v_inq FROM betk.inquiries WHERE id = p_inquiry_id;
+  IF NOT FOUND OR v_inq.buyer_id <> v_uid THEN RAISE EXCEPTION 'BETK_INQUIRY_NOT_FOUND'; END IF;
+  IF v_inq.status <> 'confirmed' THEN RAISE EXCEPTION 'BETK_INQUIRY_NOT_CONFIRMED'; END IF;
+  IF v_inq.converted_to_order_id IS NOT NULL THEN RAISE EXCEPTION 'BETK_ALREADY_CONVERTED'; END IF;
+
+  IF p_deposit_method NOT IN ('instapay','vodafone_cash','orange_cash') THEN
+    RAISE EXCEPTION 'BETK_INVALID_DEPOSIT_METHOD';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM betk.addresses a WHERE a.id = p_address_id AND a.buyer_id = v_uid) THEN
+    RAISE EXCEPTION 'BETK_ADDRESS_NOT_FOUND';
+  END IF;
+
+  SELECT * INTO v_listing FROM betk.listings WHERE id = v_inq.listing_id;
+  IF NOT FOUND OR v_listing.price IS NULL THEN RAISE EXCEPTION 'BETK_LISTING_UNPRICED'; END IF;
+
+  v_qty      := COALESCE(v_inq.quantity, 1);
+  v_unit     := v_listing.price;
+  v_subtotal := round(v_unit * v_qty, 2);
+
+  SELECT COALESCE(NULLIF(value,'')::numeric, 0) INTO v_fee
+  FROM betk.admin_settings WHERE key = 'delivery_fee_flat_egp';
+  v_fee   := COALESCE(v_fee, 0);
+
+  v_total   := round(v_subtotal + v_fee, 2);
+  v_deposit := round(v_total / 2, 2);
+  v_balance := v_total - v_deposit;
+
+  LOOP
+    v_attempt := v_attempt + 1;
+    v_ref := 'BETK-' || to_char(now() AT TIME ZONE 'UTC','YYYYMMDD') || '-'
+             || upper(substr(md5(gen_random_uuid()::text), 1, 4));
+    BEGIN
+      INSERT INTO betk.orders (betk_ref, buyer_id, store_id, inquiry_id, delivery_address_id,
+                               delivery_method, delivery_fee, subtotal, total_amount, status)
+      VALUES (v_ref, v_uid, v_inq.store_id, v_inq.id, p_address_id,
+              p_delivery_method, v_fee, v_subtotal, v_total, 'pending')
+      RETURNING id INTO v_order_id;
+      EXIT;
+    EXCEPTION WHEN unique_violation THEN
+      IF v_attempt >= 5 THEN RAISE EXCEPTION 'BETK_REF_RETRY_EXHAUSTED'; END IF;
+    END;
+  END LOOP;
+
+  INSERT INTO betk.order_items (order_id, listing_id, listing_title_ar, quantity, unit_price, subtotal)
+  VALUES (v_order_id, v_listing.id, v_listing.title_ar, v_qty, v_unit, v_subtotal);
+
+  INSERT INTO betk.payments (order_id, payment_type, amount, method, status)
+  VALUES (v_order_id, 'deposit', v_deposit, p_deposit_method, 'pending'),
+         (v_order_id, 'balance', v_balance, 'cod',            'pending');
+
+  INSERT INTO betk.order_status_history (order_id, from_status, to_status, changed_by, changed_by_type, notes)
+  VALUES (v_order_id, NULL, 'pending', v_uid, 'buyer', 'order created');
+
+  RETURN v_order_id;
+END; $$;
+REVOKE EXECUTE ON FUNCTION betk.create_order_from_inquiry(uuid, uuid, betk.delivery_preference, betk.payment_method) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION betk.create_order_from_inquiry(uuid, uuid, betk.delivery_preference, betk.payment_method) TO authenticated;

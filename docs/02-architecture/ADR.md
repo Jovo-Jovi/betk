@@ -172,10 +172,12 @@ integration-proven. No broad buyer UPDATE policy on `inquiries` exists or is nee
 
 ### ADR-018 — Checkout is an atomic SECURITY INVOKER RPC (`create_order_from_inquiry`)
 
-> **Status: PROPOSED — DRAFT (Phase 07 / T02a read-first audit, 2026-07-23, Opus/Max). NOT Accepted.**
-> Acceptance lands at **T02b** once the rpc is built, CI-typegen'd (REG-32), and integration-proven on
-> staging. Recorded now so the write-layer build gates against a reviewed decision. `018` confirmed
-> next-free (ADR-001…017 occupied; last = ADR-017). This entry documents a *decision*, not applied DDL.
+> **Status: Accepted.** Landed in migration `20260723140552_order_payment_write_layer_reg49` (Phase 07 /
+> T02b, 2026-07-23, Opus 4.8). Drafted at T02a's read-first audit; accepted here once the rpc was built,
+> the signature backfilled into `src/lib/supabase/types.ts` (REG-32; the MCP generator emits only the
+> empty `public` schema, so the hand-maintained `betk` block is the source of record), and the write
+> layer applied + advisor-swept (8/6/2/4/1 UNCHANGED). Companion decision **ADR-019** (below) records the
+> three-layer write model landed in the same migration.
 
 **Context.** A single checkout writes, in one logical act: `betk.orders` (1 row) + N `betk.order_items`
 + **exactly two** `betk.payments` rows (deposit + balance, `uq_payment_type_per_order`) + an initial
@@ -226,15 +228,99 @@ INSERTs `status='pending'`; **no auto-confirm**; `converted_to_order_id` is left
 INSERT trigger on `orders` (TRAP 1, option i) — the buyer never reads `commission_rate_pct`. See the
 companion decision below.
 
-**Companion decision (candidate ADR-019, to be recorded at T02b): the `payments` / `orders` UPDATE
-write-authorization model** — the *three-layer actor↔column control* (column `REVOKE`/`GRANT` + a
-permissive row policy + an `OLD`-aware `BEFORE UPDATE` trigger that RAISEs on illegal actor↔column /
-transition combinations), plus the TRAP-1 commission `BEFORE INSERT` DEFINER trigger, plus the
-**FLAGGED, un-applied** `admin_settings` buyer-read broadening. These are distinct from checkout
-atomicity and are held for T02b pending the TRAP-1 human authorization (they are the substance of the
-T02a audit report). PRECEDENTS.md candidate row: *three-layer actor↔column write control*.
+**Companion decision — ADR-019 (below, Accepted): the `payments` / `orders` UPDATE write-authorization
+model** — the *three-layer actor↔column control* (column `REVOKE`/`GRANT` + a permissive row policy + an
+`OLD`-aware `BEFORE UPDATE` trigger that RAISEs on illegal actor↔column / transition combinations), plus
+the TRAP-1 commission `BEFORE INSERT` DEFINER trigger, plus the (now human-authorized) `admin_settings`
+buyer-read broadening. These are distinct from checkout atomicity but co-land in the same migration, so
+they are recorded as the separate ADR-019 (the substance of the T02a audit report + the T02b corrections).
+PRECEDENTS.md row: *three-layer actor↔column write control*.
 
-**Consequences (if Accepted at T02b).** One additive migration carries the rpc + the REG-49 policies /
-grants / triggers; ledger 30→31; advisor expected UNCHANGED at 8/6/2/4/1 (INVOKER rpc + policies on
-already-policied tables + search_path-pinned, EXECUTE-revoked DEFINER triggers add nothing). No
-service-role anywhere. REG-32 typegen is CI-authoritative.
+**Consequences (as landed).** One additive migration (`20260723140552`) carries the rpc + the REG-49
+policies / grants / triggers; ledger 30→31; **security advisor UNCHANGED at 8/6/2/4/1** (INVOKER rpc +
+policies on already-policied tables + search_path-pinned, EXECUTE-revoked DEFINER triggers add nothing —
+0 new security findings). Performance advisor gained exactly the 5 findings its policies imply (4
+`auth_rls_initplan` in the house bare-`auth.uid()` style, 1 `multiple_permissive_policies` on
+`admin_settings {authenticated, SELECT}` = the intended REG-69 buyer-read broadening) — all attributed,
+none unexplained. No service-role anywhere. **UNPINNED engineering decision (cite-or-flag):** nothing in
+the frozen scope pins whether the flat delivery fee applies to pickup/remote; the rpc applies it
+uniformly to all delivery methods (documented in the rpc header). **REG-32:** the MCP type generator
+returns only the empty `public` schema, so the rpc signature was backfilled into the hand-maintained
+`betk` block of `src/lib/supabase/types.ts` (`create_order_from_inquiry`, Returns `string`/uuid).
+
+### ADR-019 — The `payments` / `orders` write-authorization model: three-layer actor↔column control + commission BEFORE-INSERT trigger + authorized `admin_settings` buyer-read broadening
+
+> **Status: Accepted.** Landed in the same migration `20260723140552_order_payment_write_layer_reg49`
+> (Phase 07 / T02b, 2026-07-23, Opus 4.8). Companion to ADR-018 (checkout atomicity); recorded as ONE
+> decision because the three concerns co-land and are jointly load-bearing for the custodial write path.
+> `019` confirmed next-free (ADR-001…018 occupied). PRECEDENTS.md row: *three-layer actor↔column write
+> control*.
+
+**Context.** ADR-018 makes order *creation* atomic. It does not govern the subsequent *mutations* —
+the buyer attaching a transfer proof, the admin confirming a deposit, the seller accepting / preparing,
+the buyer cancelling while pending — nor the commission snapshot, nor the buyer's need to *read* BETK's
+payment handles + the flat fee at checkout. `WITH CHECK` on a permissive policy cannot see `OLD`, so it
+cannot express transition legality (pending→confirmed only) or actor↔column legality (only admin may
+move `payments.status`; only the buyer may attach proof). A broad column grant would let any party
+rewrite money columns; a `SECURITY DEFINER` mutation rpc granted to `authenticated` would trip advisor
+0029 (the ADR-012/ADR-015 rejection). The three concerns are distinct from checkout atomicity but share
+one migration and one authorization posture.
+
+**Decision — three mechanisms, composed.**
+1. **Three-layer actor↔column write control** (the load-bearing pattern, applied to both `payments`
+   UPDATE and `orders` UPDATE):
+   - **Layer 1 — column GRANT** (REG-42 pattern). `REVOKE UPDATE … FROM authenticated` then
+     `GRANT UPDATE(<writable cols>)`. `payments` → `{status, confirmed_by, confirmed_at, notes,
+     proof_path, transfer_reference}`; `orders` → `{status, cancellation_reason}`. Money / identity /
+     ref columns (`amount`, `payment_type`, `order_id`, `method`; `total_amount`, `subtotal`,
+     `betk_ref`, `buyer_id`, `store_id`, `delivery_fee`, …) become **untouchable** — a forbidden write
+     is `42501`, not a silent 0-row no-op. **F1:** `orders.cancelled_by` is deliberately **NOT** granted
+     — it is trigger-stamped like `confirmed_at`.
+   - **Layer 2 — permissive row policy** scoping the parties. `payments_update` = `is_admin()` OR
+     buyer-of-parent (**the seller gets NO `payments` UPDATE**). `orders_update` = buyer own OR store OR
+     `is_admin()` — **SUB-DECISION A:** admin is KEPT in the *policy* (ERD §3 row 54 "store/admin"
+     verbatim) but DROPPED from the trigger's actor checks; the trigger, not the policy, scopes the
+     Phase-07 transitions. Phase 14 amends the trigger for admin-forced cancellation.
+   - **Layer 3 — `OLD`-aware `BEFORE UPDATE` DEFINER trigger** (search_path pinned, EXECUTE revoked
+     PUBLIC/anon/authenticated; never PostgREST-exposed → no advisor 0028/0029). `enforce_payment_update`:
+     admin-only columns require `is_admin()`; **F2** the ONLY legal status change is `pending→confirmed`
+     (anything else — incl. admin reverting to pending or setting refunded/failed, which are Phase 10/14 —
+     RAISEs `BETK_ILLEGAL_PAYMENT_TRANSITION`); proof-attach only on the caller's own pending deposit row.
+     `enforce_order_transition`: **F1** cancel-metadata (`cancelled_by`/`cancellation_reason`) may change
+     ONLY on a genuine `pending→cancelled` transition (`BETK_CANCEL_METADATA_FORBIDDEN` otherwise, guarded
+     OUTSIDE the status branch); accept = store-only + the **AC-SEL-14 custodial gate** (deposit row
+     `status='confirmed'`, DB-authoritative) + stamps `confirmed_at`; preparing = store-only; cancel =
+     `pending`-only (R-O03) + buyer-only + stamps `cancelled_by='buyer'` (enum members verified live:
+     `buyer,seller,admin,system`); everything else RAISEs.
+2. **Commission snapshot via a `SECURITY DEFINER` `BEFORE INSERT` trigger on `orders`** (TRAP 1 (i);
+   ADR-017 precedent — a trigger is never API-exposed, so no advisor 0029). Reads
+   `admin_settings.commission_rate_pct` server-side (the buyer never reads the rate) and stamps
+   `commission_rate` + `commission_amount = round(rate/100 * subtotal, 2)` (base = **subtotal**, never
+   `total_amount`). **F5:** an ABSENT `commission_rate_pct` row RAISEs `BETK_COMMISSION_CONFIG_MISSING`
+   (a missing key is a config fault, not 0%); an explicit `'0'` passes through as 0.
+3. **Authorized `admin_settings` buyer-read broadening** (TRAP 1 (ii); **REG-69, STANDING**). A narrow
+   `settings_payment_config_read` (`FOR SELECT TO authenticated`) over EXACTLY the 4 keys
+   `{betk_instapay_handle, betk_vodafone_cash, betk_orange_cash, delivery_fee_flat_egp}`. `commission_rate_pct`
+   and `return_hold_hours` are DELIBERATELY excluded. **REG-69 is standing:** the `key IN (…)` allow-list
+   is LITERAL — it must NEVER become a prefix/pattern (`key LIKE 'betk_%'`) or a `NOT-IN`, and NO secret
+   may EVER be stored under those 4 keys. This is the one broadening on an admin table; it was authorized
+   by the human this session, not applied unilaterally.
+
+**F3 (moderation_logs INSERT, #14-class, REG-68).** ERD §3 row 71 specs INSERT=admin; live only
+`modlog_admin` (SELECT) existed (INSERT default-denied for everyone incl. admin). `moderation_logs.admin_id`
+is `NOT NULL FK→users` (an actor column exists), so `modlog_admin_insert` pins
+`WITH CHECK (is_admin() AND admin_id = auth.uid())` per the `inq_msg_insert` pinned-actor precedent — a
+*tightening* (an admin cannot forge a log attributed to another admin), not a broadening.
+
+**anon grant retention (ADR-015 precedent).** The pre-existing table-wide `UPDATE` grant to `anon` on
+`orders`/`payments` is left in place (harmless: both new UPDATE policies are `TO authenticated`, RLS is
+on, and `auth.uid()` is null for anon so it matches no row). **Recorded hazard:** any FUTURE `TO public`
+UPDATE policy on these tables would inherit anon's column grant silently — such a policy MUST be
+`TO authenticated` or must first re-scope anon's grant.
+
+**Consequences.** One additive migration (shared with ADR-018). Security advisor UNCHANGED at 8/6/2/4/1
+(0 new). Performance advisor +5, all attributed (see ADR-018 consequences). Two permanent `BEFORE UPDATE`
+DEFINER triggers + one `BEFORE INSERT` DEFINER trigger on the order/payment write path, all
+search_path-pinned + EXECUTE-revoked. No service-role. Grant-level denials (`42501`) and trigger RAISEs
+are integration-proven, not asserted by row count. REG-49 CLOSED; REG-68 minted+CLOSED; REG-69 minted
+STANDING.
