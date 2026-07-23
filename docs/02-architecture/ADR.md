@@ -169,3 +169,72 @@ write is structurally unreachable through RLS.
 
 **Consequences.** One permanent DEFINER object on the orders write path. Idempotency is
 integration-proven. No broad buyer UPDATE policy on `inquiries` exists or is needed.
+
+### ADR-018 — Checkout is an atomic SECURITY INVOKER RPC (`create_order_from_inquiry`)
+
+> **Status: PROPOSED — DRAFT (Phase 07 / T02a read-first audit, 2026-07-23, Opus/Max). NOT Accepted.**
+> Acceptance lands at **T02b** once the rpc is built, CI-typegen'd (REG-32), and integration-proven on
+> staging. Recorded now so the write-layer build gates against a reviewed decision. `018` confirmed
+> next-free (ADR-001…017 occupied; last = ADR-017). This entry documents a *decision*, not applied DDL.
+
+**Context.** A single checkout writes, in one logical act: `betk.orders` (1 row) + N `betk.order_items`
++ **exactly two** `betk.payments` rows (deposit + balance, `uq_payment_type_per_order`) + an initial
+`betk.order_status_history` row. **AC-BUY-6 says an order is created ONLY from a seller-confirmed
+inquiry and the create is ATOMIC.** T02 must decide the write shape against the two standing precedents:
+ADR-012 (atomic `SECURITY INVOKER` rpc, chosen when a partial write is *invalid stranded residue*) vs
+ADR-013 / ADR-014 (draft-first decomposition / single-INSERT, chosen when a partial write is a *valid
+resting state*).
+
+**The deciding question: is an order with no items / no payments a valid resting state?** No. Unlike a
+`draft` listing with zero children (ADR-013 — a legal mid-edit state gated at publish time) or an
+inquiry whose thread is empty because the opening lives in `inquiries.buyer_first_message NOT NULL`
+(ADR-014 — degenerate to one INSERT), an order with zero `order_items` has nothing to fulfil and an
+order with fewer than two `payments` rows has nowhere to pay — a broken, unusable record. And
+`orders` **DELETE = "—"** (ERD §3 row 54; live: no DELETE policy), so a stranded order **cannot be
+compensated** by the buyer, exactly the ADR-012 no-DELETE-policy condition. Decomposition therefore
+does **not** survive AC-BUY-6 here; atomicity is required.
+
+**Options.**
+- **(a) Sequential authenticated-client writes + compensating cleanup.** Rejected: a failure after the
+  `orders` INSERT (e.g. a `payments` INSERT error, or a crash between writes) strands an itemless /
+  paymentless order with no DELETE policy to clean it up — compensation would need a service-role
+  reach-around (bans RLS) and is still non-atomic. Fails the AC-BUY-6 invariant. (ADR-012 reasoning.)
+- **(b) One `SECURITY DEFINER` rpc.** Rejected for the two ADR-012 / ADR-015 reasons: (i) it **defeats
+  the verified-phone gate** — `orders_phone_gate` is a RESTRICTIVE INSERT policy; a DEFINER function
+  bypasses RLS, so honoring OD-4 would require a hand-rolled `phone_number IS NOT NULL` check inside
+  the function (a botched/omitted check silently defeats the gate); (ii) it trips security-advisor
+  **0029** (`authenticated_security_definer_function_executable`) because `authenticated` must be able
+  to call it — violating the standing advisor-clean bar.
+- **(c) One atomic `SECURITY INVOKER` rpc — CHOSEN.** `betk.create_order_from_inquiry(...)` runs inside
+  PostgREST's per-request transaction, so all writes commit or roll back together (the 23505 BETK-ref
+  retry and any child-write failure leave **zero rows** — the no-partial-residue invariant). Because it
+  is INVOKER, **RLS is not bypassed**: `orders_insert` (`buyer_id = auth.uid()`) + the RESTRICTIVE
+  `orders_phone_gate` (verified phone, OD-4) + `order_items_insert` + the new `payments_insert` all bite
+  **through the invoker as the buyer**, with **no hand-rolled checks**. `SET search_path = betk, public`;
+  `REVOKE EXECUTE FROM PUBLIC`; `GRANT EXECUTE TO authenticated`. Advisor-clean (INVOKER → neither 0028
+  nor 0029; search_path set → no 0011). Signature via **REG-32 CI-typegen — never hand-added**; budget
+  the boundary-cast iteration. This is the ADR-012 pattern applied to checkout.
+
+**Amounts are server-authoritative, never client-supplied.** The rpc resolves listing/store/price and
+computes `subtotal` from `order_items.unit_price × quantity` server-side; `delivery_fee` and the BETK
+deposit handles are read per **TRAP 1's resolution** (see below); `total_amount = subtotal +
+delivery_fee` is validated by the live `chk_order_total` CHECK; the deposit/balance 50/50 split
+(`deposit = round(total_amount/2, 2)`, `balance = total_amount − deposit`) is computed in SQL. Order
+INSERTs `status='pending'`; **no auto-confirm**; `converted_to_order_id` is left to ADR-017's trigger.
+
+**Commission is NOT computed in the rpc.** It is snapshotted by a hardened `SECURITY DEFINER` BEFORE
+INSERT trigger on `orders` (TRAP 1, option i) — the buyer never reads `commission_rate_pct`. See the
+companion decision below.
+
+**Companion decision (candidate ADR-019, to be recorded at T02b): the `payments` / `orders` UPDATE
+write-authorization model** — the *three-layer actor↔column control* (column `REVOKE`/`GRANT` + a
+permissive row policy + an `OLD`-aware `BEFORE UPDATE` trigger that RAISEs on illegal actor↔column /
+transition combinations), plus the TRAP-1 commission `BEFORE INSERT` DEFINER trigger, plus the
+**FLAGGED, un-applied** `admin_settings` buyer-read broadening. These are distinct from checkout
+atomicity and are held for T02b pending the TRAP-1 human authorization (they are the substance of the
+T02a audit report). PRECEDENTS.md candidate row: *three-layer actor↔column write control*.
+
+**Consequences (if Accepted at T02b).** One additive migration carries the rpc + the REG-49 policies /
+grants / triggers; ledger 30→31; advisor expected UNCHANGED at 8/6/2/4/1 (INVOKER rpc + policies on
+already-policied tables + search_path-pinned, EXECUTE-revoked DEFINER triggers add nothing). No
+service-role anywhere. REG-32 typegen is CI-authoritative.
