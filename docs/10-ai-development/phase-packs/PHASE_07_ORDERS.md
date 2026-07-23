@@ -1,5 +1,11 @@
 # PHASE 07 — Orders, Checkout & Split Payments
 
+> ⚠️ **AMENDED BY CORRECTION-02 / OD-8 (custodial payments), SIGNED 2026-07-23 — READ THIS FIRST.**
+> This pack was generated 2026-07-22 under the **superseded** no-custody model (ADR-002). **OD-8 / ADR-016 now govern:** the buyer pays **BETK** (not the seller); BETK settles to the seller net of a flat platform commission snapshotted on the order; **deposit verification is ADMIN's** (against a buyer-uploaded transfer screenshot on `payments.proof_path`), while order acceptance stays the **seller's** act; the seller balance is **derived** (no wallet/ledger). 3 additive columns (`payments.proof_path`, `orders.commission_rate`, `orders.commission_amount`) — table count **43** + page count **59** both HOLD.
+> **Task status:** **T00 + T01 stay DONE** and their landed artifacts SURVIVE (migration `20260723074953`, the ORDER-SET CONTRACT, ADR-017 — per CORRECTION-01 §G3). **T02–T06 are SUPERSEDED — PENDING REGENERATION** for the custodial model (**REG-57** blocks the rebuild until then). Do NOT build T02+ from the prose below without regenerating it.
+> **OD-8 §3.1 RETIRES the "NAMED TRAP":** there is **no order auto-confirm and no pure-COD path (§3.2)** — every order INSERTs `pending` then UPDATEs to `confirmed`, so `decrement_stock_on_confirm` (AFTER UPDATE) fires **naturally** on the seller's acceptance; the old "INSERT-as-confirmed never fires the trigger" hazard cannot arise.
+> **Posture (2026-07-23):** all buyer↔seller communication is **in-app only**. **REG-45 is CLOSED-as-not-a-defect** (misread) — every "REG-45 contact-exchange product decision (unlock at confirm vs order)" reference below is **VOID**; **REG-44 stands ALONE** (the seller needs the buyer's name + address to fulfil). Deposit instructions render **BETK's** handles from `admin_settings`, NOT the store's.
+>
 > Generated 2026-07-22 by the Phase-06 review chat after Phase 06 sign-off (PR #47 merged).
 > Scope authority: `BETK_PHASES.md` Phase 07 = **FR-BUY-6..9 + FR-SEL-14..15 ONLY** — checkout (atomic
 > order + items + two payments), confirmation/deposit instructions, order history, order detail/track,
@@ -27,15 +33,23 @@
   policy (the REG-42 pattern — but `status` must stay seller-only, and grants are per-role not
   per-policy, so this likely needs a trigger guard anyway); (c) defer the write to seller confirm.
   Do NOT smuggle a broad buyer UPDATE policy on `inquiries`.
-- **NAMED TRAP (COD × R-L06):** `decrement_stock_on_confirm` is `AFTER UPDATE OF status` firing on the
-  transition INTO `'confirmed'` (R2, live-verified). An order INSERTed directly as `'confirmed'` NEVER
-  fires it. R-O04 COD auto-confirm must INSERT `pending` then UPDATE→`confirmed` inside the same
-  transaction (or cite an alternative that provably fires the trigger — prove it either way in tests).
+- **NAMED TRAP (COD × R-L06) — ⚠️ RETIRED by OD-8 §3.1 (2026-07-23):** `decrement_stock_on_confirm` is
+  `AFTER UPDATE OF status` firing on the transition INTO `'confirmed'` (R2, live-verified). An order
+  INSERTed directly as `'confirmed'` NEVER fires it. **Under OD-8 there is no COD auto-confirm and no
+  pure-COD path (§3.2, R-O04 retired)** — EVERY order INSERTs `pending` and reaches `confirmed` only via
+  the seller's acceptance UPDATE, so the trigger fires **naturally** and the "INSERT-as-confirmed" hazard
+  cannot arise. (Historical note: the pre-OD-8 fix was to INSERT `pending` then UPDATE→`confirmed` inside
+  one transaction; that shape is now simply the ordinary path, not a special COD workaround.)
 - **Identity transition (REG-44 resolves here, human-authorized):** the order exposes buyer name +
   delivery address to the seller for fulfilment. Pre-order opacity stays everywhere else. One code
   comment at the seller order-detail citing REG-44's posture change.
-- **Split payment = ADR-002 (no custody) + C2 §3.8** — two payment rows, display/instructions only.
-  NO payment gateway, NO processing, NO custody. Cite-or-flag anything implying otherwise.
+- **Split payment = CUSTODIAL — OD-8 / ADR-016 (supersedes ADR-002) + C2 §3.8** — two payment rows whose
+  **payee = BETK** (buyer pays BETK; BETK settles to the seller net of a flat commission on `subtotal`,
+  snapshotted onto `orders.commission_rate`/`orders.commission_amount` at creation). Deposit = upfront to
+  BETK's rails (`admin_settings`), buyer uploads a screenshot to `payments.proof_path`, **ADMIN verifies**
+  (not the seller); balance = COD, courier remits to BETK. Still **NO payment gateway, NO automated
+  capture, NO automated payout** (out of scope, unchanged); a persisted ledger stays post-MVP (§6, balance
+  is derived). Cite-or-flag anything implying the seller is the payee or the deposit confirmer.
 - **Money discipline:** cite the actual column types (expect numeric); no float arithmetic on money in
   app code; totals computed server-side, client display-only.
 - Migrations per REG-24 + schema-source backfill + advisor sweep vs the stated baseline. Any rpc →
@@ -53,9 +67,12 @@
 - **REG-48 — RESERVED for T01:** the order-children policy set (`order_items`, `order_status_history`,
   `order_messages`, + `shipments`/`shipment_tracking_events` READ if T01's decision lands it) —
   ERD §3-specced, ABSENT live (next instances of the #14 / REG-29/31/34/41 class). Do NOT mint elsewhere.
-- **REG-44:** resolved-by-design at T02/T05 (identity transition recorded). **REG-45:** the
-  contact-exchange PRODUCT DECISION (unlock at confirm vs at order) is owed FROM THE HUMAN at T02 —
-  record the answer in the register; build nothing for it this phase unless the decision + UI_SPEC align.
+- **REG-44 (AMENDED — OD-8/CORRECTION-02):** stands ALONE — resolved-by-design when the seller order
+  surfaces expose the buyer's name + address for fulfilment (T05). The old REG-44↔REG-45 "bilateral
+  pre-transaction identity opacity" coupling is **RETIRED**. **REG-45 is CLOSED-as-not-a-defect** (the
+  inbox "WhatsApp deep-link" was a misread — no counterparty phone column was ever provisioned; all
+  buyer↔seller communication is in-app only). There is **NO contact-exchange product decision** to make;
+  build nothing for it.
 - **REG-47** stays record-only (Guard E candidate — do not build here). Further mints **REG-49+**.
 - Closes/updates owed at T06: REG-09/48 closed with evidence; Phase-07 entry checklist all-✅;
   **Phase-08 entry checklist written** (shipments/tracking write policies + Bosta webhook idempotency +
@@ -161,8 +178,9 @@ STEP 1 — READ-ONLY STATE (MCP execute_sql; paste evidence):
       exist; NO 'paid' — Phase-05 T06 cite). Which member(s) mean cancelled/dispatched/delivered.
       Which transitions are Phase 07's (AC-SEL-14 + R-O03) vs Phase 08's (delivery) — cite BETK_PHASES.
     - payments: table columns, payment-type/method enums, and the EXACT two-row split shape per
-      C2 §3.8 + ADR-002 (deposit row + remainder row? amounts derivation? status per row?). If the
-      split shape is not pinned in C2/ERD → STOP-and-flag, do not invent percentages.
+      C2 §3.8 + OD-8/ADR-016 (**custodial — payee = BETK**; deposit row + remainder row? amounts
+      derivation? status per row?). If the split shape is not pinned in C2/ERD → STOP-and-flag, do not
+      invent percentages. [OD-8/CORRECTION-02: pinned in the ORDER-SET CONTRACT; ADR-002 superseded.]
     - R-O02 BETK-ref: the order reference mechanism (column, default, format, uniqueness) — cite or flag.
     - delivery_method (buyer-side enum) members + mapping to StoreDeliveryOptions.modes (REG-14
       sibling — cite both sides; do not conflate).
@@ -211,6 +229,7 @@ BETK-ref, trap, tension resolution, shipments decision) recorded with cites or S
 baselines stated; A4b flipped.
 
 ## T02 — Checkout/order write layer (Opus, Max)
+> ⛔ **SUPERSEDED — PENDING REGENERATION (OD-8/CORRECTION-02; REG-57).** Rebuild for the custodial model before executing — the prompt below reflects the retired no-custody design (seller-as-payee, COD auto-confirm, the REG-45 contact decision). The write layer must instead: payee = BETK, snapshot `commission_rate`/`commission_amount`, create the deposit against BETK's rails, and leave deposit verification to ADMIN.
 ```
 Read SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 07 T02 — queries + Server Actions.
 Branch feature/phase-07-orders (continue; git pull first). Opus, thinking MAX. Cite T01's CONTRACT
@@ -270,6 +289,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 proven; both gates (R-O01 + phone) proven both layers; dedupe proven; no service-role; CI green.
 
 ## T03 — Checkout UI (Sonnet, Medium)
+> ⛔ **SUPERSEDED — PENDING REGENERATION (OD-8/CORRECTION-02; REG-57).** Confirmation must render BETK's `admin_settings` handles (NOT the store's), add the buyer proof-upload, show "awaiting ADMIN verification", and drop the COD-auto-confirm state (§3.2).
 ```
 Read SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 07 T03 — /checkout +
 /checkout/confirmation/[id]. Branch feature/phase-07-orders (continue). Sonnet, Medium. Compose-only.
@@ -284,10 +304,13 @@ notFound() — state the finding.
   createOrderFromInquiry (file-path import) routing EVERY typed outcome: ok → confirmation page ·
   phone_required → /auth/phone (the OD-4 loop, live at last) · already_converted → the existing order ·
   not_confirmed → back to the thread · blocked → /blocked.
-- /checkout/confirmation/[id]: deposit path = instructions composing the SELLER's payment handles
-  (stores.payment_methods — the R-S09 data, displayed not processed, ADR-002) + BETK-ref prominently
-  (R-O02) + "seller confirms once deposit received" state; COD path = auto-confirmed state, no deposit
-  instructions (R-O04). Outsider/unknown id → hard notFound() by status code.
+- /checkout/confirmation/[id]: deposit instructions compose **BETK's** payment handles (**from
+  `admin_settings` — NOT `stores.payment_methods`; custodial, OD-8/ADR-016**, displayed not processed) +
+  the buyer **transfer-screenshot upload** to `payments.proof_path` (docs bucket, own-prefix, no new
+  storage policy; awaiting-review convention = `proof_path NOT NULL AND status='pending'`) + BETK-ref
+  prominently (R-O02) + an **"awaiting ADMIN deposit verification"** state (**deposit confirmation is
+  ADMIN's, not the seller's**). **No pure-COD path (OD-8 §3.2); R-O04 COD auto-confirm RETIRED** — every
+  order carries the 50/50 split. Outsider/unknown id → hard notFound() by status code.
 - WIRE THE PHASE-06 CTA: the buyer-thread confirmed banner's guidance-only note becomes the real
   routes.checkout link (the "Phase 07 wires here" comment — remove it, link it). Disable/annotate when
   already converted (per the T02 idempotency outcome).
@@ -303,6 +326,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 retired); deposit vs COD states proven live; zero ui/shared diff.
 
 ## T04 — Buyer orders (Sonnet, Medium)
+> ⛔ **SUPERSEDED — PENDING REGENERATION (OD-8/CORRECTION-02; REG-57).** Payment rows/states must reflect the custodial model (payee = BETK, admin-verified deposit); rebuild before executing.
 ```
 Read SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 07 T04 — /orders + /orders/[id].
 Branch feature/phase-07-orders (continue). Sonnet, Medium. Compose-only. STEP 0 loading.tsx sweep first.
@@ -325,6 +349,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 rule held; zero ui/shared diff.
 
 ## T05 — Seller orders (Sonnet, Medium)
+> ⛔ **SUPERSEDED — PENDING REGENERATION (OD-8/CORRECTION-02; REG-57).** The seller confirm gate stays the seller's act but is gated on the ADMIN-verified deposit (not a seller-verified deposit); COD orders are no longer pre-confirmed. REG-44 stands alone (buyer name+address for fulfilment). Rebuild before executing.
 ```
 Read SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 07 T05 — /seller/orders +
 /seller/orders/[id]. Branch feature/phase-07-orders (continue). Sonnet, Medium. Compose-only, seller
@@ -350,6 +375,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 transition commented; nav extended; zero ui/shared diff.
 
 ## T06 — Exit verification + consolidated PR prep (Opus, Max)
+> ⛔ **SUPERSEDED — PENDING REGENERATION (OD-8/CORRECTION-02; REG-57).** The DoD ledger must add the custodial lines (payee = BETK, commission snapshot, admin deposit-verification against `proof_path`, derived balance) and drop the COD-auto-confirm / REG-45 product-decision lines. Rebuild before executing.
 ```
 Read SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 07 T06 — exit gate. Opus, MAX. ZERO
 feature-code changes (docs-only + throwaway E2E, deleted).
@@ -378,7 +404,7 @@ feature-code changes (docs-only + throwaway E2E, deleted).
    regrowth) + journal + pack tracker.
 5. Full CI green (typecheck · lint 0 new · 4 guards + parity · unit · integration full suite · build
    both locales + route count). Push. Open consolidated PR feature/phase-07-orders → main titled
-   "Phase 07: Orders, Checkout & Split Payments (T01–T05 + REG-09/48)" — migrations present → the R5
+   "Phase 07: Orders, Checkout & Custodial Payments — OD-8/ADR-016 (T01–T05 + REG-09/48)" — migrations present → the R5
    RLS-smoke job MUST fire (and A4b now passes inside it); flag the checkout rpc + the
    converted_to_order_id mechanism as the security-relevant changes to review first. HOLD — human merges.
 Env: Windows/PowerShell — no &&. No credentials in output or chat.
@@ -390,12 +416,16 @@ stays slim; PR open + held.
 - A buyer with a verified phone converts a confirmed inquiry into an atomic order (items + 2 payments +
   history + inquiry linkage) — and NOTHING else can create one (non-confirmed, foreign, phone-NULL,
   re-submission all provably rejected with zero residue).
-- COD auto-confirms at create and provably fires the stock decrement; deposit orders decrement at
-  seller confirm; oversell rolls the whole checkout back.
+- Every order INSERTs `pending` and decrements stock at the seller's confirm (the AFTER-UPDATE trigger
+  fires naturally); there is **no COD auto-confirm / no pure-COD path (OD-8 §3.2)**; oversell rolls the
+  whole checkout back.
 - Cancel = pending-only; every transition writes status history; timelines render it on both surfaces.
 - REG-09 + REG-48 closed ERD-verbatim; the RLS-smoke A4b finding is retired.
 - Buyer identity exposed to the seller ON the order only (REG-44 posture transition, commented).
-- Split payments are display/instruction rows per ADR-002 — no processing, no custody, no gateway.
+- Split payments are **custodial** (OD-8/ADR-016): payee = **BETK**, which settles to the seller net of a
+  platform commission; the buyer uploads a transfer screenshot and **ADMIN** verifies the deposit. Still
+  no payment gateway / no automated capture / no automated payout; a persisted ledger stays post-MVP (§6,
+  balance derived).
 - Every screen bilingual + theme-wired; ledger 1:1; schema backfilled; consolidated PR open with
   RLS-smoke fired; `main` untouched until the gate verdict.
 
@@ -409,8 +439,8 @@ precedent lands) · `BETK_UI_SPEC.md` acceptance matrix · this pack's results t
 |---|---|---|---|---|---|---|
 | T00 housekeep+reorg | Sonnet | High | — | — | — | SESSION_CONTEXT slim + PRECEDENTS + effort rule |
 | T01 DB+RLS | Opus | Max | ✅ 2026-07-23 | feature/phase-07-orders | CI green · ledger 29 · advisor 8 INFO (was 13) | REG-09/48 CLOSED, REG-49 opened; migration `20260723074953`; ORDER-SET CONTRACT pinned; tension=DEFINER-trigger; shipments=READ-now/WRITE-Phase-08; order.rls 15/15+1 opt-in; A4b→PASS |
-| T02 write layer | Opus | Max | — | — | — | ADR-016 · REG-45 product decision asked |
-| T03 checkout UI | Sonnet | Medium | — | — | — | Phase-06 CTA wired |
-| T04 buyer orders | Sonnet | Medium | — | — | — | — |
-| T05 seller orders | Sonnet | Medium | — | — | — | REG-44 transition |
-| T06 exit gate | Opus | Max | — | — | — | PR held for human |
+| T02 write layer | Opus | Max | ⛔ SUPERSEDED (OD-8/CORRECTION-02) | — | — | PENDING REGENERATION for custodial (payee = BETK, commission snapshot, admin deposit gate); REG-57 blocks rebuild. ADR-016 already recorded in ADR.md by CORRECTION-02 |
+| T03 checkout UI | Sonnet | Medium | ⛔ SUPERSEDED (OD-8/CORRECTION-02) | — | — | PENDING REGENERATION — BETK handles from `admin_settings` + proof-upload + admin-verify state; no COD auto-confirm |
+| T04 buyer orders | Sonnet | Medium | ⛔ SUPERSEDED (OD-8/CORRECTION-02) | — | — | PENDING REGENERATION — custodial payment rows/states |
+| T05 seller orders | Sonnet | Medium | ⛔ SUPERSEDED (OD-8/CORRECTION-02) | — | — | PENDING REGENERATION — confirm gated on admin-verified deposit; REG-44 stands alone |
+| T06 exit gate | Opus | Max | ⛔ SUPERSEDED (OD-8/CORRECTION-02) | — | — | PENDING REGENERATION — custodial DoD ledger; PR held for human |

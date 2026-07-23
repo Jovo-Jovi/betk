@@ -538,14 +538,15 @@ FOR EACH ROW
 WHEN (NEW.inquiry_id IS NOT NULL)
 EXECUTE FUNCTION betk.set_inquiry_converted_order();
 ## **Group H: Payments**
-**Split Payment Model**
-deposit = 50% upfront via Instapay / Vodafone Cash / Orange Cash
-balance = 50% COD on delivery
-Two payment records created per order at checkout
+**Split Payment Model (CUSTODIAL — OD-8 / ADR-016, amended 2026-07-23)**
+deposit = 50% upfront to BETK's Instapay / Vodafone Cash / Orange Cash handles (from admin_settings); buyer uploads a transfer screenshot; ADMIN verifies (not the seller)
+balance = 50% COD on delivery; courier collects and remits to BETK
+Two payment records created per order at checkout; payee = BETK, which settles to the seller net of a platform commission (seller net = subtotal − commission_amount)
+NOTE (OD-8 §9): the custodial model adds 3 additive columns — payments.proof_path, orders.commission_rate, orders.commission_amount — OWED BY Phase-07 T02's migration and NOT yet reflected in the DDL below (no new table; count 43 holds). The payments DDL below is the LIVE schema as landed by migration 20260622082914_payments_delivery.sql, which stays historical (never edited retroactively).
 **  SQL**
 -- ============================================================
 -- H1. payments
--- Split payment: deposit (upfront) + balance (COD)
+-- Split payment (CUSTODIAL, OD-8/ADR-016): deposit (upfront to BETK's rails, admin-verified) + balance (COD, remitted to BETK); payee = BETK, settles to seller net of commission
 -- ============================================================
 CREATE TABLE betk.payments (
   id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),

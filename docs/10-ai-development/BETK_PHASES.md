@@ -44,8 +44,8 @@ Decide OD-1…OD-6 (MVP Scope §6) and sign. **No development begins until this 
 - **Docs:** journal.
 
 ## Phase 07 — Orders, Checkout & Split Payments
-- Features: FR-BUY-6..9, FR-SEL-14..15. Checkout (atomic order + items + two payments), confirmation/instructions, order history, track order, seller order mgmt + status lifecycle + shipment, deposit confirmation gate, COD auto-confirm.
-- **Acceptance:** AC-BUY-6 (atomic, 2 payments, only from confirmed inquiry); AC-SEL-14 (confirm→stock decrement→notify; COD skips deposit); cancel only pending (R-O03); status history written.
+- Features: FR-BUY-6..9, FR-SEL-14..15. Checkout (atomic order + items + two payments, **payee = BETK / custodial per OD-8/ADR-016; commission snapshotted on the order**), confirmation/instructions (**BETK's handles from `admin_settings` + buyer proof-upload**), order history, track order, seller order mgmt + status lifecycle + shipment, **admin deposit-verification gate → seller acceptance** (R-O04 COD auto-confirm retired — no pure-COD path).
+- **Acceptance:** AC-BUY-6 (atomic, 2 payments, only from confirmed inquiry); AC-SEL-14 (**seller** confirm→stock decrement→notify, gated on the **admin-verified deposit**); cancel only pending (R-O03); status history written.
 - **Tests:** integration (checkout atomicity, split payment dedupe, status transitions); E2E full purchase.
 - **Docs:** API_STANDARDS, journal.
 

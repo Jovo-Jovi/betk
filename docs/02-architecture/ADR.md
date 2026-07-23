@@ -5,7 +5,7 @@
 Status: Accepted. Context: MVP needs type-safe DB access without ORM overhead. Decision: Supabase JS Client + `supabase gen types` + Zod; no Prisma/Drizzle. Consequences: regenerate types every migration; RLS is the authorization layer.
 
 ### ADR-002 — Split payment, no custody
-Status: Accepted. Decision: 50% deposit (Instapay/VF Cash/Orange Cash) + 50% COD; two `payments` rows per order; BETK never holds funds. Consequences: manual seller confirmation; no gateway; wallet/escrow is post-MVP (C3 §8.4).
+Status: **Superseded by ADR-016** (custodial payments per OD-8, 2026-07-23). Decision: 50% deposit (Instapay/VF Cash/Orange Cash) + 50% COD; two `payments` rows per order; BETK never holds funds. Consequences: manual seller confirmation; no gateway; wallet/escrow is post-MVP (C3 §8.4).
 
 ### ADR-003 — Phone OTP as sole auth
 Status: **Superseded by ADR-008** (Google OAuth added per OD-4). Original: Supabase Auth phone OTP only; no passwords (R-A01).
@@ -117,3 +117,55 @@ Status: **Accepted** (Phase 06 / T02-FIX, 2026-07-22, Opus 4.8). Supersedes the 
 **Why NOT a broad receiver UPDATE grant/policy.** A general `FOR UPDATE` to the receiver without the column GRANT would expose `body` to the other party (message tampering). The column-level GRANT is what makes the receiver write safe; a broad grant is explicitly the non-sanctioned shape (a plain BEFORE UPDATE trigger rejecting non-`is_read` changes by a non-sender was the sanctioned fallback had the grant proven unworkable — it did not).
 
 **Consequences.** One additive migration (ledger 27→28), no rpc, no DEFINER, no service-role, no new advisor finding. REG-42 CLOSED. Proven on staging (`inquiry.readReceipt.test.ts`, 10/10): receiver flips `is_read` both directions; receiver/sender `body` edit → `42501`; sender own `is_read` harmless; idempotent; outsider → not_found + 0 rows; anon → 0 rows; no DELETE; T01's 13 assertions unregressed (the one T01 assertion that encoded the now-closed REG-42 gap was revised to the amended behavior). **Phase 06 / T05 exit-gate re-confirmation (2026-07-22, Opus):** the lifecycle E2E re-proved receiver-flips-the-other-party's-`is_read` while the caller's OWN messages stay untouched (the `sender_id <> auth.uid()` half) live; DB live-state re-verified the column GRANT (`authenticated` = `is_read` only) + the `inq_msg_read_receipt` policy ERD-verbatim. ADR-015 stands **Accepted, unchanged.**
+
+### ADR-016 — Custodial payments with platform commission (supersedes ADR-002)
+
+> The registry is **append-only; supersede rather than edit** — so ADR-002 stays in place and gains a "Superseded by ADR-016" marker, mirroring the ADR-003 → ADR-008 precedent.
+
+**Status:** Accepted (OD-8, 2026-07-23). Supersedes ADR-002.
+
+**Context.** ADR-002 established a no-custody model: the buyer transferred the deposit directly to
+the seller's own handle, and BETK never touched the money. That model gives BETK no leverage over
+transaction completion, no commission mechanism, and no buyer protection beyond the dispute process —
+in an informal-seller market where trust is the core product problem.
+
+**Decision.** The buyer pays BETK. BETK settles to the seller net of a flat percentage commission
+computed on `subtotal` and snapshotted onto the order at creation. Deposit verification is performed
+by **admin** against a buyer-uploaded transfer screenshot (`payments.status`); order acceptance
+remains the **seller's** act (`orders.status`). The seller's balance is **derived**, not persisted —
+no wallet or ledger table.
+
+**Consequences.**
+- BETK takes legal custody of buyer funds (see OD-8 §11).
+- Manual verification moves from seller to admin; `/admin/payments` becomes an operational surface.
+- BETK becomes merchant of record with the courier (Phase 08).
+- Three additive columns; no new table; table count 43 and page count 59 both hold.
+- R-O04 (COD auto-confirm) is retired; R-O05's confirming actor becomes admin.
+- Payment gateways, automated capture, and automated payouts remain out of scope — unchanged
+  from ADR-002.
+- A persisted ledger remains post-MVP (OD-8 §6).
+
+### ADR-017 — `converted_to_order_id` is written by a SECURITY DEFINER AFTER-INSERT trigger
+
+> Recorded **retroactively**. CORRECTION-01 §E1 confirmed Phase-07 T01 landed this object without an
+> ADR; the decision existed only in the SESSION_CONTEXT contract block and the journal.
+
+**Status:** Accepted. Landed in migration `20260723074953` (Phase 07 / T01, 2026-07-23).
+
+**Context.** Checkout is buyer-driven, but `inquiries` UPDATE is restricted to store/admin
+(`inq_update`, ERD §3 row 51). The buyer therefore cannot write `inquiries.converted_to_order_id`
+when their order is created, and broadening the policy to admit a buyer UPDATE would violate the
+ERD row and expose the whole inquiry row to buyer writes.
+
+**Decision.** A hardened `SECURITY DEFINER` AFTER-INSERT trigger on `betk.orders` performs the write:
+`search_path` pinned, `EXECUTE` revoked from `PUBLIC`/`anon`/`authenticated`.
+
+**Distinction from ADR-012's rejection.** ADR-012 rejected a `SECURITY DEFINER` **rpc** because a
+PostgREST-exposed DEFINER function is API-callable and trips advisor 0029. A trigger function is
+never API-exposed and carries no such surface — confirmed by the post-migration advisor sweep, which
+recorded zero new findings. The REG-43 rejection of a DEFINER trigger also does not apply: that was
+DB machinery proposed for a read-ordering concern the query layer could already serve, whereas this
+write is structurally unreachable through RLS.
+
+**Consequences.** One permanent DEFINER object on the orders write path. Idempotency is
+integration-proven. No broad buyer UPDATE policy on `inquiries` exists or is needed.
