@@ -1088,6 +1088,8 @@ export type Database = {
           buyer_id: string
           cancellation_reason: string | null
           cancelled_by: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount: number | null
+          commission_rate: number | null
           confirmed_at: string | null
           created_at: string
           delivered_at: string | null
@@ -1107,6 +1109,8 @@ export type Database = {
           buyer_id: string
           cancellation_reason?: string | null
           cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount?: number | null
+          commission_rate?: number | null
           confirmed_at?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -1126,6 +1130,8 @@ export type Database = {
           buyer_id?: string
           cancellation_reason?: string | null
           cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount?: number | null
+          commission_rate?: number | null
           confirmed_at?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -1212,6 +1218,7 @@ export type Database = {
           notes: string | null
           order_id: string
           payment_type: Database["betk"]["Enums"]["payment_type"]
+          proof_path: string | null
           status: Database["betk"]["Enums"]["payment_status"]
           transfer_reference: string | null
         }
@@ -1225,6 +1232,7 @@ export type Database = {
           notes?: string | null
           order_id: string
           payment_type: Database["betk"]["Enums"]["payment_type"]
+          proof_path?: string | null
           status?: Database["betk"]["Enums"]["payment_status"]
           transfer_reference?: string | null
         }
@@ -1238,6 +1246,7 @@ export type Database = {
           notes?: string | null
           order_id?: string
           payment_type?: Database["betk"]["Enums"]["payment_type"]
+          proof_path?: string | null
           status?: Database["betk"]["Enums"]["payment_status"]
           transfer_reference?: string | null
         }
