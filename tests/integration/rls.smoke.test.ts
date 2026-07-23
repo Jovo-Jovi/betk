@@ -581,11 +581,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     if (gOrderId) await svc().from("orders").delete().eq("id", gOrderId);
     expect(gRejected).toBe(true);
 
-    // 4b (spec: "Buyer A passes"): Buyer A has a verified phone, so the phone
-    // gate is satisfied. However, `orders` currently has NO permissive INSERT
-    // policy (only `orders_access` SELECT + the RESTRICTIVE phone gate), so the
-    // insert is default-denied regardless of phone. Capture this as a finding
-    // rather than silently passing, and prove the positive path on `payouts`.
+    // 4b (spec: "Buyer A passes"): Buyer A has a verified phone AND owns the row,
+    // so the permissive `orders_insert` (REG-09, migration 20260723074953) +
+    // the RESTRICTIVE `orders_phone_gate` both pass -> INSERT succeeds. This was a
+    // FINDING before Phase 07 / T01 (no permissive INSERT policy existed); REG-09
+    // is now CLOSED so this is a hard PASS. Insert is cleaned up immediately.
     const { data: aOrder, error: aErr } = await actors.buyerA.client
       .from("orders")
       .insert({
@@ -600,27 +600,17 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       })
       .select("id");
     const aOrderId = firstId(aOrder);
-    if (aOrderId) {
-      await svc().from("orders").delete().eq("id", aOrderId);
-      record(
-        "A4b",
-        "orders",
-        "orders INSERT (ownership)",
-        "PASS",
-        "phone-verified Buyer A inserted an order (permissive INSERT policy present)",
-      );
-    } else {
-      record(
-        "A4b",
-        "orders",
-        "orders INSERT (ownership)",
-        "FINDING",
-        `phone-verified Buyer A also rejected on orders INSERT (${aErr?.message}) — ` +
-          `orders has NO permissive INSERT policy; the RESTRICTIVE phone gate cannot ` +
-          `be positively verified on orders until the ownership INSERT policy lands ` +
-          `(expected in a later phase). Positive path proven on payouts below.`,
-      );
-    }
+    if (aOrderId) await svc().from("orders").delete().eq("id", aOrderId);
+    record(
+      "A4b",
+      "orders",
+      "orders_insert + orders_phone_gate (RESTRICTIVE)",
+      aOrderId ? "PASS" : "FAIL",
+      aOrderId
+        ? "phone-verified Buyer A inserted an order (REG-09 orders_insert present + phone gate passed)"
+        : `REG-09 regression — phone-verified owner rejected on orders INSERT: ${aErr?.message}`,
+    );
+    expect(aOrderId, "REG-09: phone-verified owner must be able to INSERT their own order").toBeTruthy();
 
     // 4c (positive gate proof): Seller has a verified phone AND owns the store,
     // so `payouts_insert` (permissive: store_id = my_store_id()) + the
@@ -726,29 +716,32 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   it("records known schema/policy findings", () => {
     record(
       "F1",
-      "~21 betk tables",
+      "8 betk tables",
       "RLS-enabled / no policy",
       "FINDING",
-      "RLS enabled but no policy => default-deny for non-admins (parent-scoped); " +
-        "child-table policies (order_items, listing_images, inquiry_messages, etc.) " +
-        "are expected to arrive in later phases per C3 §5.",
+      "RLS enabled but no policy => default-deny (parent-scoped); the remaining 8 " +
+        "zero-policy tables (dispute_evidence/messages, flagged_content, otp_tokens, " +
+        "restock_alerts, seller_strikes, sessions, whatsapp_templates) are owned by " +
+        "later phases per the SESSION_CONTEXT owning-phase map. The order-set children " +
+        "(order_items/status_history/messages, shipments/tracking) gained policies in " +
+        "Phase 07 / T01 (REG-48); inquiry_messages in Phase 06 (REG-41).",
     );
     record(
       "F2",
       "orders/seller_profiles/payouts",
-      "phone gate vs permissive INSERT",
-      "FINDING",
-      "orders & seller_profiles have the RESTRICTIVE phone gate but no permissive " +
-        "INSERT policy yet, so direct authenticated inserts are default-denied; only " +
-        "payouts has a permissive INSERT (payouts_insert) to pair with its gate.",
+      "phone gate + permissive INSERT",
+      "PASS",
+      "RESOLVED — all three phone-gated tables now pair the RESTRICTIVE gate with a " +
+        "permissive ownership INSERT: payouts_insert (Phase 01), sp_insert (REG-10, " +
+        "Phase 04), orders_insert (REG-09, Phase 07 / T01). No default-denied gated table remains.",
     );
     record(
       "F3",
-      "listings / orders trigger",
+      "orders trigger",
       "decrement_stock_on_confirm",
-      "FINDING",
-      "BETK_ERD §7 lists 5 triggers but the source schema defines 4 — the " +
-        "decrement_stock_on_confirm trigger (R-L05/06) is missing (carried from T05).",
+      "PASS",
+      "RESOLVED — the decrement_stock_on_confirm trigger (R-L05/06) is live " +
+        "(migration 20260716124323, REG-02); AFTER UPDATE OF status WHEN NEW.status='confirmed'.",
     );
     expect(findings.length).toBeGreaterThan(0);
   });

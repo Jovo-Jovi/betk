@@ -507,6 +507,36 @@ AFTER UPDATE OF status ON betk.orders
 FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'confirmed')
 EXECUTE FUNCTION betk.decrement_stock_on_confirm();
+-- ── inquiry→order conversion link (REG-09 TENSION, Phase 07 / T01) ────────────
+-- Checkout is buyer-driven (the buyer INSERTs the order), but inquiries UPDATE RLS
+-- is store/admin only (inq_update) — the buyer cannot write inquiries.converted_to_order_id
+-- from an INVOKER path. This hardened SECURITY DEFINER AFTER INSERT trigger copies the
+-- new order id onto the source inquiry, once (idempotent via the IS NULL guard — first
+-- order wins). Distinct from the ADR-012-rejected DEFINER *RPC*: this is a definer
+-- *trigger*, never API-exposed (EXECUTE revoked below), so no 0028/0029 advisor applies.
+-- Only the derived inquiry-linkage write is definer; the order INSERT stays RLS-gated
+-- (orders_insert + orders_phone_gate). Migration 20260723074953_order_rls_and_conversion_link.
+CREATE OR REPLACE FUNCTION betk.set_inquiry_converted_order()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = betk, public
+AS $$
+BEGIN
+  UPDATE betk.inquiries
+  SET converted_to_order_id = NEW.id
+  WHERE id = NEW.inquiry_id
+    AND converted_to_order_id IS NULL;
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION betk.set_inquiry_converted_order() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER trg_set_inquiry_converted_order
+AFTER INSERT ON betk.orders
+FOR EACH ROW
+WHEN (NEW.inquiry_id IS NOT NULL)
+EXECUTE FUNCTION betk.set_inquiry_converted_order();
 ## **Group H: Payments**
 **Split Payment Model**
 deposit = 50% upfront via Instapay / Vodafone Cash / Orange Cash
@@ -1265,6 +1295,82 @@ CREATE POLICY payments_access ON betk.payments FOR SELECT
       AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id())
     )
     OR betk.is_admin()
+  );
+-- REG-09 + REG-48 (Phase 07 / T01): ERD §3 rows 53-59 order-set RLS. orders permissive
+--   ownership INSERT (combines with the RESTRICTIVE orders_phone_gate below); children
+--   parent-scoped READ + INSERT. order_status_history UPDATE/DELETE stay blocked by the
+--   append-only RULES (no policy). order_messages INSERT pins sender_id; no read-state
+--   write (row 53 not REG-42-amended). shipments/shipment_tracking_events READ land now
+--   (FR-BUY-9 tracking); their store/courier WRITE policies defer to Phase 08. payments
+--   INSERT/UPDATE + orders UPDATE are REG-49, owed by T02. Migration
+--   20260723074953_order_rls_and_conversion_link.
+CREATE POLICY orders_insert ON betk.orders FOR INSERT
+  WITH CHECK (buyer_id = auth.uid());
+CREATE POLICY order_items_access ON betk.order_items FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_items.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_items_insert ON betk.order_items FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_items.order_id
+        AND o.buyer_id = auth.uid()
+    )
+  );
+CREATE POLICY order_status_history_access ON betk.order_status_history FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_status_history.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_status_history_insert ON betk.order_status_history FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_status_history.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_messages_access ON betk.order_messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_messages.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_messages_insert ON betk.order_messages FOR INSERT
+  WITH CHECK (
+    sender_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_messages.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY shipments_access ON betk.shipments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = shipments.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY shipment_tracking_events_access ON betk.shipment_tracking_events FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.shipments s
+      JOIN betk.orders o ON o.id = s.order_id
+      WHERE s.id = shipment_tracking_events.shipment_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
   );
 -- REVIEWS: public read visible; buyer writes own
 CREATE POLICY reviews_public ON betk.reviews FOR SELECT

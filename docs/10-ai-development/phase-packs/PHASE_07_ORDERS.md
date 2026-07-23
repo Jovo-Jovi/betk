@@ -191,7 +191,8 @@ STEP 2 — MIGRATION (one, additive, ERD §3 row-verbatim):
   ONLY if the ERD/spec pins a read-state; cite-or-omit).
 - shipments/shipment_tracking_events per the STEP-1 decision. Plus the TENSION resolution object if
   T01 pinned a DB-side shape. Nothing else touched.
-Apply via MCP → local file to MCP version → ledger 29→(count) 1:1 → schema backfill → advisor sweep,
+Apply via MCP → local file to MCP version → ledger 28→29 1:1 (pre-T01 state is 28/28 — expansion vs
+the pack's "29→(count)" wording, flagged in the review chat) → schema backfill → advisor sweep,
 state old + new baselines, 0 unexplained findings.
 
 STEP 3 — INTEGRATION (staging, minted + cleaned, zero residue):
@@ -407,7 +408,7 @@ precedent lands) · `BETK_UI_SPEC.md` acceptance matrix · this pack's results t
 | Task | Model | Thinking | Status | Branch | Gate | Notes |
 |---|---|---|---|---|---|---|
 | T00 housekeep+reorg | Sonnet | High | — | — | — | SESSION_CONTEXT slim + PRECEDENTS + effort rule |
-| T01 DB+RLS | Opus | Max | — | — | — | REG-09/48 + tension + trap + shipments decision |
+| T01 DB+RLS | Opus | Max | ✅ 2026-07-23 | feature/phase-07-orders | CI green · ledger 29 · advisor 8 INFO (was 13) | REG-09/48 CLOSED, REG-49 opened; migration `20260723074953`; ORDER-SET CONTRACT pinned; tension=DEFINER-trigger; shipments=READ-now/WRITE-Phase-08; order.rls 15/15+1 opt-in; A4b→PASS |
 | T02 write layer | Opus | Max | — | — | — | ADR-016 · REG-45 product decision asked |
 | T03 checkout UI | Sonnet | Medium | — | — | — | Phase-06 CTA wired |
 | T04 buyer orders | Sonnet | Medium | — | — | — | — |
