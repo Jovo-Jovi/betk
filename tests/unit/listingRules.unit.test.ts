@@ -48,12 +48,16 @@ describe("mediaObjectPathFromPublicUrl / ownsMediaPrefix", () => {
   });
 });
 
-describe("hasPaymentMethod (R-S09)", () => {
-  it("true when any handle is set or COD is on", () => {
+describe("hasPaymentMethod (R-S09, REG-61 — OD-8 §3.2/§7 custodial model)", () => {
+  it("true when any SETTLEMENT handle is set", () => {
     expect(hasPaymentMethod({ instapay_handle: "01000000000" })).toBe(true);
     expect(hasPaymentMethod({ vodafone_cash: "01000000000" })).toBe(true);
     expect(hasPaymentMethod({ orange_cash: "01000000000" })).toBe(true);
-    expect(hasPaymentMethod({ cod_enabled: true })).toBe(true);
+  });
+
+  it("REG-61: false for a COD-only store — cod_enabled no longer satisfies the gate", () => {
+    expect(hasPaymentMethod({ cod_enabled: true })).toBe(false);
+    expect(hasPaymentMethod({ cod_enabled: true, instapay_handle: "   " })).toBe(false);
   });
 
   it("false when empty / whitespace-only / all disabled / null", () => {
@@ -65,12 +69,12 @@ describe("hasPaymentMethod (R-S09)", () => {
   });
 });
 
-describe("evaluatePublishRequirements (R-L02/03/04 + R-S09)", () => {
+describe("evaluatePublishRequirements (R-L02/03/04 + R-S09, REG-61)", () => {
   const ok = {
     titleAr: "عنوان",
     categoryId: CATEGORY,
     imageCount: 1,
-    paymentMethods: { cod_enabled: true },
+    paymentMethods: { instapay_handle: "01000000000" },
   };
 
   it("returns [] when all requirements are met", () => {
@@ -93,6 +97,12 @@ describe("evaluatePublishRequirements (R-L02/03/04 + R-S09)", () => {
     expect(evaluatePublishRequirements({ ...ok, paymentMethods: {} })).toEqual([
       "payment_method",
     ]);
+  });
+
+  it("REG-61: flags a COD-only store — a pure-COD store now FAILS the gate", () => {
+    expect(
+      evaluatePublishRequirements({ ...ok, paymentMethods: { cod_enabled: true } }),
+    ).toEqual(["payment_method"]);
   });
 
   it("returns every unmet requirement together (each independently blocking)", () => {

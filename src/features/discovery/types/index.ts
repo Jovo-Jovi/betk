@@ -5,7 +5,7 @@
  */
 
 import type { Database } from "@/lib/supabase/types";
-import type { StorePaymentMethods, StoreDeliveryOptions } from "@/types/jsonb";
+import type { StoreDeliveryOptions } from "@/types/jsonb";
 
 type E = Database["betk"]["Enums"];
 
@@ -207,7 +207,6 @@ export interface StoreDetail {
   city: string | null;
   returnPolicy: string | null;
   minOrderEgp: number | null;
-  paymentMethods: StorePaymentMethods;
   deliveryOptions: StoreDeliveryOptions;
   createdAt: string;
   seller: ListingSeller | null;

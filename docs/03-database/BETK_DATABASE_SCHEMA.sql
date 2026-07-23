@@ -507,15 +507,46 @@ AFTER UPDATE OF status ON betk.orders
 FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'confirmed')
 EXECUTE FUNCTION betk.decrement_stock_on_confirm();
+-- ── inquiry→order conversion link (REG-09 TENSION, Phase 07 / T01) ────────────
+-- Checkout is buyer-driven (the buyer INSERTs the order), but inquiries UPDATE RLS
+-- is store/admin only (inq_update) — the buyer cannot write inquiries.converted_to_order_id
+-- from an INVOKER path. This hardened SECURITY DEFINER AFTER INSERT trigger copies the
+-- new order id onto the source inquiry, once (idempotent via the IS NULL guard — first
+-- order wins). Distinct from the ADR-012-rejected DEFINER *RPC*: this is a definer
+-- *trigger*, never API-exposed (EXECUTE revoked below), so no 0028/0029 advisor applies.
+-- Only the derived inquiry-linkage write is definer; the order INSERT stays RLS-gated
+-- (orders_insert + orders_phone_gate). Migration 20260723074953_order_rls_and_conversion_link.
+CREATE OR REPLACE FUNCTION betk.set_inquiry_converted_order()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = betk, public
+AS $$
+BEGIN
+  UPDATE betk.inquiries
+  SET converted_to_order_id = NEW.id
+  WHERE id = NEW.inquiry_id
+    AND converted_to_order_id IS NULL;
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION betk.set_inquiry_converted_order() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER trg_set_inquiry_converted_order
+AFTER INSERT ON betk.orders
+FOR EACH ROW
+WHEN (NEW.inquiry_id IS NOT NULL)
+EXECUTE FUNCTION betk.set_inquiry_converted_order();
 ## **Group H: Payments**
-**Split Payment Model**
-deposit = 50% upfront via Instapay / Vodafone Cash / Orange Cash
-balance = 50% COD on delivery
-Two payment records created per order at checkout
+**Split Payment Model (CUSTODIAL — OD-8 / ADR-016, amended 2026-07-23)**
+deposit = 50% upfront to BETK's Instapay / Vodafone Cash / Orange Cash handles (from admin_settings); buyer uploads a transfer screenshot; ADMIN verifies (not the seller)
+balance = 50% COD on delivery; courier collects and remits to BETK
+Two payment records created per order at checkout; payee = BETK, which settles to the seller net of a platform commission (seller net = subtotal − commission_amount)
+NOTE (OD-8 §9): the custodial model adds 3 additive columns — payments.proof_path, orders.commission_rate, orders.commission_amount — LANDED by migration 20260723110557_od8_custodial_payment_columns_and_settings (CORRECTION-03, 2026-07-23; ledger 29→30; no new table; count 43 holds). The original CREATE TABLE blocks below stay historical (landed by 20260622082914_payments_delivery.sql / 20260622082857_messaging_orders.sql, never edited retroactively); the additive columns + CHECKs are backfilled as an ALTER block below the payments table for source parity, and the 6 admin_settings rows are backfilled below the seed INSERT. RLS policies for the new write paths (REG-49: payments INSERT/UPDATE, orders UPDATE) are OWED BY the regenerated Phase-07 T02, NOT this migration.
 **  SQL**
 -- ============================================================
 -- H1. payments
--- Split payment: deposit (upfront) + balance (COD)
+-- Split payment (CUSTODIAL, OD-8/ADR-016): deposit (upfront to BETK's rails, admin-verified) + balance (COD, remitted to BETK); payee = BETK, settles to seller net of commission
 -- ============================================================
 CREATE TABLE betk.payments (
   id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -531,6 +562,20 @@ CREATE TABLE betk.payments (
   created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_payment_type_per_order UNIQUE (order_id, payment_type)
 );
+-- OD-8 CUSTODIAL ADDITIVE COLUMNS + CHECKs (OD-8 §9, migration
+-- 20260723110557_od8_custodial_payment_columns_and_settings; CORRECTION-03,
+-- 2026-07-23; backfilled here for source parity). Additive only, nullable +
+-- app-enforced; the CHECKs bite only once a value is set (NULL passes).
+ALTER TABLE betk.payments
+  ADD COLUMN proof_path VARCHAR NULL;                    -- OD-8 §5: buyer's transfer-screenshot path in the private `docs` bucket (awaiting-admin-review = proof_path IS NOT NULL AND status='pending')
+ALTER TABLE betk.orders
+  ADD COLUMN commission_rate NUMERIC(5,2) NULL;          -- OD-8 §4: platform commission rate (%) in force at creation (snapshot, from admin_settings.commission_rate_pct)
+ALTER TABLE betk.orders
+  ADD COLUMN commission_amount NUMERIC(10,2) NULL;       -- OD-8 §4: computed commission = round(commission_rate * subtotal, 2), snapshot; base is subtotal, NEVER total_amount; seller net = subtotal - commission_amount (derived, no wallet table)
+ALTER TABLE betk.orders
+  ADD CONSTRAINT chk_commission_amount_nonneg CHECK (commission_amount >= 0);
+ALTER TABLE betk.orders
+  ADD CONSTRAINT chk_commission_rate_range CHECK (commission_rate BETWEEN 0 AND 100);
 -- H2. payouts
 -- Seller earnings withdrawal requests
 -- ============================================================
@@ -861,6 +906,18 @@ INSERT INTO betk.admin_settings (key, value, description) VALUES
   ('silver_level_min_rating', '4.0', 'Minimum rating for Silver level'),
   ('gold_level_min_orders', '50', 'Minimum orders for Gold level'),
   ('gold_level_min_rating', '4.5', 'Minimum rating for Gold level');
+-- OD-8 §9.1 custodial payment-config seed rows (migration
+-- 20260723110557_od8_custodial_payment_columns_and_settings; CORRECTION-03,
+-- 2026-07-23; backfilled here for source parity). Every value is PROVISIONAL and
+-- gated by REG-62 (HARD pre-launch gate): 0 and '' are "not yet configured"
+-- sentinels, NOT business decisions — no rate, fee, or handle is invented.
+INSERT INTO betk.admin_settings (key, value, description) VALUES
+  ('commission_rate_pct', '0', 'PROVISIONAL - platform commission, % of order subtotal. BETK EARNS NOTHING UNTIL SET. Hard pre-launch gate (REG-62).'),
+  ('return_hold_hours', '48', 'PROVISIONAL - hours after delivery before a seller balance is approved. Engineering default, house-consistent with dispute_sla_hours / review_edit_window_hours - NOT spec-derived. Confirm before launch (REG-62).'),
+  ('delivery_fee_flat_egp', '0', 'PROVISIONAL - flat delivery fee (Phase 07; retired when the courier API lands at Phase 08). Hard pre-launch gate (REG-62).'),
+  ('betk_instapay_handle', '', 'BETK deposit-receipt handle - set via dashboard. Checkout cannot render payment instructions while empty. Hard gate (REG-62).'),
+  ('betk_vodafone_cash', '', 'BETK deposit-receipt handle - set via dashboard (REG-62).'),
+  ('betk_orange_cash', '', 'BETK deposit-receipt handle - set via dashboard (REG-62).');
 -- M8. seller_analytics_snapshots
 -- ============================================================
 CREATE TABLE betk_analytics.seller_snapshots (
@@ -1265,6 +1322,82 @@ CREATE POLICY payments_access ON betk.payments FOR SELECT
       AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id())
     )
     OR betk.is_admin()
+  );
+-- REG-09 + REG-48 (Phase 07 / T01): ERD §3 rows 53-59 order-set RLS. orders permissive
+--   ownership INSERT (combines with the RESTRICTIVE orders_phone_gate below); children
+--   parent-scoped READ + INSERT. order_status_history UPDATE/DELETE stay blocked by the
+--   append-only RULES (no policy). order_messages INSERT pins sender_id; no read-state
+--   write (row 53 not REG-42-amended). shipments/shipment_tracking_events READ land now
+--   (FR-BUY-9 tracking); their store/courier WRITE policies defer to Phase 08. payments
+--   INSERT/UPDATE + orders UPDATE are REG-49, owed by T02. Migration
+--   20260723074953_order_rls_and_conversion_link.
+CREATE POLICY orders_insert ON betk.orders FOR INSERT
+  WITH CHECK (buyer_id = auth.uid());
+CREATE POLICY order_items_access ON betk.order_items FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_items.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_items_insert ON betk.order_items FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_items.order_id
+        AND o.buyer_id = auth.uid()
+    )
+  );
+CREATE POLICY order_status_history_access ON betk.order_status_history FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_status_history.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_status_history_insert ON betk.order_status_history FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_status_history.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_messages_access ON betk.order_messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_messages.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY order_messages_insert ON betk.order_messages FOR INSERT
+  WITH CHECK (
+    sender_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = order_messages.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY shipments_access ON betk.shipments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.orders o
+      WHERE o.id = shipments.order_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
+  );
+CREATE POLICY shipment_tracking_events_access ON betk.shipment_tracking_events FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM betk.shipments s
+      JOIN betk.orders o ON o.id = s.order_id
+      WHERE s.id = shipment_tracking_events.shipment_id
+        AND (o.buyer_id = auth.uid() OR o.store_id = betk.my_store_id() OR betk.is_admin())
+    )
   );
 -- REVIEWS: public read visible; buyer writes own
 CREATE POLICY reviews_public ON betk.reviews FOR SELECT

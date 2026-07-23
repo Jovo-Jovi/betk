@@ -468,16 +468,8 @@
       "empty": "This store has not set a return policy."
     },
     "about": {
-      "paymentTitle": "Payment methods",
-      "paymentEmpty": "This store has not set payment methods.",
       "deliveryTitle": "Delivery options",
       "deliveryEmpty": "This store has not set delivery options.",
-      "payment": {
-        "instapay": "InstaPay",
-        "vodafoneCash": "Vodafone Cash",
-        "orangeCash": "Orange Cash",
-        "cod": "Cash on delivery"
-      },
       "delivery": {
         "modesTitle": "Delivery modes",
         "modes": {
@@ -679,9 +671,9 @@
           "image": "Add at least one photo",
           "title_ar": "Add an Arabic title",
           "category": "Choose a category",
-          "payment_method": "Add at least one payment method to your store"
+          "payment_method": "Add at least one settlement method so BETK can pay you"
         },
-        "paymentMethodLink": "Add a payment method",
+        "paymentMethodLink": "Add a settlement method",
         "saveFailed": "Couldn't save, try again",
         "errors": {
           "required": "This field is required",
@@ -765,7 +757,7 @@
         "cityPlaceholder": "Optional"
       },
       "payment": {
-        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "note": "These are the handles BETK uses to send your money to you — they are not shown to buyers. Never enter them as secrets in any other field.",
         "instapayLabel": "InstaPay handle",
         "instapayPlaceholder": "Username or number",
         "vodafoneLabel": "Vodafone Cash",
@@ -773,7 +765,7 @@
         "orangeLabel": "Orange Cash",
         "orangePlaceholder": "01xxxxxxxxx",
         "codLabel": "Cash on delivery",
-        "atLeastOneHint": "At least one payment method is required before publishing your first listing (you can add it later)."
+        "atLeastOneHint": "At least one settlement method is required so BETK can pay you, before publishing your first listing (you can add it later)."
       },
       "delivery": {
         "intro": "Choose how buyers receive their orders.",

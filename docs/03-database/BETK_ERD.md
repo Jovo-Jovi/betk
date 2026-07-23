@@ -54,7 +54,7 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 | orders | buyer or store or admin | buyer | store/admin | — | `orders_access` |
 | order_items | follows order | system (checkout) | — | — | via order |
 | order_status_history | follows order | system/actor | — (append-only) | — (append-only) | immutable |
-| payments | order parties or admin | system (checkout) | seller(confirm)/admin | — | `payments_access` |
+| payments | order parties or admin | system (checkout) | admin(confirm) + buyer(proof) † | — | `payments_access` |
 | payouts | own store or admin | own store | admin | — | `payouts_own`,`payouts_insert` |
 | shipments / shipment_tracking_events | order parties or admin | store/courier | store/courier | — | via order |
 | reviews | visible public, author, store, admin | buyer (own) | buyer<deadline / store(reply) / admin | — | `reviews_public/buyer/edit` |
@@ -77,6 +77,8 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 > ‡ **`inquiry_messages` UPDATE — amendment (authorized 2026-07-22, REG-42).** The original cell read "sender". It is refined to two distinct write rights that do not overlap in scope:
 > - **sender — content (theoretical).** A message author editing their own message body. There is **no edit surface for this in the MVP** (`BETK_UI_SPEC.md` draws no message-edit affordance); the right exists only as the row's original policy (`inq_msg_update`, `sender_id = auth.uid()`) and is now further narrowed by the column-level GRANT below to the point of being a no-op on content.
 > - **RECEIVER — `is_read` only, enforced by column-level GRANT (not by policy).** The mark-as-read write is **definitionally receiver-driven** — the party who did *not* send a message is the one who reads it, and a sender flipping the read-state on their *own* message is a semantic no-op. The original row wording ("sender") described **content-edit rights**, which is why it did not contemplate the receiver's read-receipt write; it was never intended to forbid it. Rather than broaden the row policy to a general receiver UPDATE (which would expose `body`), the receiver's write is confined to the `is_read` column by `REVOKE UPDATE … / GRANT UPDATE(is_read) … TO authenticated`, with a permissive `inq_msg_read_receipt` policy (thread-party AND `sender_id <> auth.uid()`) authorizing the row. Column safety is thus the GRANT's job, row safety the policy's. This mirrors the `notifications` row's "self(read)" UPDATE intent (row: notifications) for the messaging thread.
+>
+> † **`payments` UPDATE + `orders` UPDATE — amendment (authorized 2026-07-23, OD-8 custodial payments, ADR-016; RLS design owed by Phase-07 T02, REG-49).** Under custody the buyer pays **BETK**, so the deposit-confirming actor moves from the seller to **admin**. `payments` UPDATE is split by column + actor (the REG-42 column-GRANT pattern, since `WITH CHECK` cannot see `OLD`): **admin** confirms (`status`, `confirmed_by`, `confirmed_at`, `notes`); the **buyer** attaches `proof_path` + `transfer_reference` to their own order's **deposit** row only. The original cell wording ("seller(confirm)") described the no-custody (ADR-002) model and is superseded. `orders` UPDATE additionally admits the **buyer** for cancel-while-`pending` (R-O03) alongside the seller's acceptance transition — the "store/admin" cell is unchanged (seller = store) and transition legality is enforced by a trigger/column-grant, not RLS alone. The 3 additive OD-8 §9 columns (`payments.proof_path`, `orders.commission_rate`, `orders.commission_amount`) are owed by the same T02 migration; **no new table — table count 43 holds.**
 
 ## 4. Index justifications (41 indexes)
 
@@ -94,7 +96,7 @@ GIN on `listings.search_vector` — full-text 1–2 keyword search (unaccent). B
 
 ## 6. Scale assumptions at launch
 
-< 50K listings (search safe for 2+ yrs); < 100K orders/month; `notifications` 5–10 rows/order → archive `is_read=TRUE` > 90 days before 50K orders; `order_status_history` ~5 rows/order, archive > 1yr; `rating_aggregates` 1 row/store (trigger-updated); `seller_snapshots` 1 row/store/day → partition by year before 10K sellers; split payments = 2 rows/order with UNIQUE `(order_id,payment_type)` to prevent duplicates. (C3 §8.1.)
+< 50K listings (search safe for 2+ yrs); < 100K orders/month; `notifications` 5–10 rows/order → archive `is_read=TRUE` > 90 days before 50K orders; `order_status_history` ~5 rows/order, archive > 1yr; `rating_aggregates` 1 row/store (trigger-updated); `seller_snapshots` 1 row/store/day → partition by year before 10K sellers; split payments = 2 rows/order with UNIQUE `(order_id,payment_type)` to prevent duplicates — **custodial per OD-8/ADR-016 (payee = BETK; the deposit is paid to BETK's rails and admin-verified against the buyer's uploaded `payments.proof_path`; commission snapshotted on `orders.commission_rate`/`commission_amount` — the 3 additive OD-8 §9 columns, owed by Phase-07 T02's migration; table count 43 holds)**. (C3 §8.1.)
 
 ## 7. Triggers (5)
 

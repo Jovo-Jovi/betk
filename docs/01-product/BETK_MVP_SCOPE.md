@@ -23,7 +23,7 @@ All 70 use cases from the C2 Use Case Coverage Matrix are in scope and 100% cove
 
 In scope iff it maps to a page in `BETK_UI_SPEC.md §3`. The 59 pages across Public/Guest (5), Auth (3), Buyer (13), Seller (22), Admin (16) constitute the complete included feature set. No feature outside this page list is in MVP. (Count verified 2026-07-16, R4 docs-hygiene: §3 documents 60 page headings; *WhatsApp Templates* is a merged Admin→Settings tab per OD-5, not a standalone page, so Admin = 16 standalone pages and the total = 59, not the earlier miscounted 56/61.)
 
-Confirmed stack capabilities in scope: phone-OTP **and Google OAuth** sign-in (Supabase Auth; phone verification gated to transactions — OD-4), split payment (50% deposit upfront via Instapay/Vodafone Cash/Orange Cash + 50% COD; BETK never holds funds), manual seller payment confirmation, Bosta/self-deliver/pickup/remote delivery, 1–2 keyword PostgreSQL full-text search (tsvector + GIN + unaccent), boost promotion (24/48/72h packages, admin-confirmed), admin-curated homepage collections, multi-channel notifications (push/SMS/WhatsApp/email), seller levels (Bronze/Silver/Gold, nightly recalculation), buyer-protection disputes (48h SLA), reviews (48h edit window, one seller reply), soft deletes, RLS on every table.
+Confirmed stack capabilities in scope: phone-OTP **and Google OAuth** sign-in (Supabase Auth; phone verification gated to transactions — OD-4), split payment (50% deposit upfront via Instapay/Vodafone Cash/Orange Cash + 50% COD; **custodial — the buyer pays BETK, which settles to the seller net of a platform commission (OD-8/ADR-016)**), manual **admin** payment confirmation (R-O05 amended), Bosta/self-deliver/pickup/remote delivery, 1–2 keyword PostgreSQL full-text search (tsvector + GIN + unaccent), boost promotion (24/48/72h packages, admin-confirmed), admin-curated homepage collections, multi-channel notifications (push/SMS/WhatsApp/email), seller levels (Bronze/Silver/Gold, nightly recalculation), buyer-protection disputes (48h SLA), reviews (48h edit window, one seller reply), soft deletes, RLS on every table.
 
 ## 5. Features excluded (post-MVP)
 
@@ -32,7 +32,7 @@ These have no wireframe page and/or are explicitly deferred in the C3 Architect 
 | Excluded | Reason | Re-entry condition |
 |---|---|---|
 | Multi-store per seller | `stores.seller_id` is UQ (1:1). C3 §8.4(1). | Drop UQ + query rework, post-MVP. |
-| Platform wallet / escrow | MVP is direct buyer→seller; BETK holds no funds. C3 §8.4(2). | New `wallet_balances` + escrow columns. |
+| Platform wallet / escrow (**persisted** balance ledger) | Custody itself is now IN (OD-8/ADR-016 — buyer pays BETK, BETK settles net of commission); the seller balance is **DERIVED at read time** from stored order/payment facts, not persisted. A persisted immutable ledger/wallet table stays OUT (OD-8 §6). C3 §8.4(2). | New `wallet_balances` / immutable ledger table — post-MVP, on the OD-8 §6 revisit trigger (first reconciliation dispute unsettleable from derived figures). |
 | Product variants (size/color) | No `listing_variants` table. C3 §8.4(3). | Add variants table for fashion/handmade. |
 | Multi-listing cart checkout | Inquiry flow is single-listing. C3 §8.4(4). | Add `cart`/`cart_items`. |
 | Real-time per-listing analytics / hourly snapshots | Snapshots are daily. C3 §8.4(6). | Add `listing_view_events`. |
@@ -59,6 +59,7 @@ All six resolved per the MVP Freeze Sheet. No further expansion.
   - **Theme:** `next-themes`, class strategy on `<html>`. Tokens shipped Phase 01 T03.
   - **Persistence:** locale URL+cookie, theme localStorage. No user/content DB column.
   - Post-MVP: on-demand content translation; per-account persisted preferences; more locales. *Schema change: NO. New dependency: NONE.*
+- **OD-8 — Custodial payments & platform commission: IN (amended 2026-07-23).** BETK moves from a no-custody model to a **custodial** one: the buyer pays BETK; BETK settles to the seller net of a flat platform commission (a percentage of `subtotal`, snapshotted onto the order at creation as `commission_rate` + `commission_amount`). Deposit verification moves from seller to **admin** (against a buyer-uploaded transfer screenshot on `payments.proof_path`, in the private `docs` bucket); order acceptance stays the **seller's** act. **What does NOT change:** no payment gateway, no automated capture, no automated payouts; the 50/50 deposit/balance split is unchanged. **R-O04 (COD auto-confirm) is retired** — no pure-COD path, every order carries the split; **R-O05 confirming actor → admin.** The seller balance is **DERIVED**, not persisted (no wallet/ledger table — see §5). **Table count 43 and page count 59 both HOLD.** *Schema change: YES (3 additive columns — `payments.proof_path`, `orders.commission_rate`, `orders.commission_amount`; no new table, no new enum member).* Supersedes ADR-002 → **ADR-016**. Full record: `docs/10-ai-development/OD8_CUSTODIAL_PAYMENTS.md`.
 
 ## 7. Success metrics
 
@@ -75,7 +76,7 @@ All six resolved per the MVP Freeze Sheet. No further expansion.
 
 ## 8. Sign-off
 
-Scope FROZEN and signed 2026-06-13 (OD-1…OD-6); amended OD-7 2026-07-01 — bilingual AR/EN web app + theme, no schema, no new dependency. After sign-off, additions require a written change request and re-baselining of the PRD and phases.
+Scope FROZEN and signed 2026-06-13 (OD-1…OD-6); amended OD-7 2026-07-01 — bilingual AR/EN web app + theme, no schema, no new dependency; amended **OD-8 2026-07-23 — custodial payments & platform commission** (buyer pays BETK, admin deposit verification, derived seller balance; 3 additive columns; table count 43 + page count 59 both hold; ADR-002 → ADR-016). After sign-off, additions require a written change request and re-baselining of the PRD and phases.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______

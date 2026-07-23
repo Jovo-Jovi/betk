@@ -9,10 +9,21 @@ import type { StepErrors, WizardData } from "../wizardShared";
 
 /**
  * Step 3 — Payment config. instapay_handle / vodafone_cash / orange_cash +
- * cod_enabled (Toggle). These are DISPLAY handles surfaced to buyers at checkout,
- * NOT secrets — the UI_SPEC note (§ Payment Methods) is rendered up top. All
- * fields optional here: R-S09 (≥1 method) is enforced at the Phase-05 publish
- * gate, not at onboarding — so this step never blocks advance.
+ * cod_enabled (Toggle).
+ *
+ * REG-55/OD-8 §7 (CORRECTION-02B): these handles are the BETK→seller
+ * SETTLEMENT destination, NOT a buyer-facing pay-to surface — buyers pay
+ * BETK's own rails, never the store's. Copy reworded accordingly (i18n
+ * only, no shape change). All fields stay optional here: R-S09 (≥1
+ * SETTLEMENT handle — instapay/vodafone_cash/orange_cash; REG-61,
+ * cod_enabled no longer counts) is enforced at the Phase-05 publish gate,
+ * not at onboarding — so this step never blocks advance.
+ *
+ * ⚠️ REG-63 (STOP-AND-FLAG, record-only): `cod_enabled` is now DEAD — COD is
+ * universal under OD-8 §3.2 (every order carries the 50/50 split; COD is the
+ * balance leg, remitted to BETK, never the store) and it gates nothing
+ * buyer-facing anymore. The toggle is left in place unchanged (removing it
+ * would be a JSONB/Zod/wizard shape change, not authorized here).
  */
 interface Props {
   data: WizardData;

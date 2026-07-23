@@ -3,7 +3,7 @@
 
 ## 1. Executive summary
 
-BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy — bilingual Arabic/English with light/dark theming (OD-7), Arabic-first by default. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 59 pages of the UI Spec and the 43-table schema.
+BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy — bilingual Arabic/English with light/dark theming (OD-7), Arabic-first by default. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts **and a platform commission on custodial orders (OD-8 — buyer pays BETK, which settles to the seller net of commission)**. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 59 pages of the UI Spec and the 43-table schema.
 
 ## 2. Problem statement
 
@@ -11,7 +11,7 @@ BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy �
 
 ## 3. Solution
 
-A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services; bilingual AR/EN + light/dark, OD-7), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) where BETK never holds funds, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization.
+A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services; bilingual AR/EN + light/dark, OD-7), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) that is **custodial — the buyer pays BETK, which settles to the seller net of a platform commission (OD-8/ADR-016)**, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization.
 
 ## 4. Actors
 
@@ -39,8 +39,8 @@ Format: **FR-[area]-[n]** → page (UI Spec §3) · auth gate · primary tables 
 - **FR-BUY-3 Wishlist** — `/wishlist` · protected · `wishlists`,`listings`,`restock_alerts` · restock toggle on sold_out (R-N06).
 - **FR-BUY-4 Followed Sellers** — `/account/following` · protected · `store_follows`,`stores` · new-listing indicator vs `followed_at`.
 - **FR-BUY-5 Buyer Inbox** — `/inbox`,`/inbox/[id]` · protected · `inquiries`,`inquiry_messages` · confirmed inquiry → checkout CTA.
-- **FR-BUY-6 Checkout** — `/checkout` · protected · `orders`,`order_items`,`addresses`,`payments`,`stores` · order only from confirmed inquiry (R-O01); BETK-ref (R-O02); two payment rows split (C2 §3.8); stock decremented on seller confirm not here (R-L05).
-- **FR-BUY-7 Order Confirmation** — `/checkout/confirmation/[id]` · protected · `orders`,`payments`,`stores` · deposit instructions; COD auto-confirm (R-O04).
+- **FR-BUY-6 Checkout** — `/checkout` · protected · `orders`,`order_items`,`addresses`,`payments`,`admin_settings` · order only from confirmed inquiry (R-O01); BETK-ref (R-O02); two payment rows split, **payee = BETK (custodial, OD-8/ADR-016) — BETK's deposit rails + commission rate + flat delivery fee read from `admin_settings`; `commission_rate`/`commission_amount` snapshotted on the order at creation**; stock decremented on seller confirm not here (R-L05).
+- **FR-BUY-7 Order Confirmation** — `/checkout/confirmation/[id]` · protected · `orders`,`payments`,`admin_settings` · deposit instructions render **BETK's** handles (`admin_settings`, not the store's); buyer uploads the transfer screenshot to `payments.proof_path` (private `docs` bucket, own-prefix); awaiting-review convention = `proof_path IS NOT NULL AND status='pending'`; **deposit verified by admin** (R-O05 amended; R-O04 COD auto-confirm retired — every order carries the split).
 - **FR-BUY-8 Order History** — `/orders` · protected · `orders`,`order_items`.
 - **FR-BUY-9 Order Detail / Track** — `/orders/[id]` · protected · `orders`,`order_status_history`,`order_items`,`payments`,`shipments`,`shipment_tracking_events`,`order_messages` · cancel only while pending (R-O03); review only if delivered+window (R-R01/03); dispute only delivered/dispatched (R-D01).
 - **FR-BUY-10 Leave Review** — `/orders/[id]/review` · protected · `reviews`,`review_photos`,`rating_aggregates` · one per order (R-O07/R-R02); ≤3 photos; edit ≤48h (R-R03); aggregate recompute (R-R07).
@@ -62,7 +62,7 @@ Format: **FR-[area]-[n]** → page (UI Spec §3) · auth gate · primary tables 
 - **FR-SEL-11 Boost Listing** — `/seller/listings/[id]/boost` · role:seller · `boosts`,`boost_packages` · one active boost per listing (R-B01/R-L08); activates within 5 min of admin confirm (R-B02).
 - **FR-SEL-12 Boost Management** — `/seller/boosts` · role:seller · `boosts`,`boost_packages` · ROI (R-B05); auto-expire (R-B03).
 - **FR-SEL-13 Seller Inbox** — `/seller/inbox`,`/seller/inbox/[id]` · role:seller · `inquiries`,`inquiry_messages` · confirm→enables checkout; reply updates `avg_response_hours`; notify ≤5s (R-N04).
-- **FR-SEL-14 Orders Management** — `/seller/orders` · role:seller · `orders`,`payments`,`order_status_history` · confirm deposit gates pending→confirmed (R-O05); COD auto-confirm (R-O04).
+- **FR-SEL-14 Orders Management** — `/seller/orders` · role:seller · `orders`,`payments`,`order_status_history` · **seller accepts** pending→confirmed (AC-SEL-14, fires the stock trigger), gated on the **admin-confirmed deposit** (R-O05 amended: admin verifies the deposit, not the seller); R-O04 COD auto-confirm retired.
 - **FR-SEL-15 Order Detail** — `/seller/orders/[id]` · role:seller · `orders`,`payments`,`order_status_history`,`shipments`,`shipment_tracking_events`,`order_messages` · status changes notify (R-N03).
 - **FR-SEL-16 Reviews Management** — `/seller/reviews` · role:seller · `reviews`,`review_photos`,`rating_aggregates` · one immutable reply (R-R04).
 - **FR-SEL-17 Earnings** — `/seller/earnings` · role:seller · `seller_analytics_snapshots`,`payouts`,`payments`.
@@ -82,8 +82,8 @@ Format: **FR-[area]-[n]** → page (UI Spec §3) · auth gate · primary tables 
 - **FR-ADM-7 Categories Mgmt** — `/admin/categories` · role:admin · `categories`.
 - **FR-ADM-8 Orders Mgmt** — `/admin/orders` · role:admin · `orders`,`order_items`,`payments`,`order_status_history`,`shipments`,`moderation_logs`.
 - **FR-ADM-9 Disputes Mgmt** — `/admin/disputes`,`/admin/disputes/[id]` · role:admin · `disputes`,`dispute_evidence`,`dispute_messages`,`orders`,`payments`,`moderation_logs` · SLA 48h (R-D02); outcomes (R-D03); notify both (R-D04); SLA alert 47h (R-N05).
-- **FR-ADM-10 Payments Mgmt** — `/admin/payments` · role:admin · `payments`,`orders`,`disputes`,`moderation_logs` · refund → status refunded.
-- **FR-ADM-11 Payouts Mgmt** — `/admin/payouts` · role:admin · `payouts`,`moderation_logs` · manual (R-O10).
+- **FR-ADM-10 Payments Mgmt** — `/admin/payments` · role:admin · `payments`,`orders`,`disputes`,`moderation_logs` · **admin verifies the deposit against the buyer's uploaded proof (`proof_path`) → `payments.status='confirmed'` + `confirmed_by`/`confirmed_at`; confirms the COD balance after courier remittance; closes the order (settlement signal, OD-8 §3)**; refund → status refunded.
+- **FR-ADM-11 Payouts Mgmt** — `/admin/payouts` · role:admin · `payouts`,`moderation_logs` · manual (R-O10); **payouts settle BETK→seller net of commission (seller net = `subtotal − commission_amount`, OD-8/ADR-016); the seller's `stores.payment_methods` is now that settlement destination, not a buyer-facing handle**.
 - **FR-ADM-12 Editorial Collections** — `/admin/collections`,`/admin/collections/[id]` · role:admin · `collections`,`collection_listings`,`listings` · scheduling via publish_at/archive_at.
 - **FR-ADM-13 Notifications Broadcast** — `/admin/notifications` · role:admin · `notifications`,`whatsapp_templates`,audience tables · channel prefs (R-N01); WhatsApp templates (R-N02); MW4 no campaign entity (OD-3).
 - **FR-ADM-14 WhatsApp Templates** — **merged into Admin → Settings → Notifications** (no standalone route; OD-5) · role:admin · `whatsapp_templates` · template CRUD + activate/deactivate within the Settings page.
@@ -113,7 +113,7 @@ Phone-OTP **and Google OAuth** sign-in (Supabase Auth; R-A01 amended — OD-4); 
 Each FR has a binary acceptance criterion of the form: *"Page renders at its route behind the correct auth gate; performs its documented data reads/writes against the named tables; enforces the cited business rules; and renders correct empty, loading, and error states per `UI_STATE_STANDARDS.md`."* QA validates per page using the UI Spec page section as the test script. A feature is "done" only when its FR acceptance criterion passes in a PR review by the QA + UI-reviewer agents (see `10-ai-development/BETK_AI_TEAM.md`).
 
 Representative high-risk criteria spelled out:
-- **AC-BUY-6 (Checkout):** Given a *confirmed* inquiry, placing an order atomically creates one `orders` row (valid `betk_ref`), its `order_items`, and exactly two `payments` rows (deposit+balance); a non-confirmed inquiry is rejected; no partial writes on failure.
-- **AC-SEL-14 (Confirm order):** Confirming the deposit payment transitions pending→confirmed, writes `order_status_history`, decrements `listings.stock_qty` (→ sold_out at 0), and notifies buyer; COD orders skip the deposit step.
+- **AC-BUY-6 (Checkout):** Given a *confirmed* inquiry, placing an order atomically creates one `orders` row (valid `betk_ref`, **with `commission_rate`+`commission_amount` snapshotted**), its `order_items`, and exactly two `payments` rows (deposit+balance) **whose payee is BETK (custodial, OD-8/ADR-016)**; a non-confirmed inquiry is rejected; no partial writes on failure.
+- **AC-SEL-14 (Confirm order):** The **seller** transitions pending→confirmed (order/service acceptance — actor UNCHANGED), which writes `order_status_history`, decrements `listings.stock_qty` (→ sold_out at 0), and notifies the buyer. The seller cannot accept until the **admin** has confirmed the deposit (`payments.status='confirmed'`, OD-8 §3 — only the *deposit confirmation* moved to admin, not the acceptance); R-O04 COD auto-confirm retired — every order carries the split.
 - **AC-ADM-9 (Resolve dispute):** Resolution sets `resolution`+`resolution_notes`, writes `moderation_logs`, and dispatches push+SMS to both parties; SLA alert fires at 47h for unresolved disputes.
 - **AC-AUTH-2 (OTP):** ≤5 attempts per token; expired/used tokens rejected; success creates a session and never persists the raw OTP.
