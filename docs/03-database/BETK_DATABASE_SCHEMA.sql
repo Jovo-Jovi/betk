@@ -542,7 +542,7 @@ EXECUTE FUNCTION betk.set_inquiry_converted_order();
 deposit = 50% upfront to BETK's Instapay / Vodafone Cash / Orange Cash handles (from admin_settings); buyer uploads a transfer screenshot; ADMIN verifies (not the seller)
 balance = 50% COD on delivery; courier collects and remits to BETK
 Two payment records created per order at checkout; payee = BETK, which settles to the seller net of a platform commission (seller net = subtotal − commission_amount)
-NOTE (OD-8 §9): the custodial model adds 3 additive columns — payments.proof_path, orders.commission_rate, orders.commission_amount — OWED BY Phase-07 T02's migration and NOT yet reflected in the DDL below (no new table; count 43 holds). The payments DDL below is the LIVE schema as landed by migration 20260622082914_payments_delivery.sql, which stays historical (never edited retroactively).
+NOTE (OD-8 §9): the custodial model adds 3 additive columns — payments.proof_path, orders.commission_rate, orders.commission_amount — LANDED by migration 20260723110557_od8_custodial_payment_columns_and_settings (CORRECTION-03, 2026-07-23; ledger 29→30; no new table; count 43 holds). The original CREATE TABLE blocks below stay historical (landed by 20260622082914_payments_delivery.sql / 20260622082857_messaging_orders.sql, never edited retroactively); the additive columns + CHECKs are backfilled as an ALTER block below the payments table for source parity, and the 6 admin_settings rows are backfilled below the seed INSERT. RLS policies for the new write paths (REG-49: payments INSERT/UPDATE, orders UPDATE) are OWED BY the regenerated Phase-07 T02, NOT this migration.
 **  SQL**
 -- ============================================================
 -- H1. payments
@@ -562,6 +562,20 @@ CREATE TABLE betk.payments (
   created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_payment_type_per_order UNIQUE (order_id, payment_type)
 );
+-- OD-8 CUSTODIAL ADDITIVE COLUMNS + CHECKs (OD-8 §9, migration
+-- 20260723110557_od8_custodial_payment_columns_and_settings; CORRECTION-03,
+-- 2026-07-23; backfilled here for source parity). Additive only, nullable +
+-- app-enforced; the CHECKs bite only once a value is set (NULL passes).
+ALTER TABLE betk.payments
+  ADD COLUMN proof_path VARCHAR NULL;                    -- OD-8 §5: buyer's transfer-screenshot path in the private `docs` bucket (awaiting-admin-review = proof_path IS NOT NULL AND status='pending')
+ALTER TABLE betk.orders
+  ADD COLUMN commission_rate NUMERIC(5,2) NULL;          -- OD-8 §4: platform commission rate (%) in force at creation (snapshot, from admin_settings.commission_rate_pct)
+ALTER TABLE betk.orders
+  ADD COLUMN commission_amount NUMERIC(10,2) NULL;       -- OD-8 §4: computed commission = round(commission_rate * subtotal, 2), snapshot; base is subtotal, NEVER total_amount; seller net = subtotal - commission_amount (derived, no wallet table)
+ALTER TABLE betk.orders
+  ADD CONSTRAINT chk_commission_amount_nonneg CHECK (commission_amount >= 0);
+ALTER TABLE betk.orders
+  ADD CONSTRAINT chk_commission_rate_range CHECK (commission_rate BETWEEN 0 AND 100);
 -- H2. payouts
 -- Seller earnings withdrawal requests
 -- ============================================================
@@ -892,6 +906,18 @@ INSERT INTO betk.admin_settings (key, value, description) VALUES
   ('silver_level_min_rating', '4.0', 'Minimum rating for Silver level'),
   ('gold_level_min_orders', '50', 'Minimum orders for Gold level'),
   ('gold_level_min_rating', '4.5', 'Minimum rating for Gold level');
+-- OD-8 §9.1 custodial payment-config seed rows (migration
+-- 20260723110557_od8_custodial_payment_columns_and_settings; CORRECTION-03,
+-- 2026-07-23; backfilled here for source parity). Every value is PROVISIONAL and
+-- gated by REG-62 (HARD pre-launch gate): 0 and '' are "not yet configured"
+-- sentinels, NOT business decisions — no rate, fee, or handle is invented.
+INSERT INTO betk.admin_settings (key, value, description) VALUES
+  ('commission_rate_pct', '0', 'PROVISIONAL - platform commission, % of order subtotal. BETK EARNS NOTHING UNTIL SET. Hard pre-launch gate (REG-62).'),
+  ('return_hold_hours', '48', 'PROVISIONAL - hours after delivery before a seller balance is approved. Engineering default, house-consistent with dispute_sla_hours / review_edit_window_hours - NOT spec-derived. Confirm before launch (REG-62).'),
+  ('delivery_fee_flat_egp', '0', 'PROVISIONAL - flat delivery fee (Phase 07; retired when the courier API lands at Phase 08). Hard pre-launch gate (REG-62).'),
+  ('betk_instapay_handle', '', 'BETK deposit-receipt handle - set via dashboard. Checkout cannot render payment instructions while empty. Hard gate (REG-62).'),
+  ('betk_vodafone_cash', '', 'BETK deposit-receipt handle - set via dashboard (REG-62).'),
+  ('betk_orange_cash', '', 'BETK deposit-receipt handle - set via dashboard (REG-62).');
 -- M8. seller_analytics_snapshots
 -- ============================================================
 CREATE TABLE betk_analytics.seller_snapshots (
