@@ -14,16 +14,21 @@
  * cleanable) so the assertion is never vacuously true on an empty table; it is
  * deleted in `afterAll` regardless of pass/fail (zero residue).
  *
- * ⚠️ BLOCKED / SKIPPED (2026-07-24, Phase 07 T04 window, explicit user
- * instruction) — the LIVE staging `betk.orders` table carries 49 PRE-EXISTING
- * orphaned rows (zero `payments` rows each, from earlier interrupted test
- * runs — none created by this window) that legitimately fail this whole-table
- * assertion. The user directed: do NOT touch any order/payment row not
- * created in this window; move the cleanup to a dedicated RESIDUE-PURGE
- * window; the NO-PURE-COD ledger line stays PARTIAL (unit-layer only) until
- * then. The `describe.skip` below (not the credential gate) is the recorded
- * blocker — re-enable (`describe`) once the residue is purged; do not delete
- * this test.
+ * RE-ENABLED (2026-07-24, RESIDUE-PURGE window) — the earlier 49→71 orphaned
+ * rows were interrupted-run fixture residue (REG-71: `afterAll(purge)` never
+ * fires on Ctrl-C/stop/timeout/crash; NOT a purge() defect — proven by a
+ * completed full run that left ZERO residue). The 64 deletable orphans + their
+ * full footprint were purged; the 7 that each carry an append-only
+ * `order_status_history` row are UNDELETABLE (the `no_delete_order_history`
+ * RULE rewrites the delete to a no-op and the `order_id` FK is NO ACTION →
+ * sqlstate 23503) and remain as a documented residue class.
+ *
+ * This test now runs as a CANARY: it tolerates EXACTLY those 7 payment-less
+ * orphans (EXPECTED_ORPHANS) and FAILS on the 8th with "new residue detected".
+ * There is deliberately NO timestamp cutoff — a cutoff would excuse FUTURE
+ * orphans as well as past ones (REG-71). Guard G (REG-74) is the suite-start
+ * pre-flight that catches residue even earlier; this remains the DB-level
+ * NO-PURE-COD shape proof (OD-8 §3.2).
  */
 
 import { randomUUID } from "node:crypto";
@@ -36,10 +41,31 @@ const STAGING_ALLOWLIST = (process.env.RLS_ALLOW_PROJECT_REF ?? "sojmjvohiziapiw
   .map((s) => s.trim())
   .filter(Boolean);
 
+const HAS_CREDS =
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !!process.env.SUPABASE_SERVICE_KEY;
+
 const RUN = randomUUID().slice(0, 8);
 const PASSWORD = `Betk_P7Evi1d_${RUN}!`;
 const service = createServiceClient();
 const svc = () => service.schema("betk");
+
+/**
+ * Known staging append-only residue class (REG-71): 7 orders that each carry an
+ * `order_status_history` row and are therefore UNDELETABLE (append-only RULE
+ * no-ops the delete; `order_id` FK is NO ACTION). They legitimately have zero
+ * `payments` rows. The canary tolerates exactly these and fails on any 8th.
+ *   BETK-20260723-A04E  81147596-94ee-4a25-b634-34c043409242
+ *   BETK-20260723-E239  b327bfb8-f807-418e-9448-1fb645351f3b
+ *   BETK-20260723-E926  41c5b2c2-e5e0-4a60-9d28-3dc467a23a2a
+ *   P7T02B-8cf7a1cb-L   e5d776fc-1402-484e-84c4-d2b441f5868f
+ *   P7T02B-8cf7a1cb-M   02482319-a2a7-4b54-aaf1-8c24b5a95150
+ *   P7T02B-a97d046c-L   da73deed-0670-4cc7-bccd-064b8d301b6f
+ *   P7T02B-a97d046c-M   c7ba4f04-eefd-489a-b8de-5daa917e998b
+ * Set to 0 once these are removed (e.g. by dropping the rule in a migration).
+ */
+const EXPECTED_ORPHANS = 7;
 
 let seededOrderId: string | null = null;
 let seededBuyerId: string | null = null;
@@ -131,9 +157,10 @@ async function purge(): Promise<void> {
   }
 }
 
-// BLOCKED (see file header) — skip the whole suite so beforeAll/afterAll
-// don't perform pointless staging writes for a test that can't pass yet.
-describe.skip("Phase 07 T03-evidence-topup / STEP 1d — NO-PURE-COD, whole-table (OD-8 §3.2)", () => {
+// Credential-gated (staging); the beforeAll STAGING_GUARD pins the project ref.
+const describeOrSkip = HAS_CREDS ? describe : describe.skip;
+
+describeOrSkip("Phase 07 T03-evidence-topup / STEP 1d — NO-PURE-COD, whole-table (OD-8 §3.2)", () => {
   beforeAll(async () => {
     const ref = new URL(clientEnv.NEXT_PUBLIC_SUPABASE_URL).host.split(".")[0]!;
     if (!STAGING_ALLOWLIST.includes(ref)) {
@@ -146,10 +173,10 @@ describe.skip("Phase 07 T03-evidence-topup / STEP 1d — NO-PURE-COD, whole-tabl
 
   afterAll(purge);
 
-  it("EVERY order in the live table has exactly 2 payments: one non-COD deposit + one COD balance", async () => {
+  it("orders with ≥1 payment have EXACTLY 2 (non-COD deposit + COD balance); payment-less orphans == EXPECTED_ORPHANS", async () => {
     const { data: orders, error: ordersErr } = await svc().from("orders").select("id, betk_ref");
     expect(ordersErr).toBeNull();
-    // Never vacuous — the seeded throwaway order guarantees at least 1 row exists.
+    // Never vacuous — the seeded throwaway order guarantees ≥1 order WITH payments.
     expect((orders ?? []).length).toBeGreaterThan(0);
 
     const { data: payments, error: paymentsErr } = await svc()
@@ -164,23 +191,43 @@ describe.skip("Phase 07 T03-evidence-topup / STEP 1d — NO-PURE-COD, whole-tabl
       byOrder.set(p.order_id, list);
     }
 
-    const violations: string[] = [];
+    // (a) SHAPE — over every order that HAS ≥1 payment row: exactly one non-COD
+    // deposit leg + one COD balance leg. Payment-less orders are orphans (b),
+    // not shape violations — they are counted there, not asserted here.
+    const shapeViolations: string[] = [];
+    const paymentlessRefs: string[] = [];
     for (const o of orders ?? []) {
       const rows = byOrder.get(o.id) ?? [];
+      if (rows.length === 0) {
+        paymentlessRefs.push(o.betk_ref);
+        continue;
+      }
       if (rows.length !== 2) {
-        violations.push(`${o.betk_ref}: ${rows.length} payment rows (expected exactly 2)`);
+        shapeViolations.push(`${o.betk_ref}: ${rows.length} payment rows (expected exactly 2)`);
         continue;
       }
       const deposit = rows.find((r) => r.payment_type === "deposit");
       const balance = rows.find((r) => r.payment_type === "balance");
       if (!deposit || deposit.method === "cod") {
-        violations.push(`${o.betk_ref}: deposit leg missing or method='cod' (pure-COD deposit)`);
+        shapeViolations.push(`${o.betk_ref}: deposit leg missing or method='cod' (pure-COD deposit)`);
       }
       if (!balance || balance.method !== "cod") {
-        violations.push(`${o.betk_ref}: balance leg missing or method!='cod'`);
+        shapeViolations.push(`${o.betk_ref}: balance leg missing or method!='cod'`);
       }
     }
+    expect(shapeViolations).toEqual([]);
 
-    expect(violations).toEqual([]);
+    // (b) ORPHAN CANARY — payment-less orders must equal the known append-only
+    // residue class EXACTLY (no timestamp cutoff — a cutoff would excuse future
+    // orphans too). A HIGHER count means a NEW interrupted-run orphan slipped in
+    // (REG-71 root cause: afterAll(purge) skipped on interrupt) → fail loudly.
+    if (paymentlessRefs.length > EXPECTED_ORPHANS) {
+      throw new Error(
+        `new residue detected: ${paymentlessRefs.length} payment-less orders ` +
+          `(EXPECTED_ORPHANS=${EXPECTED_ORPHANS}). Refs: ${paymentlessRefs.sort().join(", ")}. ` +
+          `A new orphan means an integration run was interrupted before afterAll(purge) — see REG-71/REG-74.`,
+      );
+    }
+    expect(paymentlessRefs.length).toBe(EXPECTED_ORPHANS);
   });
 });
