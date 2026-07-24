@@ -2,7 +2,12 @@
 
 /**
  * DepositProofPanel — deposit instructions + transfer-screenshot upload + the
- * explicit state machine (OD-8 §5). Phase 07 / T03. Mirrors the ResubmitPanel /
+ * explicit state machine (OD-8 §5). Phase 07 / T03; MOVED to the feature layer
+ * at T04 (was `(buyer)/checkout/confirmation/[id]/_components/`) so `/orders/[id]`
+ * (T04) can reuse it verbatim for the re-upload-while-pending path — a route
+ * `_components` folder is private to its own route tree, so a second consumer
+ * requires a feature-layer home; this component has no page-specific logic, so
+ * the move is a pure relocation (byte-identical body). Mirrors the ResubmitPanel /
  * OnboardingWizard upload contract exactly: files land in the PRIVATE `docs`
  * bucket under the CALLER'S OWN prefix (own-prefix INSERT RLS,
  * `docs_insert_own_prefix`) via the authenticated browser client, then

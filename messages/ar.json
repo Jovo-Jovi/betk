@@ -614,6 +614,72 @@
       }
     }
   },
+  "orders": {
+    "metaTitle": "طلباتي",
+    "title": "طلباتي",
+    "detailMetaTitle": "تفاصيل الطلب",
+    "currency": "ج.م",
+    "filter": {
+      "all": "الكل",
+      "pending": "قيد الانتظار",
+      "confirmed": "مؤكد",
+      "preparing": "قيد التحضير",
+      "dispatched": "تم الشحن",
+      "delivered": "تم التسليم",
+      "cancelled": "ملغي",
+      "returned": "مرتجع"
+    },
+    "empty": {
+      "message": "لا توجد طلبات بعد",
+      "hint": "ستظهر طلباتك هنا بعد إتمام الشراء من أحد المتاجر",
+      "filteredMessage": "لا توجد طلبات بهذه الحالة"
+    },
+    "detail": {
+      "items": {
+        "title": "المنتجات"
+      },
+      "address": {
+        "title": "عنوان التوصيل"
+      },
+      "delivery": {
+        "title": "طريقة التوصيل"
+      },
+      "payments": {
+        "title": "الدفعات",
+        "balanceTitle": "المتبقي (عند الاستلام)"
+      },
+      "timeline": {
+        "title": "سجل الطلب",
+        "status": {
+          "pending": "تم إنشاء الطلب",
+          "confirmed": "تم تأكيد الطلب من المتجر",
+          "preparing": "المتجر يقوم بتحضير الطلب",
+          "dispatched": "تم شحن الطلب",
+          "delivered": "تم تسليم الطلب",
+          "cancelled": "تم إلغاء الطلب",
+          "returned": "تم إرجاع الطلب"
+        }
+      },
+      "tracking": {
+        "title": "تتبع الشحنة",
+        "emptyMessage": "معلومات التتبع غير متاحة بعد",
+        "emptyHint": "ستتوفر معلومات التتبع بعد شحن طلبك"
+      },
+      "postDelivery": {
+        "reviewCta": "تقييم الطلب — قريبًا",
+        "disputeCta": "تقديم شكوى — قريبًا"
+      },
+      "cancel": {
+        "cta": "إلغاء الطلب",
+        "confirmTitle": "تأكيد إلغاء الطلب",
+        "confirmMessage": "هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.",
+        "confirmLabel": "نعم، إلغاء الطلب",
+        "cancelLabel": "تراجع",
+        "errorGeneric": "تعذر إلغاء الطلب، حاول مرة أخرى",
+        "errorNotCancellable": "لا يمكن إلغاء هذا الطلب في حالته الحالية"
+      }
+    }
+  },
   "seller": {
     "listings": {
       "metaTitle": "إدارة الإعلانات",

@@ -614,6 +614,72 @@
       }
     }
   },
+  "orders": {
+    "metaTitle": "My orders",
+    "title": "My orders",
+    "detailMetaTitle": "Order details",
+    "currency": "EGP",
+    "filter": {
+      "all": "All",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "preparing": "Preparing",
+      "dispatched": "Dispatched",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "returned": "Returned"
+    },
+    "empty": {
+      "message": "No orders yet",
+      "hint": "Your orders will appear here after you buy from a store",
+      "filteredMessage": "No orders with this status"
+    },
+    "detail": {
+      "items": {
+        "title": "Items"
+      },
+      "address": {
+        "title": "Delivery address"
+      },
+      "delivery": {
+        "title": "Delivery method"
+      },
+      "payments": {
+        "title": "Payments",
+        "balanceTitle": "Balance (on delivery)"
+      },
+      "timeline": {
+        "title": "Order history",
+        "status": {
+          "pending": "Order placed",
+          "confirmed": "Order confirmed by the store",
+          "preparing": "Store is preparing your order",
+          "dispatched": "Order dispatched",
+          "delivered": "Order delivered",
+          "cancelled": "Order cancelled",
+          "returned": "Order returned"
+        }
+      },
+      "tracking": {
+        "title": "Shipment tracking",
+        "emptyMessage": "Tracking info isn't available yet",
+        "emptyHint": "Tracking becomes available once your order ships"
+      },
+      "postDelivery": {
+        "reviewCta": "Leave a review — coming soon",
+        "disputeCta": "Raise a dispute — coming soon"
+      },
+      "cancel": {
+        "cta": "Cancel order",
+        "confirmTitle": "Confirm order cancellation",
+        "confirmMessage": "Are you sure you want to cancel this order? This action cannot be undone.",
+        "confirmLabel": "Yes, cancel order",
+        "cancelLabel": "Go back",
+        "errorGeneric": "Couldn't cancel the order, try again",
+        "errorNotCancellable": "This order can no longer be cancelled"
+      }
+    }
+  },
   "seller": {
     "listings": {
       "metaTitle": "Listings Management",

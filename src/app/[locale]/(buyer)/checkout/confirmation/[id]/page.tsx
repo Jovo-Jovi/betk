@@ -27,7 +27,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrderDetail } from "@/features/orders/queries/getOrderDetail";
 import { getDepositHandles } from "@/features/checkout/queries/getDepositHandles";
 import type { AppLocale } from "@/i18n/routing";
-import { DepositProofPanel } from "./_components/DepositProofPanel";
+import { DepositProofPanel } from "@/features/checkout/components/DepositProofPanel";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("checkout.confirmation");
