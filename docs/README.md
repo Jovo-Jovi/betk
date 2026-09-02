@@ -34,6 +34,12 @@
 - `LAUNCH_CHECKLIST.md`
 - `.cursorrules` — **legacy human summary only** (Agent mode ignores it; superseded by `.cursor/rules/00-betk-core.mdc`)
 
+## v2 scope baseline (AUTHORITY)
+
+- `10-ai-development/BETK_V2_SCOPE_BASELINE.md`
+- `10-ai-development/BETK_V2_ROLE_JOURNEYS.md`
+- `10-ai-development/BETK_MODIFICATION_SPEC_REVIEW.md`
+
 ## Status
 - **Docs complete.** Scope **FROZEN & signed 2026-06-13** (OD-1…OD-6 in `BETK_MVP_SCOPE.md §6`; includes OD-4 Google OAuth IN and the OD-2 `users.deleted_at`/`anonymized_at` additions).
 - **Build underway** — Phase 01 Foundation. **Live phase/task is in `10-ai-development/SESSION_CONTEXT.md`** (this README is not the status tracker).

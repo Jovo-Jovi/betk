@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BETK v2 — Role Journeys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1F2A; --ink2:#3E5561; --ink3:#7E9099;
+  --paper:#FBFAF7; --board:#FFFFFF; --rule:#E3E7E4; --rule2:#CFD6D2;
+  --brand:#1C8D7E; --brand-deep:#0E4F47;
+
+  --guest:#7A8794; --buyer:#2563EB; --seller:#E0701C;
+  --admin:#7C3AED; --courier:#0E9CB0; --system:#B4436C;
+
+  --ok:#17853F; --warn:#C77800; --bad:#C0392B;
+
+  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --body:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ar:"IBM Plex Sans Arabic",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:96px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);margin:0;letter-spacing:-.02em}
+p{margin:0}
+.wrap{max-width:1220px;margin:0 auto;padding:0 28px}
+
+/* ── header ─────────────────────────────── */
+.masthead{background:var(--brand-deep);color:#EAF3F1;padding:44px 0 40px;border-bottom:4px solid var(--brand)}
+.brandline{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.beh{font-family:var(--ar);font-size:34px;line-height:1;width:52px;height:52px;display:grid;place-items:center;background:var(--brand);color:#fff;border-radius:14px}
+.brandtxt strong{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:block}
+.brandtxt span{font-size:12.5px;color:#8FB8B1;font-family:var(--mono);letter-spacing:.04em}
+.masthead h1{font-size:clamp(30px,4.6vw,50px);font-weight:700;line-height:1.02;max-width:16ch}
+.thesis{margin-top:24px;padding-top:22px;border-top:1px solid rgba(255,255,255,.16);display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--mono);font-size:clamp(12px,1.5vw,16px);font-weight:500}
+.thesis b{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);padding:7px 13px;border-radius:8px;font-weight:500;color:#fff}
+.thesis i{color:var(--brand);font-style:normal;font-weight:700}
+.masthead .sub{margin-top:20px;color:#A9C8C2;font-size:14px;max-width:62ch}
+
+/* ── sticky legend ──────────────────────── */
+.bar{position:sticky;top:0;z-index:40;background:rgba(251,250,247,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);padding:11px 0}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
+.keys{display:flex;flex-wrap:wrap;gap:14px}
+.key{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;font-family:var(--mono);letter-spacing:.02em}
+.key i{width:11px;height:11px;border-radius:3px;display:block}
+.jump{display:flex;flex-wrap:wrap;gap:4px}
+.jump a{font-family:var(--mono);font-size:11.5px;color:var(--ink2);text-decoration:none;padding:5px 9px;border-radius:6px;border:1px solid transparent}
+.jump a:hover{background:#fff;border-color:var(--rule2);color:var(--ink)}
+.jump a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ── boards ─────────────────────────────── */
+main{padding:40px 0 90px}
+.board{background:var(--board);border:1px solid var(--rule);border-radius:18px;padding:30px 30px 34px;margin-bottom:26px;position:relative;overflow:hidden}
+.board::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--c,var(--brand))}
+.board[data-role=guest]{--c:var(--guest)} .board[data-role=buyer]{--c:var(--buyer)}
+.board[data-role=seller]{--c:var(--seller)} .board[data-role=admin]{--c:var(--admin)}
+.board[data-role=all]{--c:linear-gradient(180deg,var(--buyer),var(--seller),var(--admin),var(--courier))}
+.board[data-role=all]::before{background:linear-gradient(180deg,var(--buyer) 0%,var(--seller) 34%,var(--admin) 67%,var(--courier) 100%)}
+.eyebrow{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--c,var(--brand));margin-bottom:7px}
+.board h2{font-size:26px;font-weight:700;margin-bottom:8px}
+.lede{color:var(--ink2);max-width:78ch;margin-bottom:26px;font-size:14.5px}
+
+/* ── flow primitives ────────────────────── */
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:9px;margin:6px 0 4px}
+.node{--c:var(--ink3);background:#fff;border:1px solid var(--rule2);border-top:3px solid var(--c);border-radius:11px;padding:12px 14px;min-width:150px;flex:1 1 150px;max-width:280px}
+.node[data-role=guest]{--c:var(--guest)} .node[data-role=buyer]{--c:var(--buyer)}
+.node[data-role=seller]{--c:var(--seller)} .node[data-role=admin]{--c:var(--admin)}
+.node[data-role=courier]{--c:var(--courier)} .node[data-role=system]{--c:var(--system)}
+.node .who{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--c);display:block;margin-bottom:4px}
+.node strong{display:block;font-family:var(--display);font-size:14.5px;font-weight:600;line-height:1.25}
+.node p{color:var(--ink2);font-size:12.5px;margin-top:5px;line-height:1.45}
+.node.gate{border:1.5px dashed var(--c);border-top-width:3px;background:#FCFDFC}
+.node.gate strong::before{content:"◆ ";color:var(--c);font-size:11px;vertical-align:1px}
+.node.stop{--c:var(--bad)} .node.good{--c:var(--ok)}
+.arrow{align-self:center;flex:0 0 auto;width:20px;height:2px;background:var(--rule2);position:relative}
+.arrow::after{content:"";position:absolute;right:-1px;top:-3px;border-left:7px solid var(--rule2);border-top:4px solid transparent;border-bottom:4px solid transparent}
+.arrow.soft{background:transparent;border-top:2px dashed var(--rule2)}
+.arrow.soft::after{border-left-color:var(--rule2)}
+
+.group{border:1.5px dashed var(--rule2);border-radius:14px;padding:26px 16px 16px;position:relative;margin:20px 0;background:#FCFCFB}
+.group>.tag{position:absolute;top:-9px;left:16px;background:var(--board);padding:0 9px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.stage{display:flex;gap:13px;align-items:flex-start;margin:16px 0}
+.num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:2px}
+.stage-body{flex:1;min-width:0}
+.stage-title{font-family:var(--display);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);margin-bottom:9px}
+
+/* ── tree (5.3) ─────────────────────────── */
+.tree{margin:8px 0 4px}
+.trunk{display:grid;place-items:center;gap:0}
+.tnode{background:#fff;border:1px solid var(--rule2);border-radius:12px;padding:13px 18px;text-align:center;max-width:440px}
+.tnode.hero{border:2px solid var(--brand);box-shadow:0 6px 20px -12px rgba(28,141,126,.55)}
+.tnode strong{font-family:var(--display);font-size:15px;font-weight:700;display:block}
+.tnode .mono{font-family:var(--mono);font-size:11.5px;color:var(--brand);font-weight:500;margin-top:3px;display:block}
+.stem{width:2px;height:22px;background:var(--rule2)}
+.stem.brand{background:var(--brand)}
+.fan{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:0}
+.leaf{flex:1 1 210px;max-width:270px;background:#fff;border:1px solid var(--rule2);border-top:3px solid var(--seller);border-radius:12px;overflow:hidden}
+.leaf-h{padding:11px 14px;border-bottom:1px solid var(--rule);background:#FEFAF6}
+.leaf-h strong{font-family:var(--display);font-size:14px;font-weight:700;display:block}
+.leaf-h .ref{font-family:var(--mono);font-size:11px;color:var(--seller);font-weight:500}
+.leaf ul{list-style:none;margin:0;padding:11px 14px 13px}
+.leaf li{font-size:12.5px;color:var(--ink2);padding:3px 0 3px 15px;position:relative}
+.leaf li::before{content:"";position:absolute;left:0;top:10px;width:5px;height:5px;border-radius:2px;background:var(--rule2)}
+.leaf li.hot{color:var(--ink);font-weight:500}
+.leaf li.hot::before{background:var(--seller)}
+.ell{align-self:center;font-family:var(--mono);color:var(--ink3);font-size:20px;padding:0 2px}
+
+/* ── custody grid (5.6) ─────────────────── */
+.custody{border:1px solid var(--rule2);border-radius:14px;overflow:hidden;margin:6px 0 4px}
+.crow{display:grid;grid-template-columns:210px repeat(5,1fr);border-bottom:1px solid var(--rule)}
+.crow:last-child{border-bottom:0}
+.chead{background:var(--ink);color:#fff}
+.chead>div{padding:11px 12px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+.chead>div+div{border-left:1px solid rgba(255,255,255,.13)}
+.cstep{padding:12px;background:#FCFCFB;border-right:1px solid var(--rule)}
+.cstep b{display:block;font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.1em;font-weight:700}
+.cstep span{font-family:var(--display);font-size:13px;font-weight:600;line-height:1.3;display:block;margin-top:2px}
+.cell{padding:10px 11px;border-left:1px solid var(--rule);display:flex;align-items:center;min-height:52px}
+.cell.on{--c:var(--ink3)}
+.cell.on span{display:block;width:100%;background:color-mix(in srgb,var(--c) 12%,#fff);border-left:3px solid var(--c);border-radius:0 7px 7px 0;padding:6px 9px;font-size:12px;line-height:1.35;color:var(--ink);font-weight:500}
+.cell[data-role=buyer]{--c:var(--buyer)} .cell[data-role=seller]{--c:var(--seller)}
+.cell[data-role=admin]{--c:var(--admin)} .cell[data-role=courier]{--c:var(--courier)}
+.cell[data-role=system]{--c:var(--system)}
+
+/* ── tables & panels ────────────────────── */
+table{width:100%;border-collapse:collapse;margin:6px 0 2px;font-size:13.5px}
+th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3);padding:9px 12px;border-bottom:1.5px solid var(--rule2);font-weight:700}
+td{padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink2)}
+td:first-child{color:var(--ink);font-weight:500}
+tr:last-child td{border-bottom:0}
+.mono{font-family:var(--mono);font-size:12.5px}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:2.5px 8px;border-radius:20px;text-transform:uppercase}
+.pill.ok{background:#E6F4EB;color:var(--ok)} .pill.bad{background:#FBEAE7;color:var(--bad)}
+.pill.warn{background:#FDF2E0;color:var(--warn)} .pill.neutral{background:#EEF1F0;color:var(--ink2)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px;margin-top:6px}
+.panel{border:1px solid var(--rule2);border-radius:12px;padding:15px 17px;background:#FCFCFB}
+.panel h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;color:var(--pc,var(--ink))}
+.panel[data-role=buyer]{--pc:var(--buyer)} .panel[data-role=seller]{--pc:var(--seller)}
+.panel[data-role=admin]{--pc:var(--admin)} .panel[data-role=courier]{--pc:var(--courier)}
+.panel ul{margin:0;padding-left:17px}
+.panel li{font-size:13px;color:var(--ink2);margin:5px 0}
+.panel li b{color:var(--ink);font-weight:600}
+.note{border-left:3px solid var(--brand);background:#F1F8F6;padding:12px 15px;border-radius:0 10px 10px 0;font-size:13.5px;color:var(--ink2);margin:18px 0 2px}
+.note b{color:var(--ink)}
+.callout{border:1px solid #F0D9BE;background:#FEF9F2;border-radius:12px;padding:14px 17px;margin:18px 0 2px;font-size:13.5px;color:#6B4A22}
+.callout b{color:#4A3115}
+footer{border-top:1px solid var(--rule);padding:26px 0 40px;color:var(--ink3);font-size:12.5px;font-family:var(--mono)}
+
+@media (max-width:820px){
+  .crow{grid-template-columns:1fr}
+  .chead{display:none}
+  .cstep{border-right:0;border-bottom:1px solid var(--rule)}
+  .cell{border-left:0;min-height:0;padding:5px 12px}
+  .cell:not(.on){display:none}
+  .cell.on span::before{content:attr(data-who) " · ";font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+  .arrow{display:none}
+  .node{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{
+  .bar{display:none} body{background:#fff}
+  .board{break-inside:avoid;page-break-inside:avoid;border-color:#ccc;margin-bottom:14px}
+  .masthead{background:#0E4F47 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="brandline">
+      <div class="beh" aria-hidden="true">ب</div>
+      <div class="brandtxt">
+        <strong>BETK Marketplace</strong>
+        <span>v2 scope baseline · role journeys</span>
+      </div>
+    </div>
+    <h1>Whose hands is the order in?</h1>
+    <div class="thesis">
+      <b>ONE CART</b><i>→</i><b>ONE MASTER ORDER</b><i>→</i><b>N SELLER ORDERS</b><i>→</i><b>N SHIPMENTS</b>
+    </div>
+    <p class="sub">Every rule in v2 — payment allocation, delivery pricing, prep deadlines, escalation, partial refunds — exists to serve that split. Each role owns one colour below, and it stays with them through every diagram.</p>
+  </div>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="keys">
+      <span class="key"><i style="background:var(--guest)"></i>Guest</span>
+      <span class="key"><i style="background:var(--buyer)"></i>Buyer</span>
+      <span class="key"><i style="background:var(--seller)"></i>Seller</span>
+      <span class="key"><i style="background:var(--admin)"></i>Admin</span>
+      <span class="key"><i style="background:var(--courier)"></i>Courier</span>
+      <span class="key"><i style="background:var(--system)"></i>System</span>
+    </div>
+    <nav class="jump">
+      <a href="#guest">5.1 Guest</a><a href="#buyer">5.2 Buyer</a><a href="#arch">5.3 Architecture</a>
+      <a href="#seller">5.4 Seller</a><a href="#admin">5.5 Admin</a><a href="#cross">5.6 Cross-role</a>
+      <a href="#risk">Handoffs</a><a href="#privacy">Visibility</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- 5.1 GUEST -->
+<section class="board" data-role="guest" id="guest">
+  <div class="eyebrow">5.1</div>
+  <h2>Guest journey</h2>
+  <p class="lede">Browse → Listing → Authentication boundary. Every listing now carries a fixed price, so a guest sees real numbers before ever signing in.</p>
+
+  <div class="flow">
+    <div class="node" data-role="guest"><span class="who">Guest</span><strong>Homepage</strong><p>Collections, new arrivals, categories</p></div>
+    <div class="arrow"></div>
+    <div class="node" data-role="guest"><span class="who">Guest</span><strong>Search &amp; category</strong><p>Keywords, governorate, city</p></div>
+    <div class="arrow"></div>
+    <div class="node" data-role="guest"><span class="who">Guest</span><strong>Listing detail</strong><p>Fixed price · weight · dimensions · specs · prep days</p></div>
+    <div class="arrow"></div>
+    <div class="node" data-role="guest"><span class="who">Guest</span><strong>Storefront &amp; legal</strong><p>Terms, returns, privacy — all readable without an account</p></div>
+  </div>
+
+  <div class="group">
+    <span class="tag">Authentication boundary</span>
+    <div class="flow">
+      <div class="node gate" data-role="guest"><span class="who">Gate</span><strong>Account required</strong><p>Add to cart · request price · follow · wishlist</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="buyer"><span class="who">Auth</span><strong>Phone OTP or Google</strong><p>Verified phone required before transacting</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Becomes a buyer</strong><p>Cart and quote actions unlock</p></div>
+    </div>
+  </div>
+
+  <div class="note"><b>Open — N21.</b> Whether a guest cart is held client-side and merged at login, or an account is required before the first add.</div>
+</section>
+
+<!-- 5.2 BUYER -->
+<section class="board" data-role="buyer" id="buyer">
+  <div class="eyebrow">5.2</div>
+  <h2>Buyer journey</h2>
+  <p class="lede">Eight stages. Numbering is earned here — the order of these steps carries real meaning, and two of them can end the journey early.</p>
+
+  <div class="stage"><div class="num">01</div><div class="stage-body"><div class="stage-title">Discover</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Fixed-price item</strong><p>Straight to cart</p></div>
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Custom item</strong><p>Request a price first</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">02</div><div class="stage-body"><div class="stage-title">Quote — custom items only</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Request price</strong><p>Opens an inquiry thread</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="seller"><span class="who">Seller</span><strong>Quotes firm</strong><p><span class="mono">price … 2× price</span> · valid 24h · states prep time</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Accepts</strong><p>Cart line created, flagged custom</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">03</div><div class="stage-body"><div class="stage-title">Cart</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Review cart</strong><p>Quantities, removals, running totals</p></div>
+      <div class="arrow"></div>
+      <div class="node gate" data-role="system"><span class="who">Gate</span><strong>Blocked lines must clear</strong><p>Sold out, or an expired quote</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">04</div><div class="stage-body"><div class="stage-title">Checkout</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Delivery address</strong><p>No courier or method choice — courier is the only route</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="system"><span class="who">System</span><strong>One combined delivery total</strong><p>Courier matrix, summed across sellers</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Sees 50% deposit</strong><p>Half of subtotal + delivery</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">05</div><div class="stage-body"><div class="stage-title">Master order created — atomically</div>
+    <div class="flow">
+      <div class="node" data-role="system"><span class="who">System</span><strong>Master + N seller orders</strong><p>Items and 2N payment rows in one transaction</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="system"><span class="who">System</span><strong>Stock decrements now</strong><p>Not at acceptance — there is no acceptance</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="system"><span class="who">System</span><strong>Payment window opens</strong><p>Stock is held for its full duration</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">06</div><div class="stage-body"><div class="stage-title">Payment</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>One InstaPay transfer</strong><p>To BETK's own handle</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Uploads one proof</strong><p>Covers the whole master order</p></div>
+      <div class="arrow"></div>
+      <div class="node gate" data-role="admin"><span class="who">Admin</span><strong>Verifies once</strong><p>Confirms every deposit row underneath</p></div>
+    </div>
+    <div class="flow" style="margin-top:9px">
+      <div class="node stop" data-role="buyer"><span class="who">Exit</span><strong>Buyer cancels</strong><p>Only before the proof is uploaded</p></div>
+      <div class="node stop" data-role="system"><span class="who">Exit</span><strong>Window expires</strong><p>Auto-cancel · stock restored · cart restored · notified</p></div>
+      <div class="node stop" data-role="admin"><span class="who">Exit</span><strong>Proof rejected</strong><p>Cancel · restore · refund if taken · notify</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">07</div><div class="stage-body"><div class="stage-title">Fulfilment — independently, per seller order</div>
+    <div class="flow">
+      <div class="node good" data-role="seller"><span class="who">Seller</span><strong>Preparing → Ready</strong><p>Within the prep deadline</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="courier"><span class="who">Courier</span><strong>Collects → Delivers</strong><p>COD balance taken at each delivery</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="admin"><span class="who">Admin</span><strong>Confirms balance</strong><p>That seller order closes</p></div>
+    </div></div></div>
+
+  <div class="stage"><div class="num">08</div><div class="stage-body"><div class="stage-title">Return</div>
+    <div class="flow">
+      <div class="node" data-role="buyer"><span class="who">Buyer</span><strong>Requests return</strong><p>Reason and evidence</p></div>
+      <div class="arrow"></div>
+      <div class="node gate" data-role="seller"><span class="who">Seller</span><strong>Responds</strong><p>Accept, or reject into a dispute</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="admin"><span class="who">Admin</span><strong>Decides &amp; refunds</strong><p>Stock is <b>not</b> auto-restored on a return</p></div>
+    </div></div></div>
+
+  <div class="split" style="margin-top:22px">
+    <div class="panel" data-role="buyer"><h4>Buyer sees</h4><ul>
+      <li>One master order, with per-seller sections progressing independently</li>
+      <li><b>One</b> combined delivery total</li>
+      <li>Both payment states per seller order</li>
+      <li>A timeline built from real history rows</li></ul></div>
+    <div class="panel" data-role="buyer"><h4>Buyer never sees</h4><ul>
+      <li>Any seller's address</li>
+      <li>BETK's commission</li>
+      <li>The per-seller delivery breakdown</li></ul></div>
+  </div>
+  <div class="callout"><b>One-way door.</b> The buyer can cancel only before uploading proof. Once the deposit is confirmed the exit is return, refund or dispute — never cancellation.</div>
+</section>
+
+<!-- 5.3 ARCHITECTURE -->
+<section class="board" id="arch">
+  <div class="eyebrow" style="color:var(--brand)">5.3</div>
+  <h2>Master order architecture</h2>
+  <p class="lede">The canonical structure. A single-order model cannot express partial fulfilment — and in a multi-seller cart, partial fulfilment is the normal case, not the exception.</p>
+
+  <div class="tree">
+    <div class="trunk">
+      <div class="tnode"><strong>CART</strong><span class="mono">price snapshotted at add · custom lines carry inquiry_id</span></div>
+      <div class="stem brand"></div>
+      <div class="tnode hero"><strong>MASTER ORDER</strong><span class="mono">BETK-2026-000123</span>
+        <p style="font-size:12.5px;color:var(--ink2);margin-top:7px">Buyer · delivery address · one payment proof · aggregate status · combined delivery total</p></div>
+      <div class="stem brand"></div>
+    </div>
+    <div class="fan">
+      <div class="leaf"><div class="leaf-h"><strong>Seller order</strong><span class="ref">BETK-2026-000123-1</span></div>
+        <ul><li>Items</li><li class="hot">Own subtotal</li><li class="hot">Own delivery fee</li><li class="hot">Commission snapshot</li><li>Prep deadline</li><li>Shipment</li><li class="hot">Deposit row · InstaPay</li><li class="hot">Balance row · COD</li><li>Escalation record</li></ul></div>
+      <div class="leaf"><div class="leaf-h"><strong>Seller order</strong><span class="ref">BETK-2026-000123-2</span></div>
+        <ul><li>Items</li><li class="hot">Own subtotal</li><li class="hot">Own delivery fee</li><li class="hot">Commission snapshot</li><li>Prep deadline</li><li>Shipment</li><li class="hot">Deposit row · InstaPay</li><li class="hot">Balance row · COD</li><li>Escalation record</li></ul></div>
+      <div class="ell">···</div>
+      <div class="leaf"><div class="leaf-h"><strong>Seller order</strong><span class="ref">BETK-2026-000123-N</span></div>
+        <ul><li>Items</li><li class="hot">Own subtotal</li><li class="hot">Own delivery fee</li><li class="hot">Commission snapshot</li><li>Prep deadline</li><li>Shipment</li><li class="hot">Deposit row · InstaPay</li><li class="hot">Balance row · COD</li><li>Escalation record</li></ul></div>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px;margin:26px 0 4px">Aggregated for the buyer, itemised for BETK</h3>
+  <table>
+    <thead><tr><th style="width:22%">Concern</th><th style="width:36%">Buyer sees</th><th>BETK stores</th></tr></thead>
+    <tbody>
+      <tr><td>Delivery fee</td><td>One combined total</td><td>Per seller order — required for partial refunds and courier reconciliation</td></tr>
+      <tr><td>Payment</td><td>One transfer, one proof, one confirmation</td><td><span class="mono">2 rows per seller order</span> — <span class="mono">2N</span> in total</td></tr>
+      <tr><td>Status</td><td>A master aggregate</td><td>Independent per seller order</td></tr>
+      <tr><td>Commission</td><td><span class="pill neutral">never</span></td><td>Per seller order, snapshotted at creation, on subtotal only</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><b>Why the split is load-bearing.</b> Each seller has a different pickup origin, courier fee, prep time and delivery date — and can fail independently without touching the others.</div>
+</section>
+
+<!-- 5.4 SELLER -->
+<section class="board" data-role="seller" id="seller">
+  <div class="eyebrow">5.4</div>
+  <h2>Seller journey</h2>
+  <p class="lede">Onboarding → Approval → Listing → Quote → Order released → Fulfilment → Escalation → Payout. The order arrives already committed; there is no acceptance step to decline.</p>
+
+  <div class="flow">
+    <div class="node" data-role="seller"><span class="who">Seller</span><strong>Onboarding</strong><p>Profile · ID · settlement handles · <b>pickup address</b> · up to 3 categories · agreement e-signature</p></div>
+    <div class="arrow soft"></div>
+    <div class="node" data-role="seller"><span class="who">Conditional</span><strong>Food branch</strong><p>Social presence URL (admin-only) · packaging, label and expiry photos</p></div>
+    <div class="arrow"></div>
+    <div class="node gate" data-role="admin"><span class="who">Admin</span><strong>Reviews</strong><p>Approve, or return with a reason to resubmit</p></div>
+    <div class="arrow"></div>
+    <div class="node good" data-role="seller"><span class="who">Seller</span><strong>Active</strong></div>
+  </div>
+
+  <div class="flow" style="margin-top:16px">
+    <div class="node" data-role="seller"><span class="who">Seller</span><strong>Create listing</strong><p>Fixed price in band · weight &amp; dimensions · specs · stock · prep days ≤ 3 · category within the approved 3</p></div>
+    <div class="arrow"></div>
+    <div class="node gate" data-role="system"><span class="who">Gate</span><strong>Publish checks</strong><p>Image · title · category · price in band · shipping attributes · settlement handle · food approval where relevant</p></div>
+    <div class="arrow"></div>
+    <div class="node good" data-role="seller"><span class="who">Seller</span><strong>Listing live</strong></div>
+  </div>
+
+  <div class="group">
+    <span class="tag">Fulfilment — no acceptance step</span>
+    <div class="flow">
+      <div class="node" data-role="admin"><span class="who">Admin</span><strong>Releases the order</strong><p>Seller is already committed</p></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="seller"><span class="who">Seller</span><strong>Preparing</strong></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="seller"><span class="who">Seller</span><strong>Ready</strong></div>
+      <div class="arrow"></div>
+      <div class="node" data-role="courier"><span class="who">Courier</span><strong>Collects</strong></div>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px;margin:22px 0 4px">Prep SLA</h3>
+  <p style="font-size:13.5px;color:var(--ink2);margin-bottom:8px">Deadline = <span class="mono">confirmed_at + MAX(prep_days)</span> across that seller order's items — max, not sum, because a seller prepares in parallel.</p>
+  <table>
+    <thead><tr><th style="width:22%">Elapsed</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>On release</td><td>Notify: order reference, item count, ready-by date</td></tr>
+      <tr><td>50%</td><td>Reminder</td></tr>
+      <tr><td>80%, not ready</td><td>Urgent reminder</td></tr>
+      <tr><td><span class="pill bad">breach</span></td><td><b>Auto-escalation</b> → admin queue, and the buyer is told about the delay</td></tr>
+    </tbody>
+  </table>
+
+  <div class="split" style="margin-top:20px">
+    <div class="panel" data-role="seller"><h4>On an order, the seller sees</h4><ul>
+      <li>Order reference</li><li>Items and quantities</li><li>Prep deadline</li></ul></div>
+    <div class="panel" data-role="seller"><h4>Never sees</h4><ul>
+      <li>Buyer name, phone or address</li>
+      <li>The buyer's other seller orders</li>
+      <li>Any part of the payment picture</li></ul></div>
+    <div class="panel" data-role="seller"><h4>May not</h4><ul>
+      <li><b>Cancel an order</b> — escalation is the only exit</li>
+      <li>Sell outside the approved 3 categories</li>
+      <li>Publish food without food approval</li>
+      <li>Quote outside the tolerance band</li></ul></div>
+  </div>
+  <div class="callout"><b>Custom items are exempt from the 3-day cap.</b> Their prep time comes from the accepted quote, so a two-week commission stays possible.</div>
+</section>
+
+<!-- 5.5 ADMIN -->
+<section class="board" data-role="admin" id="admin">
+  <div class="eyebrow">5.5</div>
+  <h2>Admin operations</h2>
+  <p class="lede">Seller approval → Payment verification → Courier handoff → Escalations → Returns → Payouts. Admin is the only role that sees both addresses, the commission and the full payment picture.</p>
+
+  <div class="split">
+    <div class="panel" data-role="admin"><h4>1 · Seller approvals</h4><ul><li>Identity, categories, agreement</li><li>Food verification review</li></ul></div>
+    <div class="panel" data-role="admin"><h4>2 · Payment verification</h4><ul><li>Proof opened via signed URL</li><li><b>One action</b> confirms every deposit row under that master order</li><li>Reject → cancel, restore stock, refund, notify</li></ul></div>
+    <div class="panel" data-role="admin"><h4>3 · Ready-for-pickup queue</h4><ul><li>Seller orders awaiting collection</li><li>Handoff to courier — API or manual</li></ul></div>
+    <div class="panel" data-role="admin"><h4>4 · Escalations</h4><ul><li>Seller-reported and SLA breaches land in the same queue</li><li>Cancel + refund · reinstate with a new deadline · cancel + strike</li></ul></div>
+    <div class="panel" data-role="admin"><h4>5 · Returns &amp; disputes</h4><ul><li>Evidence review, final decision</li><li>Refund — full, or partial per seller order</li></ul></div>
+    <div class="panel" data-role="admin"><h4>6 · Payouts &amp; configuration</h4><ul><li>Derived balances, manual settlement</li><li>Price band · commission · tolerance · windows · prep cap · courier matrix</li></ul></div>
+  </div>
+
+  <h3 style="font-size:15px;margin:24px 0 4px">Stock rule on escalation resolution</h3>
+  <table>
+    <thead><tr><th style="width:30%">Escalation reason</th><th>Stock action</th></tr></thead>
+    <tbody>
+      <tr><td>Out of stock</td><td><b>Set to zero</b> — the seller has just said the item does not exist; restoring would re-list a phantom that sells again within the hour</td></tr>
+      <tr><td>Any other reason</td><td>Restore normally</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>No automatic strikes.</b> An SLA breach feeds the performance record; a human judges. Automatic penalties on a system-detected signal will misfire.</div>
+</section>
+
+<!-- 5.6 CROSS-ROLE -->
+<section class="board" data-role="all" id="cross">
+  <div class="eyebrow" style="color:var(--brand)">5.6</div>
+  <h2>Cross-role lifecycle</h2>
+  <p class="lede">Read down a single column to see everything one role does. Read across a row to see who holds the order at that moment. Every colour change is a handoff — and handoffs are where this model's risk lives.</p>
+
+  <div class="custody">
+    <div class="crow chead"><div>Step</div><div>Buyer</div><div>Seller</div><div>Admin</div><div>Courier</div><div>System</div></div>
+
+    <div class="crow"><div class="cstep"><b>01</b><span>Fill the cart</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">Browse, add fixed-price items</span></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>02</b><span>Custom quote</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">Request price, then accept</span></div>
+      <div class="cell on" data-role="seller"><span data-who="Seller">Quote within band, 24h</span></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>03</b><span>Checkout</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">Address, one delivery total</span></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="system"><span data-who="System">Master + N orders · stock decrements · window opens</span></div></div>
+
+    <div class="crow"><div class="cstep"><b>04</b><span>Pay the deposit</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">One InstaPay transfer, one proof</span></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="system"><span data-who="System">No proof in time → auto-cancel, stock and cart restored</span></div></div>
+
+    <div class="crow"><div class="cstep"><b>05</b><span>Verify</span></div>
+      <div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">One action confirms every deposit row</span></div>
+      <div class="cell"></div><div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>06</b><span>Release</span></div>
+      <div class="cell"></div>
+      <div class="cell on" data-role="seller"><span data-who="Seller">Receives a committed order — no acceptance</span></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">Releases all seller orders</span></div>
+      <div class="cell"></div><div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>07</b><span>Prepare</span></div>
+      <div class="cell"></div>
+      <div class="cell on" data-role="seller"><span data-who="Seller">Preparing → ready, within deadline</span></div>
+      <div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="system"><span data-who="System">Reminders at 50% and 80% · breach auto-escalates</span></div></div>
+
+    <div class="crow"><div class="cstep"><b>08</b><span>Handoff</span></div>
+      <div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">Ready-for-pickup queue → courier</span></div>
+      <div class="cell on" data-role="courier"><span data-who="Courier">Collects from the pickup address</span></div>
+      <div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>09</b><span>Deliver</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">Receives, pays the COD balance</span></div>
+      <div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="courier"><span data-who="Courier">Delivers, then remits to BETK</span></div>
+      <div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>10</b><span>Close</span></div>
+      <div class="cell"></div><div class="cell"></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">Confirms the balance row</span></div>
+      <div class="cell"></div>
+      <div class="cell on" data-role="system"><span data-who="System">Seller order closes · master aggregates</span></div></div>
+
+    <div class="crow"><div class="cstep"><b>11</b><span>Return</span></div>
+      <div class="cell on" data-role="buyer"><span data-who="Buyer">Requests with evidence</span></div>
+      <div class="cell on" data-role="seller"><span data-who="Seller">Accepts, or rejects into a dispute</span></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">Decides, issues the refund</span></div>
+      <div class="cell"></div><div class="cell"></div></div>
+
+    <div class="crow"><div class="cstep"><b>12</b><span>Settle</span></div>
+      <div class="cell"></div>
+      <div class="cell on" data-role="seller"><span data-who="Seller">Requests payout</span></div>
+      <div class="cell on" data-role="admin"><span data-who="Admin">Pays derived balance after the hold window</span></div>
+      <div class="cell"></div><div class="cell"></div></div>
+  </div>
+</section>
+
+<!-- RISK -->
+<section class="board" id="risk">
+  <div class="eyebrow" style="color:var(--bad)">Handoffs</div>
+  <h2>The five handoffs that carry the risk</h2>
+  <p class="lede">Each is a moment where the order changes hands and could stall. Every one has a named mitigation in this model.</p>
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:22%">Handoff</th><th style="width:31%">Failure mode</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">1</td><td>Buyer → Admin<br><span class="mono" style="color:var(--ink3);font-size:11.5px">payment proof</span></td><td>Buyer never pays; stock sits held</td><td>Payment window, auto-cancel, stock and cart restored</td></tr>
+      <tr><td class="mono">2</td><td>Admin → Seller<br><span class="mono" style="color:var(--ink3);font-size:11.5px">release</span></td><td>Seller ignores an order they never agreed to</td><td>Prep SLA ladder, then auto-escalation</td></tr>
+      <tr><td class="mono">3</td><td>Seller → Courier<br><span class="mono" style="color:var(--ink3);font-size:11.5px">ready</span></td><td>Marked ready, never collected</td><td>Admin ready-for-pickup queue</td></tr>
+      <tr><td class="mono">4</td><td>Courier → BETK<br><span class="mono" style="color:var(--ink3);font-size:11.5px">COD remittance</span></td><td>Collected from the buyer but not remitted</td><td>Admin confirms the balance row before closure</td></tr>
+      <tr><td class="mono">5</td><td>Any → Cancellation</td><td>Money held against no order</td><td>Refund is launch-blocking, not a fast-follow</td></tr>
+    </tbody>
+  </table>
+  <div class="callout"><b>Handoff 2 is new.</b> Removing seller acceptance created it — a seller is now bound to an order they never agreed to. The SLA ladder exists specifically to close that gap, and escalation is the seller's only exit.</div>
+</section>
+
+<!-- PRIVACY -->
+<section class="board" id="privacy">
+  <div class="eyebrow" style="color:var(--brand)">Visibility</div>
+  <h2>Who can see what</h2>
+  <p class="lede">Courier-only delivery tightened this considerably. The seller no longer needs the buyer's address to fulfil, so they no longer get it.</p>
+  <table>
+    <thead><tr><th style="width:32%">Data</th><th>Buyer</th><th>Seller</th><th>Admin</th><th>Courier</th></tr></thead>
+    <tbody>
+      <tr><td>Buyer name, phone, address</td><td><span class="pill ok">own</span></td><td><span class="pill bad">never</span></td><td><span class="pill ok">yes</span></td><td><span class="pill warn">delivery only</span></td></tr>
+      <tr><td>Seller pickup address</td><td><span class="pill bad">never</span></td><td><span class="pill ok">own</span></td><td><span class="pill ok">yes</span></td><td><span class="pill warn">pickup only</span></td></tr>
+      <tr><td>BETK commission</td><td><span class="pill bad">never</span></td><td><span class="pill bad">never</span></td><td><span class="pill ok">yes</span></td><td><span class="pill bad">never</span></td></tr>
+      <tr><td>Per-seller delivery breakdown</td><td><span class="pill bad">never</span></td><td><span class="pill ok">own</span></td><td><span class="pill ok">yes</span></td><td><span class="pill bad">never</span></td></tr>
+      <tr><td>Payment proof</td><td><span class="pill ok">own</span></td><td><span class="pill bad">never</span></td><td><span class="pill ok">yes</span></td><td><span class="pill bad">never</span></td></tr>
+      <tr><td>Other seller orders in the master</td><td><span class="pill ok">all own</span></td><td><span class="pill bad">never</span></td><td><span class="pill ok">yes</span></td><td><span class="pill bad">never</span></td></tr>
+      <tr><td>Food verification social handles</td><td><span class="pill bad">never</span></td><td><span class="pill ok">own</span></td><td><span class="pill ok">yes</span></td><td><span class="pill bad">never</span></td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>All buyer↔seller communication stays in-app.</b> Food verification handles are review data for admin only — surfacing them to a buyer would recreate the off-platform contact channel the whole posture prohibits.</div>
+</section>
+
+</main>
+
+<footer><div class="wrap">BETK v2 scope baseline · §5 role journeys · visual companion to BETK_V2_ROLE_JOURNEYS.md · proposed, pending sign-off</div></footer>
+</body>
+</html>
