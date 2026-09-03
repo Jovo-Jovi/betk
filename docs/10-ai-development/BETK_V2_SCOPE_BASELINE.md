@@ -357,15 +357,17 @@ the `order_status` enum.
 
 ## 13. Open questions
 
-| # | Question |
-|---|---|
-| **N21** | Guest cart: client-side and merged at login, or login required to add? |
-| **N22** | Payment proof on the **master order** (recommended — one transfer, one proof) or replicated across each deposit row? |
-| **N23** | Confirm the quote band reads as `[listing price, 2 × listing price]` — never below the listing price |
-| **N25** | Returns reuse `dispute_evidence`, or get their own evidence table? |
-| **N26** | Buyer T&C acceptance at signup, or at first checkout? |
-| **N27** | Staging carries 7 undeletable zombie orders and a live seller account under the v1 model. Reset the staging schema before the v2 build, or migrate forward? |
-| **N28** | Does the seller see the **buyer's city** for prep/packing purposes, or nothing at all? |
+Questions retained (not deleted). Answers signed 2026-09-03 (V2-STATE-RECORD). Do not re-open except **N22**, which B3 may override with a stated, cited reason.
+
+| # | Question | Status |
+|---|---|---|
+| **N21** | Guest cart: client-side and merged at login, or login required to add? | **ANSWERED:** No guest cart. An account is required before the first add-to-cart. |
+| **N22** | Payment proof on the **master order** (recommended — one transfer, one proof) or replicated across each deposit row? | **ANSWERED-WITH-DIRECTION** (pending B3 / ERD rewrite validation): ONE payment proof at MASTER-ORDER level. DIRECTION: each child seller order's deposit row SNAPSHOTS the proof reference at verification time, giving durable per-order traceability for later disputes, rather than resolving it only through the parent by join. B3 (the ERD rewrite) VALIDATES this against the existing architecture and may override it only with a stated, cited reason. |
+| **N23** | Confirm the quote band reads as `[listing price, 2 × listing price]` — never below the listing price | **ANSWERED:** Custom-item quoting: the seller may quote up to 2x the original/requested listing price. Band = [listing price, 2x listing price]. Never below the listing price. Valid 24h. The quote also states that item's prep time. |
+| **N25** | Returns reuse `dispute_evidence`, or get their own evidence table? | **ANSWERED:** Returns get a DEDICATED returns-evidence table. Do NOT reuse `dispute_evidence` — different lifecycle and purpose, keep them cleanly separated. |
+| **N26** | Buyer T&C acceptance at signup, or at first checkout? | **ANSWERED:** Terms acceptance at SIGNUP, and version-gated re-confirmation before any order can complete. `agreement_acceptances` therefore covers BUYERS as well as sellers. |
+| **N27** | Staging carries 7 undeletable zombie orders and a live seller account under the v1 model. Reset the staging schema before the v2 build, or migrate forward? | **ANSWERED:** Staging MIGRATES, it does not reset. Preserve current state and migrate it, so the migration path itself is validated. |
+| **N28** | Does the seller see the **buyer's city** for prep/packing purposes, or nothing at all? | **ANSWERED:** Sellers see NO buyer location — not address, not city. Order ref + items + prep deadline only. |
 
 ## 14. Sign-off
 
