@@ -20,9 +20,11 @@
  * MARK-READ: `MarkThreadRead` (client, mount-effect) calls `markInquiryRead`
  * — never from this RSC render path.
  *
- * CONFIRMED CTA: guidance-only banner, no link (/checkout is Phase 07 — the
- * dead-link rule, `/seller-landing` precedent). Phase 07 wires
- * `routes.checkout(thread.id)` into this banner's action.
+ * CONFIRMED CTA: Phase 07 / T03 wires the real `routes.checkout(thread.id)`
+ * link here (closing the dead-link-rule forward reference this comment used
+ * to describe). Already-converted (`convertedToOrderId` set) routes straight
+ * to the existing order's confirmation page instead — idempotent, never
+ * re-runs checkout on a re-visit.
  *
  * WHATSAPP DEEP-LINK (REG-45, flagged, NOT built): BETK_UI_SPEC.md L224 pins
  * a "WhatsApp deep-link button" on this page, but the counterpart's phone
@@ -33,6 +35,7 @@
  * seller) — flagged, not worked around with a service-role reach-around.
  */
 
+import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getInquiryThread } from "@/features/messaging/queries/getInquiryThread";
@@ -41,6 +44,7 @@ import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/i18n/localizedName";
 import { routes } from "@/constants/routes";
 import { Alert, StatusBadge, type ThreadMessage } from "@/components/shared";
+import { Button } from "@/components/ui/button";
 import { MarkThreadRead } from "./_components/MarkThreadRead";
 import { ThreadComposer } from "./_components/ThreadComposer";
 
@@ -138,13 +142,20 @@ export default async function InboxThreadPage({ params }: { params: Promise<Rout
         </div>
       )}
 
-      {/* CONFIRMED-STATE CTA — guidance-only, no link (see header note). */}
+      {/* CONFIRMED-STATE CTA — real routes.checkout link (Phase 07 / T03). */}
       {thread.status === "confirmed" && (
-        <Alert
-          variant="success"
-          title={t("thread.confirmedBanner.title")}
-          message={t("thread.confirmedBanner.message")}
-        />
+        <Alert variant="success" title={t("thread.confirmedBanner.title")}>
+          <p>{t("thread.confirmedBanner.message")}</p>
+          <Button asChild size="sm" className="mt-2">
+            {thread.convertedToOrderId ? (
+              <Link href={routes.buyer.checkoutConfirmation(thread.convertedToOrderId)}>
+                {t("thread.confirmedBanner.viewOrderCta")}
+              </Link>
+            ) : (
+              <Link href={routes.checkout(thread.id) as Route}>{t("thread.confirmedBanner.cta")}</Link>
+            )}
+          </Button>
+        </Alert>
       )}
 
       {/* Declined/expired — read-only per BETK_UI_SPEC.md L226. */}

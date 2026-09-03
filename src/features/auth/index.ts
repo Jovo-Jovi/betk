@@ -30,6 +30,9 @@ export {
 } from "./queries/requireVerifiedPhone";
 export type { VerifiedPhoneUser } from "./queries/requireVerifiedPhone";
 
+// Phase 07 / T02b admin gate — consumed by confirmDepositPayment + /admin/* (T05).
+export { requireAdmin, requireAdminForUser, NotAdminError } from "./queries/requireAdmin";
+
 // T07 phone-capture flow — Server Actions for an authenticated phone-NULL user.
 export { sendPhoneOtp } from "./actions/sendPhoneOtp";
 export type { SendPhoneOtpResult } from "./actions/sendPhoneOtp";

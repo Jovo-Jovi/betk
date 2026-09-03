@@ -15,6 +15,15 @@
  * `authenticated` — OD-4 phone-gate RESTRICTIVE policy), drives the status
  * transition via service-role UPDATE (which fires the trigger), then reads the
  * listing rows back. Cleans up to zero residue.
+ *
+ * T02b UPDATE (REG-49, migration 20260723140552): the pending→confirmed UPDATE now
+ * also fires the BEFORE trigger `enforce_order_transition`, whose AC-SEL-14 gate
+ * RAISEs BETK_DEPOSIT_UNCONFIRMED unless the order has a `status='confirmed'`
+ * deposit payment. So each seeded order now carries a confirmed deposit (seeded
+ * directly — an INSERT does not fire the UPDATE-only payment trigger). The
+ * store-only actor check is skipped under service-role (my_store_id() is NULL, so
+ * `IF NOT (store_id = NULL)` is NULL → not taken), leaving the deposit gate as the
+ * only added precondition. This keeps the AFTER stock trigger the subject under test.
  */
 
 import { randomUUID } from "node:crypto";
@@ -118,6 +127,18 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
     }));
     const { error: itemErr } = await svc().from("order_items").insert(rows);
     if (itemErr) throw new Error(`[stock.test] order_items ${label}: ${itemErr.message}`);
+
+    // AC-SEL-14 (T02b): confirm requires a confirmed deposit. Seed one directly
+    // (INSERT bypasses the UPDATE-only enforce_payment_update trigger).
+    const { error: payErr } = await svc().from("payments").insert({
+      order_id: order.id,
+      payment_type: "deposit",
+      amount: subtotal / 2,
+      method: "instapay",
+      status: "confirmed",
+      confirmed_at: new Date().toISOString(),
+    });
+    if (payErr) throw new Error(`[stock.test] deposit seed ${label}: ${payErr.message}`);
     return order.id;
   }
 
@@ -209,6 +230,7 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
   afterAll(async () => {
     for (const id of orderIds) {
       await svc().from("order_items").delete().eq("order_id", id);
+      await svc().from("payments").delete().eq("order_id", id);
     }
     if (storeId) await svc().from("orders").delete().eq("store_id", storeId);
     for (const id of listingIds) {

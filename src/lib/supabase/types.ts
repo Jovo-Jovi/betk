@@ -1991,6 +1991,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_order_from_inquiry: {
+        Args: {
+          p_address_id: string
+          p_delivery_method: Database["betk"]["Enums"]["delivery_preference"]
+          p_deposit_method: Database["betk"]["Enums"]["payment_method"]
+          p_inquiry_id: string
+        }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
       my_store_id: { Args: never; Returns: string }
       resubmit_seller_application: {
