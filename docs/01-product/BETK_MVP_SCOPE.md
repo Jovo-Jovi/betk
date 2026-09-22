@@ -9,13 +9,13 @@
 
 ---
 
-> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE STILL UNFROZEN pending B4.
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
 >
 > The v1 freeze of **43 tables** and **59 pages** is **SUPERSEDED**. It is not the v2 inventory.
 >
 > Live introspection (B3, 2026-09-22, `pg_tables` on `betk` + `betk_analytics`) still measures **43** physical tables: `betk` **41** + `betk_analytics` **2**. That figure is **TRUE TODAY**.
 >
-> **B3 froze the target at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. The ~50 / ~73 figures (`BETK_V2_SCOPE_BASELINE.md` §1, §10) remain **estimates**. **Pages are not frozen.**
+> **B3 froze the target at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. **B4 froze the page count at 77** under **OD-21** (`BETK_UI_SPEC.md` §0–§3). The ~50 / ~73 figures (`BETK_V2_SCOPE_BASELINE.md` §1, §10) remain **estimates**. They are not the freeze.
 
 ---
 
@@ -236,6 +236,8 @@ Buyer requests a return with reason + evidence. Seller accepts → return → re
 
 **B3 (2026-09-22) re-read before taking:** occupied ODs were OD-1…OD-19. No OD-20 row. **Took OD-20** (table count 51). Next free after B3 = **OD-21**.
 
+**B4 (2026-09-22) re-read before taking:** occupied ODs were OD-1…OD-20. No OD-21 row. **Took OD-21** (page count 77). Next free after B4 = **OD-22**.
+
 ### 4.1 v1 OD dispositions (OD-1…OD-8)
 
 Each row is exactly one verdict. Disposition authority: `BETK_V2_SCOPE_BASELINE.md` §11 “Scope decisions”, plus the cited rule sections. Historical v1 text is retained under each row and marked where superseded.
@@ -275,7 +277,7 @@ v1 OD-8 sentences that **no longer hold:** “order acceptance stays the seller'
 
 ### 4.2 v2 ODs minted this session
 
-Schema marker is YES/NO only, except **OD-20**, which freezes the table count. **No page count is asserted.** Indicative names in `BETK_V2_SCOPE_BASELINE.md` §10 were estimates; the frozen inventory is `BETK_ERD.md` §2.
+Schema marker is YES/NO only, except **OD-20**, which freezes the table count, and **OD-21**, which freezes the page count. Indicative names in `BETK_V2_SCOPE_BASELINE.md` §10 were estimates. The frozen table inventory is `BETK_ERD.md` §2. The frozen page inventory is `BETK_UI_SPEC.md` §3.
 
 | OD | One-line decision | Authority | Schema |
 |---|---|---|---|
@@ -290,7 +292,8 @@ Schema marker is YES/NO only, except **OD-20**, which freezes the table count. *
 | **OD-17** | Addresses visible to **admin + courier only**. Seller sees no buyer identity or location (not name, not phone, not address, not city) (N28). Buyer never sees seller address. | `BETK_V2_SCOPE_BASELINE.md` §2.5, §13 N28; `BETK_V2_ROLE_JOURNEYS.md` §5.2, §5.4 | **NO** — read restriction / RLS. Indicative store pickup-address **columns** are listed in baseline §10; B3 owns them. This OD does not freeze that column list. Courier principal for RLS = **REG-78**. |
 | **OD-18** | Closure is **derived** (seller order: both payment rows confirmed AND delivered; master: every child terminal). Seller balance is **derived**. **No close action. No invented enum member.** | `BETK_V2_SCOPE_BASELINE.md` §4.2, §2.4; §11 REG-56 Amend; `BETK_V2_ROLE_JOURNEYS.md` §5.4 PAYS (derived balance) | **NO** — derived; forbids a new `order_status` member. |
 | **OD-19** | Catalogue: **products only**; **fixed price** on every listing; shipping attributes mandatory; seller categories capped at 3; eligibility band. | `BETK_V2_SCOPE_BASELINE.md` §2.1 | **YES** — `store_categories`, listing shipping/specs columns; dead `price_type` / `type='service'` members blocked at the app layer (baseline §10). Frozen inside OD-20’s inventory. |
-| **OD-20** | v2 physical table count is **51** (`betk` 49 + `betk_analytics` 2). Supersedes OD-6. Live today remains 43 until Stage C migrates. **Pages are not frozen.** | B3 `BETK_ERD.md` §2. Inventory: 43 live, 0 dropped, 1 renamed (`orders` → `seller_orders`), 8 new. | **YES** — the inventory itself. |
+| **OD-20** | v2 physical table count is **51** (`betk` 49 + `betk_analytics` 2). Supersedes OD-6. Live today remains 43 until Stage C migrates. This OD does not freeze pages. | B3 `BETK_ERD.md` §2. Inventory: 43 live, 0 dropped, 1 renamed (`orders` → `seller_orders`), 8 new. | **YES** — the inventory itself. |
+| **OD-21** | v2 page count is **77** route patterns. Supersedes the v1 headline of 59. Counting rule and the 65-vs-59 reconciliation are `BETK_UI_SPEC.md` §0–§1. The ~73 estimate is not this freeze. Tables stay 51 under OD-20. | B4 `BETK_UI_SPEC.md` §3. Taken at mint 2026-09-22 (next free was OD-21). | **NO** — documentation. Not a table. |
 
 ### 4.3 Historical v1 freeze text (superseded in place — not deleted)
 
@@ -328,7 +331,7 @@ In scope iff it is authorized by this file + the two authority docs. **Page inve
 
 **Survives from phases 01–05** (baseline §11 Build): design system, process artifacts, `requireAdmin` / `requireVerifiedPhone` / `requireActiveUser`, private-bucket proof upload, admin deposit-verification slice, derived-balance rule. **Repurposed:** Phase 06 messaging becomes the quote channel. **Rebuilt:** `create_order_from_inquiry` rpc, `/checkout`, `/orders`, order-set RLS, `order_status` enum (baseline §11). Those rebuilds are **in scope as work**, not a license to invent pages or tables.
 
-**v1 capability list (historical — SUPERSEDED in part).** The v1 §4 paragraph named 59 pages, three buyer rails, Bosta/self-deliver/pickup/remote, and inquiry-to-order. Counts are unfrozen; rails and delivery modes are retired per §7. Capabilities v2 does **not** contradict (boost packages, seller levels, disputes, reviews, collections, 1–2 keyword search, wishlists, follows, soft deletes, RLS on every table) remain in scope **until B4/B3 say otherwise**. This is preserve-where-untouched, not a new freeze.
+**v1 capability list (historical — SUPERSEDED in part).** The v1 §4 paragraph named 59 pages, three buyer rails, Bosta/self-deliver/pickup/remote, and inquiry-to-order. Rails and delivery modes are retired per §7. Tables are frozen at 51 (OD-20). Pages are frozen at 77 (OD-21). Capabilities v2 does **not** contradict (boost packages, seller levels, disputes, reviews, collections, 1–2 keyword search, wishlists, follows, soft deletes, RLS on every table) remain in scope. Boosts are retained (REG-80). This is preserve-where-untouched, not a second freeze.
 
 <details>
 <summary>v1 §3 “70 use cases” and v1 §4 “59 pages” — SUPERSEDED counts, retained as history</summary>
@@ -431,6 +434,7 @@ Preserved from v1 (v2 does not replace this table). G3's “supported local meth
 - **2026-09-19 — B1-FIX.** OD-9…OD-19 authority citations confirmed in §4.2. Communication-posture + PRECEDENTS self-delivery-as-courier clause marked **SUPERSEDED in place** (seller sees no buyer identity or location). Minted **REG-78** (courier RLS principal), **REG-79** (OD-4 gate location), **REG-80** (boosts in-or-out).
 - **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP as retained v1 scope. The §10 flag no longer says in-or-out is undecided. No boost requirement was added.
 - **2026-09-22 — B3.** **OD-20** minted (table count **51**). Pages still unfrozen. REG-82 propagated into §3.5. REG-78 and the `delivery_preference` flag marked resolved by the ERD, not redesigned here.
+- **2026-09-22 — B4.** **OD-21** minted (page count **77**). Both counts are now frozen: tables 51 (OD-20), pages 77 (OD-21). The page inventory is `BETK_UI_SPEC.md`, not this file.
 
 After this rewrite, additions still require a written change request and re-baselining of the PRD and phases. B2 writes FRs/ACs against this scope; B3 freezes tables; B4 freezes pages.
 

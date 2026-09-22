@@ -1,4 +1,1241 @@
 # BETK_UI_SPEC.md
+> Step 4 of the BETK Dev OS. **v2 rewrite (B4, 2026-09-22).** Pages, routes, roles, data requirements, states, and acceptance. B6 (phases) and the build cite this file **section-by-section**.
+>
+> **Authority, in order:** [`docs/01-product/BETK_PRD.md`](../01-product/BETK_PRD.md) → [`docs/03-database/BETK_ERD.md`](../03-database/BETK_ERD.md) (tables **FROZEN at 51** under OD-20) → [`docs/01-product/BETK_MVP_SCOPE.md`](../01-product/BETK_MVP_SCOPE.md) → [`docs/10-ai-development/BETK_V2_SCOPE_BASELINE.md`](../10-ai-development/BETK_V2_SCOPE_BASELINE.md) + [`docs/10-ai-development/BETK_V2_ROLE_JOURNEYS.md`](../10-ai-development/BETK_V2_ROLE_JOURNEYS.md). The historical block at the bottom is the **v1 source being rewritten** (59-page headline), not the target.
+>
+> **Layer:** routes, roles, which ERD columns a page may read, states, and which shared components it composes. **No visual design.** `components/ui` and `components/shared` are owned by Claude Design. A missing component is a **gap** (§8), never a style spec. **No schema. No ADR.**
+>
+> **Numbers taken at mint (re-read 2026-09-22 before taking):** occupied ODs ended at OD-20 (next free **OD-21**). Occupied REGs ended at REG-89 (next free **REG-90**). **Took REG-90** (seller order money pin, closed) and **OD-21** (this page freeze). **Took REG-91** (open: buyer-safe delivery total). Did **not** take an ADR. Next free after this mint: **OD-22**, **REG-92**. Next free ADR for B5 stays **ADR-020**.
+
+---
+
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
+>
+> Live physical tables **today** remain **43** (`betk` 41 + `betk_analytics` 2) until Stage C. That figure is **TRUE TODAY**. The v2 target table inventory is **51**.
+>
+> The v2 page inventory is **77** route patterns under the counting rule in §0. **OD-21 supersedes** the v1 headline of 59. The baseline ~73 figure was an estimate (§2.4). It is not this freeze.
+>
+> Cite v2 sections §0–§9. Do not cite the historical block as the v2 page inventory.
+
+---
+
+## How B6 cites this file
+
+| Cite | For |
+|---|---|
+| §0 | The counting rule. Do not recount under a different unit. |
+| §1 | What v1 measured, and why 59 and 77 are different units. |
+| §2 | Disposition of every v1 route pattern, plus the new patterns. |
+| §3 | The frozen inventory (OD-21). |
+| §4 | Binding UI inputs (N28, REG-90, REG-44, REG-79, REG-82, REG-83, REG-84, REG-85, posture, bilingual). |
+| §5 | Per-page spec. Build a page only from its §5 block. |
+| §6 | Seller-page proof: no buyer identity, no delivery fee, no order total. |
+| §7 | Acceptance matrix, both directions. |
+| §8 | Claude Design gap list. Compose what exists. Do not restyle the kit to fill a gap. |
+| §9 | STOP-and-flags. Do not fill them. |
+
+---
+
+## 0. Counting rule (written before any count)
+
+**One page is one route pattern on one role surface, counted once across locales.**
+
+1. Strip the locale prefix. Arabic is unprefixed and English is `/en/…` (OD-7). Those two URLs are **one** page.
+2. A route pattern is the path template with dynamic segments left as `[param]`. Two templates are two pages. `/inbox` and `/inbox/[inquiryId]` are two. `/seller/listings/new` and `/seller/listings/[id]/edit` are two. `/seller/payouts` and `/seller/payouts/new` are two. `/admin/disputes` and `/admin/disputes/[id]` are two. `/admin/collections` and `/admin/collections/[id]` are two.
+3. Tabs, modals, drawers, steppers, and query strings **inside one pattern do not count.** The five-step onboarding wizard is one page. WhatsApp templates live on the Notifications tab of `/admin/settings` (OD-5) and are **not** a page. A filter `?status=` is not a page. The checkout version-gate is a panel on `/checkout`, not a page. The seller escalation form is on `/seller/orders/[id]`, not a page. The courier rate matrix is a tab of `/admin/settings`, not a page.
+4. A role prefix that changes the actor is a different page. Buyer `/disputes/[id]`, seller `/seller/disputes/[id]`, and admin `/admin/disputes/[id]` are three.
+5. A redirect-only alias is not a page. A `notFound()` page still counts.
+6. Replacing a param name inside the same responsibility (`/orders/[id]` → `/orders/[masterId]`) does **not** add a page. Adding a new template does.
+
+This rule is the unit for §1, §2, and the OD-21 freeze. Do not mix it with the v1 heading count.
+
+---
+
+## 1. v1 measured under §0
+
+The v1 document (historical block) has **60** `###` page headings. One of them, WhatsApp Templates, is a tab of `/admin/settings` (OD-5) and is **not** a page under §0. The other 59 headings are the historical “59”.
+
+Six headings each contain **two** route patterns. Under §0 those six extra patterns count. Measured v1 total = **65**.
+
+| Bundled heading (counted as 1 in the 59) | Second pattern §0 counts |
+|---|---|
+| Buyer Inbox | `/inbox/[inquiryId]` |
+| Create / Edit Listing | `/seller/listings/[id]/edit` |
+| Seller Inbox | `/seller/inbox/[inquiryId]` |
+| Request Payout | `/seller/payouts/new` |
+| Disputes Management (Admin) | `/admin/disputes/[id]` |
+| Editorial Collections | `/admin/collections/[id]` |
+
+**Reconciliation with 59.** 60 headings − 1 merged tab = **59**. 59 + 6 bundled second patterns = **65**. The older headlines 56 and 61 were already rejected inside the v1 acceptance matrix (2026-07-16, R4) as arithmetic errors on the heading inventory. **59 was a heading count, not a route-pattern count.** It is not wrong for that unit. It is the wrong unit for this freeze. Nothing in v1 was added or removed to produce 65; the unit changed.
+
+### 1.1 The 65 v1 patterns
+
+| # | Pattern | Heading |
+|---|---|---|
+| 1 | `/` | Homepage |
+| 2 | `/search` | Search & Filter Results |
+| 3 | `/category/[slug]` | Category Browse |
+| 4 | `/listing/[id]` | Listing Detail |
+| 5 | `/store/[slug]` | Public Storefront |
+| 6 | `/auth/login` | Phone Entry |
+| 7 | `/auth/verify` | OTP Verification |
+| 8 | `/auth/register` | Complete Buyer Profile |
+| 9 | `/account` | Account / Profile |
+| 10 | `/account/addresses` | Address Book |
+| 11 | `/wishlist` | Wishlist & Saved |
+| 12 | `/account/following` | Followed Sellers |
+| 13 | `/inbox` | Buyer Inbox list |
+| 14 | `/inbox/[inquiryId]` | Buyer Inbox thread |
+| 15 | `/checkout` | Checkout |
+| 16 | `/checkout/confirmation/[orderId]` | Order Confirmation |
+| 17 | `/orders` | Order History |
+| 18 | `/orders/[id]` | Order Detail |
+| 19 | `/orders/[id]/review` | Leave Review |
+| 20 | `/orders/[id]/dispute/new` | Raise Dispute |
+| 21 | `/disputes/[id]` | Dispute Detail (Buyer) |
+| 22 | `/notifications` | Notifications Center |
+| 23 | `/seller/onboarding` | Seller Onboarding |
+| 24 | `/seller/status` | Seller Application Status |
+| 25 | `/seller` | Seller Dashboard |
+| 26 | `/seller/store` | Store Profile Settings |
+| 27 | `/seller/store/delivery` | Delivery Settings |
+| 28 | `/seller/store/returns` | Return Policy Settings |
+| 29 | `/seller/store/payments` | Payment Methods Settings |
+| 30 | `/seller/listings` | Listings Management |
+| 31 | `/seller/listings/new` | Create Listing |
+| 32 | `/seller/listings/[id]/edit` | Edit Listing |
+| 33 | `/seller/inventory` | Stock & Inventory |
+| 34 | `/seller/listings/[id]/boost` | Boost Listing |
+| 35 | `/seller/boosts` | Boost Management |
+| 36 | `/seller/inbox` | Seller Inbox list |
+| 37 | `/seller/inbox/[inquiryId]` | Seller Inbox thread |
+| 38 | `/seller/orders` | Orders Management (Seller) |
+| 39 | `/seller/orders/[id]` | Order Detail (Seller) |
+| 40 | `/seller/reviews` | Reviews Management (Seller) |
+| 41 | `/seller/earnings` | Earnings |
+| 42 | `/seller/transactions` | Transactions |
+| 43 | `/seller/payouts` | Payout list |
+| 44 | `/seller/payouts/new` | Request Payout |
+| 45 | `/seller/level` | Level Progress |
+| 46 | `/seller/analytics` | Seller Analytics |
+| 47 | `/seller/disputes/[id]` | Dispute Detail (Seller) |
+| 48 | `/admin` | Admin Dashboard |
+| 49 | `/admin/sellers/approvals` | Seller Approval Queue |
+| 50 | `/admin/users` | User & Seller Management |
+| 51 | `/admin/listings` | Listings Moderation |
+| 52 | `/admin/moderation/flags` | Flagged Content Queue |
+| 53 | `/admin/reviews` | Reviews Moderation |
+| 54 | `/admin/categories` | Categories Management |
+| 55 | `/admin/orders` | Orders Management (Admin) |
+| 56 | `/admin/disputes` | Disputes queue |
+| 57 | `/admin/disputes/[id]` | Dispute detail (Admin) |
+| 58 | `/admin/payments` | Payments Management |
+| 59 | `/admin/payouts` | Payouts Management |
+| 60 | `/admin/collections` | Collections list |
+| 61 | `/admin/collections/[id]` | Collection editor |
+| 62 | `/admin/notifications` | Notifications Broadcast |
+| 63 | `/admin/settings` | Admin Settings |
+| 64 | `/admin/moderation/log` | Moderation Log |
+| 65 | `/admin/boosts` | Boost Approval |
+
+WhatsApp Templates: **not a pattern.** MERGED into `/admin/settings` (OD-5, FR-ADM-14). It stays a tab.
+
+---
+
+## 2. Page disposition
+
+Every v1 pattern has exactly one verdict. A new pattern cites at least one PRD code. Retired **flows** that were never their own pattern are listed in §2.2 so they are not quietly kept inside an amended page.
+
+### 2.1 v1 patterns
+
+| # | Pattern | Verdict | Cited reason |
+|---|---|---|---|
+| 1 | `/` | **AMENDED** | FR-PUB-1. Boosted strip **KEPT** (REG-80). Guest add-to-cart creates no line (R-C01). |
+| 2 | `/search` | **AMENDED** | FR-PUB-2. Service-type filter **retired**. Boosted ranking **KEPT** (REG-80, R-B04). |
+| 3 | `/category/[slug]` | **KEPT** | FR-PUB-3 holds unchanged. |
+| 4 | `/listing/[id]` | **AMENDED** | FR-PUB-4. Fixed price, shipping attributes, specs, prep days, Request price (FR-QTE-1). Four `price_type` presentations retired. |
+| 5 | `/store/[slug]` | **AMENDED** | FR-PUB-5. No seller street address (R-V03). Delivery-method picker **retired**. Return-policy block **OPEN REG-85**. |
+| 6 | `/auth/login` | **KEPT** | FR-AUTH-1. Also the verified-phone gate surface with #7. Trigger point **OPEN REG-79**. |
+| 7 | `/auth/verify` | **KEPT** | FR-AUTH-2. Gate surface; trigger **OPEN REG-79**. |
+| 8 | `/auth/register` | **AMENDED** | FR-AUTH-3. Current Buyer T&C accepted here (R-G01, FR-AGR-1). |
+| 9 | `/account` | **KEPT** | FR-BUY-1. OD-2 deactivate-only. |
+| 10 | `/account/addresses` | **KEPT** | FR-BUY-2. Buyer reads own addresses (ERD §3.9). |
+| 11 | `/wishlist` | **KEPT** | FR-BUY-3. |
+| 12 | `/account/following` | **KEPT** | FR-BUY-4. |
+| 13 | `/inbox` | **AMENDED** | FR-BUY-5. Quote channel. Confirmed-inquiry → checkout CTA **retired** (§2.2). |
+| 14 | `/inbox/[inquiryId]` | **AMENDED** | FR-QTE-1, FR-BUY-5. Accept writes a cart line (R-Q05). No checkout CTA. |
+| 15 | `/checkout` | **AMENDED** | FR-CHK-1 supersedes FR-BUY-6. Cart, not a confirmed inquiry (R-O11). No delivery-mode picker (R-K01). |
+| 16 | `/checkout/confirmation/[orderId]` | **AMENDED** | Param is the **master** id. FR-BUY-7, FR-PAY-1. One InstaPay proof on the master (N22). |
+| 17 | `/orders` | **AMENDED** | FR-BUY-8. History is of **master** purchases. |
+| 18 | `/orders/[id]` | **AMENDED** | Param is `[masterId]`. FR-BUY-9. Per-seller sections on this route. Pickup/remote empty state **retired**. |
+| 19 | `/orders/[id]/review` | **AMENDED** | Pattern becomes `/orders/[masterId]/[sellerOrderId]/review`. FR-BUY-10, REG-83. |
+| 20 | `/orders/[id]/dispute/new` | **AMENDED** | Pattern becomes `/orders/[masterId]/[sellerOrderId]/dispute/new`. FR-BUY-11, REG-84. Not the return flow. |
+| 21 | `/disputes/[id]` | **KEPT** | FR-BUY-12. The linked order is a seller order (REG-84). |
+| 22 | `/notifications` | **KEPT** | FR-BUY-13. Event set grows (R-N07, R-N08); the surface holds. |
+| 23 | `/seller/onboarding` | **AMENDED** | FR-SEL-1, FR-CAT-1, R-S10, R-G04. Pickup address, up to 3 categories, Seller Agreement e-sign, food branch. Delivery-mode toggles **retired**. |
+| 24 | `/seller/status` | **KEPT** | FR-SEL-2. |
+| 25 | `/seller` | **AMENDED** | FR-SEL-3. No acceptance queue (§2.2). Recent orders obey §4.a. |
+| 26 | `/seller/store` | **KEPT** | FR-SEL-4. Approved categories are read-only here; the write is onboarding (#23) into `store_categories`. |
+| 27 | `/seller/store/delivery` | **AMENDED** | FR-SEL-5. This route is now the **pickup address**, not mode selection. |
+| 28 | `/seller/store/returns` | **KEPT** | FR-SEL-6 holds. Relationship to the platform policy is **OPEN REG-85**. |
+| 29 | `/seller/store/payments` | **KEPT** | FR-SEL-7. Settlement handles, not buyer rails. |
+| 30 | `/seller/listings` | **KEPT** | FR-SEL-8. |
+| 31 | `/seller/listings/new` | **AMENDED** | FR-SEL-9, FR-CAT-1. Products only, fixed price, shipping attributes, prep cap, approved categories. |
+| 32 | `/seller/listings/[id]/edit` | **AMENDED** | Same as #31. |
+| 33 | `/seller/inventory` | **AMENDED** | FR-SEL-10, FR-STK-1. Decrement is at checkout. Low stock stays derived (OD-1). No `inventory_alerts` table. |
+| 34 | `/seller/listings/[id]/boost` | **KEPT** | FR-SEL-11 **RETAINED** (REG-80). v1 text stands. Not expanded. |
+| 35 | `/seller/boosts` | **KEPT** | FR-SEL-12 **RETAINED** (REG-80). |
+| 36 | `/seller/inbox` | **AMENDED** | FR-SEL-13. Seller quotes. Confirm-to-enable-checkout **retired**. Neutral buyer label (§4.b). |
+| 37 | `/seller/inbox/[inquiryId]` | **AMENDED** | FR-QTE-1. Band, 24h, prep time. No buyer name, phone, address, or city. |
+| 38 | `/seller/orders` | **AMENDED** | FR-SEL-14. Acceptance **retired**. §4.a money and identity. |
+| 39 | `/seller/orders/[id]` | **AMENDED** | FR-SEL-15, FR-ESC-1, FR-SLA-1, FR-RET-1 (seller accept/reject). preparing → ready only. No shipment write. No buyer identity. §4.a. |
+| 40 | `/seller/reviews` | **AMENDED** | FR-SEL-16, REG-44, REG-83. No buyer name and no buyer location. |
+| 41 | `/seller/earnings` | **AMENDED** | FR-SEL-17, FR-CLO-1, REG-90. Subtotal, commission, net. No fee, no order total. |
+| 42 | `/seller/transactions` | **AMENDED** | FR-SEL-18, REG-90. Unit is the seller order. Seller cannot read `payments`. |
+| 43 | `/seller/payouts` | **AMENDED** | FR-SEL-19 behaviour holds. The balance it draws on is the REG-90 net (§9 flag on `refunded_amount`). |
+| 44 | `/seller/payouts/new` | **AMENDED** | Same as #43. Phone gate **holds** here (AC-AUTH-4). |
+| 45 | `/seller/level` | **KEPT** | FR-SEL-20. |
+| 46 | `/seller/analytics` | **AMENDED** | FR-SEL-21. Boost clause **RETAINED** (REG-80). `revenue_egp` display is flagged (§9). |
+| 47 | `/seller/disputes/[id]` | **AMENDED** | FR-SEL-22 behaviour holds. The thread label is the neutral buyer label (R-V02). No master dispute (REG-84). |
+| 48 | `/admin` | **KEPT** | FR-ADM-1. Escalation signals link to #75; they do not add a second dashboard. |
+| 49 | `/admin/sellers/approvals` | **AMENDED** | FR-ADM-2, R-S10. Food artefacts when the food branch applies. |
+| 50 | `/admin/users` | **KEPT** | FR-ADM-3. No automatic strike (R-E04). |
+| 51 | `/admin/listings` | **KEPT** | FR-ADM-4. |
+| 52 | `/admin/moderation/flags` | **KEPT** | FR-ADM-5. |
+| 53 | `/admin/reviews` | **AMENDED** | FR-ADM-6. The review surface still renders no buyer name and no buyer location (REG-44). |
+| 54 | `/admin/categories` | **KEPT** | FR-ADM-7. |
+| 55 | `/admin/orders` | **AMENDED** | FR-ADM-8. Master + children. Detail is a **drawer on this route** (not a new pattern). Admin sees addresses (R-V01). |
+| 56 | `/admin/disputes` | **AMENDED** | FR-ADM-9. Per seller order (REG-84). |
+| 57 | `/admin/disputes/[id]` | **AMENDED** | FR-ADM-9, AC-ADM-9. Refund is per seller order. |
+| 58 | `/admin/payments` | **AMENDED** | FR-ADM-10, FR-ADM-18, FR-PAY-1, FR-PAY-2. **One** confirm releases every child. **No close control** (R-O25). This is the deposit-verification queue. |
+| 59 | `/admin/payouts` | **KEPT** | FR-ADM-11. |
+| 60 | `/admin/collections` | **KEPT** | FR-ADM-12. |
+| 61 | `/admin/collections/[id]` | **KEPT** | FR-ADM-12. |
+| 62 | `/admin/notifications` | **KEPT** | FR-ADM-13. OD-3: no campaign entity. |
+| 63 | `/admin/settings` | **AMENDED** | FR-ADM-15, R-M07, R-M08. Notifications tab still holds WhatsApp templates (FR-ADM-14). **Courier rate matrix is a tab of this route** (FR-COU-1), not a new page. Flat `delivery_fee_flat_egp` is not the buyer fee source. |
+| 64 | `/admin/moderation/log` | **KEPT** | FR-ADM-16. |
+| 65 | `/admin/boosts` | **KEPT** | FR-ADM-17 **RETAINED** (REG-80). |
+
+### 2.2 Retired behaviours (not pages)
+
+These had no route pattern of their own. They are **RETIRED** inside the amended pages above. Do not rebuild them.
+
+| Behaviour | Verdict | Where it used to live | Cited reason |
+|---|---|---|---|
+| Confirmed-inquiry → checkout CTA | **RETIRED** | #13, #14, #15 | FR-BUY-5 amendment, FR-BUY-6 superseded, AC-BUY-6 retired, R-O11. |
+| Seller acceptance queue / pending→confirmed by the seller | **RETIRED** | #25, #38, #39 | FR-SEL-3, FR-SEL-14, AC-SEL-14 retired. `confirmed` means admin release. |
+| Delivery-mode picker `{delivery, pickup, remote}` | **RETIRED** | #5, #15, #23, #27 | R-K01, FR-SEL-1, FR-SEL-5, FR-PUB-5. |
+| Pickup / remote “no shipment” empty state | **RETIRED** | #18, #39 | FR-BUY-9. Courier-only; every seller order has a shipment. The seller still does not read `shipments` (ERD §8). |
+
+### 2.3 New patterns
+
+| # | Pattern | PRD |
+|---|---|---|
+| 66 | `/cart` | FR-CART-1, R-C01–R-C07, REG-82 |
+| 67 | `/legal/terms` | FR-AGR-1, R-G05, AC-AGR-4 |
+| 68 | `/legal/seller-agreement` | FR-AGR-1, R-G04, R-G05 |
+| 69 | `/legal/returns` | FR-AGR-1, R-G05. **Policy document.** Not a return case. |
+| 70 | `/legal/privacy` | FR-AGR-1, R-G05 |
+| 71 | `/orders/[masterId]/[sellerOrderId]/return` | FR-RET-1, R-U01, R-U02 |
+| 72 | `/returns/[id]` | FR-RET-1. Buyer status of one `returns` row. |
+| 73 | `/admin/returns` | FR-RET-1, FR-ADM-9 |
+| 74 | `/admin/returns/[id]` | FR-ADM-9, R-U04 |
+| 75 | `/admin/escalations` | FR-ADM-20, FR-ESC-1, R-E04 |
+| 76 | `/admin/ready-for-pickup` | FR-ADM-19, FR-COU-1, R-K07, R-K09 |
+| 77 | `/admin/sellers/[id]/performance` | FR-ADM-21 |
+
+Not added, on purpose:
+
+- No `/seller/returns` and no `/seller/returns/[id]`. Seller accept/reject is on #39 (the return hangs off that seller order; `returns` has no UNIQUE, so #39 lists the rows).
+- No `/returns` index. Same shape as disputes: entry from the master seller-order section, detail at #72.
+- No `/orders/[masterId]/[sellerOrderId]` drill-in. Per-seller sections are on #18.
+- No courier login (AC-COU-6, REG-78).
+- No support page (REG-50). Its old “OD-9” note is void; OD-9 is the cart model.
+- No second deposit-verification route. #58 is that queue.
+- No `/auth/phone`. The gate reuses #6 and #7.
+
+### 2.4 Why this is not ~73
+
+`BETK_V2_SCOPE_BASELINE.md` §10 estimated **~73** = the old headline 59 + about 14 names. Under §0 the v1 base is **65**, not 59 (+6). Against the estimate’s 14 names this freeze drops four (`/returns` list, `/seller/returns`, `/seller/returns/[id]`, `/orders/[masterId]/[sellerOrderId]`) and adds two the estimate did not split out (`/admin/returns/[id]`, the buyer return-request pattern). 65 + 12 = **77**. 73 + 6 − 4 + 2 = 77. The estimate is not corrected into 77; it was a different unit plus a different split.
+
+---
+
+## 3. Freeze (OD-21)
+
+**OD-21.** v2 page count is **77** route patterns under §0. This supersedes the v1 headline of 59. Tables stay **51** under OD-20. Taken at mint 2026-09-22 (next free OD was OD-21).
+
+v1 under §0 is 5 public + 3 auth + 14 buyer + 25 seller + 18 admin = **65**. v2 adds 4 legal pages (public), the cart, the return request, and the return detail (buyer +3), and 5 admin queues. 65 + 4 + 3 + 5 = **77**.
+
+| Band | Patterns | Count |
+|---|---|---|
+| Public | 1–5 and 67–70 | 9 |
+| Auth | 6–8 | 3 |
+| Buyer | 9–22, 66, 71, 72 | 17 |
+| Seller | 23–47 | 25 |
+| Admin | 48–65, 73–77 | 23 |
+| **Total** | | **77** |
+
+9+3+17+25+23 = **77**. Buyer is the v1 14 plus cart, return request, and return detail. The four legal pages sit in Public, not in Buyer. Admin is the v1 18 plus returns queue, return detail, escalations, ready-for-pickup, and performance.
+
+---
+
+## 4. Binding UI inputs
+
+### 4.a N28 + REG-90 (seller pages)
+
+Closed product pin **REG-90** (2026-09-22, scope owner): the seller sees **subtotal, commission, and net only**. Never the delivery fee. Never the order total. The fee is origin × destination × weight, so a seller-visible fee lets the seller infer the buyer’s destination zone, which N28 forbids. Commission is on subtotal only (R-O27), so the net does not need the fee or the total.
+
+**Net displayed** = `seller_orders.subtotal − seller_orders.commission_amount`. Do not subtract `refunded_amount` on screen while §9’s flag is open.
+
+**Seller order allow-list** (columns a seller page may render): `seller_orders.display_ref` (REG-81: render only when non-null; do not invent a format; legacy `betk_ref` may show on historical rows — it is an order number, ERD §3.6), `status`, `prep_deadline`, `confirmed_at`, `delivered_at`, `balance_confirmed_at`, `payout_eligible_at`, `commission_rate`, `commission_amount`, `subtotal`, `escalated_at`, `escalation_reason`, `escalation_note`, `escalation_resolved_at`, `cancellation_reason`, `created_at`. Items from `order_items`: `listing_title_ar`, `listing_title` snapshot columns the ERD already has, `quantity`, `unit_price`, `subtotal`, `is_custom`, `prep_days_snapshot`.
+
+**Seller order deny-list** (do not render, do not join): `delivery_fee`, `total_amount`, `buyer_id`, `delivery_address_id`, `master_orders` (seller SELECT is none, ERD §8), `payments` (seller SELECT is none), `shipments` (seller SELECT is none), `addresses`, `buyer_profiles`, `users.phone_number`. No buyer name, phone, address, city, or governorate (R-V02, AC-VIS-1).
+
+`buyer_id` and `delivery_address_id` may exist on the row (ERD §4.1). The page does not render them.
+
+### 4.b REG-44 (reviews)
+
+Reviews render **no buyer name and no buyer location**. Use a neutral keyed label. Precedent: Phase 06 T04 `t("buyerLabel")`. Applies on #4, #5, #40, #47, #53, and #18’s review entry. Do not join `reviews.buyer_id` to `buyer_profiles`.
+
+### 4.c REG-79 (phone gate) — OPEN
+
+The gate **surface** is #6 and #7. Named holds that stay: checkout (#15), become-seller (#23), payout (#44) — AC-AUTH-4. **Where** verified phone is required relative to add-to-cart is **OPEN**. Do not encode the trigger. Do not add `/auth/phone`.
+
+### 4.d REG-82 (cart restore)
+
+On #66, after payment-window expiry: fixed-price lines return as snapshotted. Custom-quote lines return only while `inquiries.quote_expires_at` is still in the future; otherwise the line is absent and the page prompts a new quote (R-C07, AC-CART-7).
+
+### 4.e REG-83 / REG-84
+
+Review entry is on the seller-order **section** of #18, and the form is #19. Dispute entry is on that same section, and the form is #20. There is **no** master-level review and **no** master-level dispute control.
+
+### 4.f REG-85 — OPEN
+
+#5 and #28 may show `stores.return_policy`. How that text relates to `/legal/returns` (OD-13) is **not decided**. Do not invent override, replacement, or a dual-display rule.
+
+### 4.g Communication posture
+
+Buyer↔seller stays in-app. A page may offer **share** of a public link (REG-51, gap §8), a **BETK→user notification**, or nothing. It may not offer counterparty WhatsApp, phone, or address. **No support page** (REG-50). Footer contact is not given a route here.
+
+### 4.h Bilingual
+
+One page, two locales. `ar` unprefixed, `en` under `/en`. RTL is canonical; logical Tailwind utilities; LTR islands for refs, money, phones, OTP. Shell chrome is `next-intl`. Listing titles use the locale column with fallback. Descriptions and bios render as authored. A locale outside `{ar, en}` is not a page.
+
+### 4.i States and Guard E
+
+Every page below names empty, error, and whether it can reach `notFound()`. **Guard E / REG-47:** if `notFound(): yes`, no `loading.tsx` may sit at that segment or any ancestor, including `[locale]`. RLS denial is not-found, not forbidden.
+
+Default empty copy is one plain-Arabic line plus one CTA, with an English catalog string (historical §6, still the standard). Admin queues use a positive empty (“queue is clear”).
+
+### 4.j Server-computed buyer delivery (REG-91, OPEN)
+
+#66 and #15 show **one** delivery figure and **one** total (R-C03, R-K03, AC-CHK-6). They do **not** show the per-seller split or commission (R-O28). They do **not** read `store_pickup_addresses` (buyer SELECT is none). The figure is a server projection. REG-91 is open; do not invent the function here and do not add a table.
+
+---
+
+## 5. Per-page spec
+
+Kit names below are components that already exist under `components/shared` or `components/ui`. Anything else is §8, not a spec.
+
+**i18n** on every page is §4.h unless the block says otherwise.
+
+### 5.1 Public and legal
+
+#### P01 Homepage — `/`
+- **v1 #1 AMENDED.** FR-PUB-1, R-B04 RETAINED, R-C01.
+- **Role:** public.
+- **Data:** `collections` where `status='live'` ordered by `homepage_position`; `collection_listings.sort_order`; `listings` (`status='active'`, `deleted_at` null) for new arrivals; `boosts.status='active'` joined to listings for the boosted strip; `listing_images`; `categories` (`is_active`, `sort_order`, `icon_url`); `stores` (`name_ar`, `name_en`, `avatar_url`, `slug`) and `seller_profiles.level`; `rating_aggregates`.
+- **States:** no live collections → new-arrivals only; zero listings → empty with become-a-seller CTA; section error with retry. **notFound(): no.**
+- **Composes:** `AppTopbar`, `MobileBottomNav`, `CategoryGrid`, `CollectionStrip`, `ListingCard`, `StoreCard`, `Footer`, `EmptyState`, `ErrorRetryCard`.
+- **Binding:** guest wishlist/cart/quote sends the guest to #6 and writes nothing (R-C01, R-Q08). Boosted strip stays.
+
+#### P02 Search — `/search`
+- **v1 #2 AMENDED.** FR-PUB-2, R-B04 RETAINED.
+- **Role:** public.
+- **Data:** `listings.search_vector`, `price`, `category_id`; `categories`; `stores.governorate`, `stores.city` (store location, not the buyer’s); `boosts`; `listing_images`; `rating_aggregates`. No `type=service` filter (R-L16).
+- **States:** empty results; filter-empty with clear; error retry. **notFound(): no.**
+- **Composes:** `SearchBar`, `FilterSheet`, `FilterChips`, `ListingCard`, `EmptyState`, `ErrorRetryCard`.
+- **Gap:** REG-58 stays a kit defect on `SearchBar` (§8). It is not restated as styling.
+
+#### P03 Category — `/category/[slug]`
+- **v1 #3 KEPT.** FR-PUB-3.
+- **Role:** public.
+- **Data:** `categories` by `slug` and children by `parent_id`; active `listings`; `listing_images`; `rating_aggregates`.
+- **States:** empty category; error retry. **notFound(): yes** when missing or `is_active=false`. **Guard E.**
+- **Composes:** `FilterSheet`, `ListingCard`, `EmptyState`, `ErrorRetryCard`.
+
+#### P04 Listing detail — `/listing/[id]`
+- **v1 #4 AMENDED.** FR-PUB-4, FR-QTE-1, FR-CAT-1, R-L10, R-N06, REG-44, REG-51.
+- **Role:** public. Writes need an account.
+- **Data:** `listings` (`price`, `price_type` rendered only as fixed, `weight_g`, `length_mm`, `width_mm`, `height_mm`, `specs`, `prep_days`, `stock_qty`, `is_made_to_order`, `title_ar`, `title_en`, `description_ar`); `listing_images`; `listing_tags`; `stores` + `seller_profiles` (`level`, `is_verified`, `avg_response_hours`) — **no pickup street**; `rating_aggregates`; `reviews` (`is_visible`, `rating`, `body`, `seller_reply`) with **no buyer name or location**; `review_photos`; `wishlists`; `restock_alerts`.
+- **States:** no reviews → empty copy; sold out → restock CTA; removed → not found; error retry. **notFound(): yes.** **Guard E.**
+- **Composes:** `ImageGallery`, `PriceBlock` (fixed only), `WishlistButton`, `SellerMiniCard`, `StarRating`, `RatingSummary`, `StockBadge`.
+- **Binding:** Add to cart and Request price require an account (#6), not a verified phone (REG-79 OPEN). Request price creates an `inquiries` row and opens #14. Share is the gap in §8 (REG-51). Store name navigation is the gap in §8 (REG-72).
+
+#### P05 Storefront — `/store/[slug]`
+- **v1 #5 AMENDED.** FR-PUB-5, R-S07, R-V03, REG-85, REG-51, REG-44.
+- **Role:** public.
+- **Data:** `stores` by `slug` (`name_ar`, `name_en`, `bio_ar`, `avatar_url`, `cover_url`, `governorate`, `city`, `return_policy`, `status`). **Do not render** `payment_methods` or `delivery_options` or `store_pickup_addresses`. `seller_profiles` (`level`, `is_verified`, `avg_response_hours`); `rating_aggregates`; active `listings`; visible `reviews` with no buyer name or location; `store_follows`; `store_categories` ids for display of approved categories (public read of ids, ERD §8).
+- **States:** no listings; no reviews; suspended or unknown → not found. **notFound(): yes.** **Guard E.**
+- **Composes:** `FollowButton`, `ListingCard`, `StarRating`, `RatingSummary`, `LevelBadge`, `VerifiedBadge`, `Tabs`.
+- **Binding:** REG-85 OPEN on the return-policy block. No delivery-mode picker. Share is §8.
+
+#### P67 Buyer terms — `/legal/terms`
+- **NEW.** FR-AGR-1, R-G05, R-G01, AC-AGR-4.
+- **Role:** public.
+- **Data:** lawyer-authored body is not a table. Current version label is the admin setting key the ERD already reserves for agreement versions (`admin_settings`, admin-only). The public page renders the prose artifact engineering is given. It does not invent prose (R-G07).
+- **States:** prose not yet supplied → empty “not published”, not a fake policy. Error retry. **notFound(): no.**
+- **Composes:** `AppTopbar`, `Footer`.
+- **Binding:** #8 links here and records `agreement_acceptances` (`document` buyer terms, `version_label`).
+
+#### P68 Seller agreement — `/legal/seller-agreement`
+- **NEW.** FR-AGR-1, R-G04, R-G05, AC-AGR-4.
+- **Role:** public (readable without an account). Signature happens on #23.
+- **Data:** same as P67 for the seller-agreement version. Acceptance row is written from #23, not from this page.
+- **States:** unpublished empty. **notFound(): no.**
+- **Composes:** `AppTopbar`, `Footer`.
+
+#### P69 Return & refund policy — `/legal/returns`
+- **NEW.** FR-AGR-1, R-G05, AC-AGR-4. This is the **platform policy page**, not #71 and not #28.
+- **Role:** public.
+- **Data:** lawyer prose plus its version label. **REG-85 OPEN:** do not decide whether #28’s `stores.return_policy` overrides, repeats, or sits beside this page.
+- **States:** unpublished empty. **notFound(): no.**
+- **Composes:** `AppTopbar`, `Footer`.
+
+#### P70 Privacy — `/legal/privacy`
+- **NEW.** FR-AGR-1, R-G05, AC-AGR-4.
+- **Role:** public.
+- **Data:** lawyer prose plus its version label.
+- **States:** unpublished empty. **notFound(): no.**
+- **Composes:** `AppTopbar`, `Footer`.
+
+### 5.2 Auth
+
+#### P06 Phone entry — `/auth/login`
+- **v1 #6 KEPT.** FR-AUTH-1, R-A01, R-A03, OD-4. Gate surface for FR-AUTH-4.
+- **Role:** public.
+- **Data:** `users.phone_number` uniqueness branch; `otp_tokens` create (`token_hash`, `expires_at`, `attempt_count`). Google OAuth find-or-create. No password.
+- **States:** invalid phone; rate limit; suspended (R-A05). **notFound(): no.**
+- **Composes:** `Button`, `Input`. Auth shell is existing layout, not a new kit component.
+- **Binding:** REG-79 does not add a trigger on this page. The page only verifies a phone when some held surface sends the user here.
+
+#### P07 OTP — `/auth/verify`
+- **v1 #7 KEPT.** FR-AUTH-2, AC-AUTH-2.
+- **Role:** public, mid-auth.
+- **Data:** `otp_tokens` (`token_hash`, `expires_at`, `is_used`, `attempt_count` ≤ 5). Success sets `users.last_login_at`. Sessions UI stays out (OD-5); do not build a sessions page.
+- **States:** expired; lockout. **notFound(): no.**
+- **Composes:** `Input`, `Button`.
+- **i18n:** OTP digits are an LTR island.
+
+#### P08 Complete profile — `/auth/register`
+- **v1 #8 AMENDED.** FR-AUTH-3, R-G01, AC-AGR-1.
+- **Role:** authenticated, profile incomplete.
+- **Data:** insert `buyer_profiles` (`full_name`, `governorate`, `city`, `interests`, `notification_prefs`); `categories` for interests; insert `agreement_acceptances` for the current buyer-terms `version_label`. Signup without that acceptance does not finish (AC-AGR-1).
+- **States:** validation errors. **notFound(): no.**
+- **Composes:** `Input`, `Select`, `Button`. Link to P67.
+- **Binding:** which of the four documents are in the **checkout** gate is REG-88, not this page. This page always takes buyer terms (R-G01).
+
+### 5.3 Buyer
+
+#### P09 Account — `/account`
+- **v1 #9 KEPT.** FR-BUY-1, OD-2.
+- **Role:** authenticated buyer.
+- **Data:** `buyer_profiles` own row; `users.phone_number` read-only (R-A06); `users.deleted_at` for deactivate. No anonymize action.
+- **States:** save error. **notFound(): no.**
+- **Composes:** `Input`, `Select`, `ConfirmDialog`, `Button`.
+- **Gap:** REG-59 (`/account` unstyled) stays open CD-DELTA-5. Do not restyle it here.
+
+#### P10 Addresses — `/account/addresses`
+- **v1 #10 KEPT.** FR-BUY-2, ERD §3.9.
+- **Role:** authenticated buyer.
+- **Data:** `addresses` own CRUD (`label`, `governorate`, `city`, `street_address`, `building_notes`, `is_default`).
+- **States:** empty list + add CTA; save/delete error. **notFound(): no.**
+- **Composes:** `AddressForm`, `EmptyState`, `ConfirmDialog`.
+
+#### P11 Wishlist — `/wishlist`
+- **v1 #11 KEPT.** FR-BUY-3, R-N06.
+- **Role:** authenticated.
+- **Data:** `wishlists` → `listings`, `listing_images`, `rating_aggregates`; `restock_alerts`.
+- **States:** empty; tombstone for a removed listing; error retry. **notFound(): no.**
+- **Composes:** `ListingCard`, `WishlistButton`, `EmptyState`, `ErrorRetryCard`.
+
+#### P12 Following — `/account/following`
+- **v1 #12 KEPT.** FR-BUY-4.
+- **Role:** authenticated.
+- **Data:** `store_follows` → `stores`, `seller_profiles.level`, `rating_aggregates`.
+- **States:** empty; suspended store hidden. **notFound(): no.**
+- **Composes:** `StoreCard`, `EmptyState`, `ErrorRetryCard`. Store-name navigation is §8 (REG-72).
+
+#### P13 Buyer inbox — `/inbox`
+- **v1 #13 AMENDED.** FR-BUY-5, FR-QTE-1.
+- **Role:** authenticated buyer.
+- **Data:** `inquiries` where `buyer_id` is self (`status`, `last_message_at` is unmaintained — derive order from `inquiry_messages.sent_at`, REG-43); `inquiry_messages.is_read`; `listings` and `stores` for context. **No** `converted_to_order_id` checkout CTA (v2 checkout does not write it, ERD §6.3).
+- **States:** empty; error retry. **notFound(): no.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`, `StatusBadge`.
+- **Binding:** no off-platform contact (§4.g).
+
+#### P14 Buyer quote thread — `/inbox/[inquiryId]`
+- **v1 #14 AMENDED.** FR-QTE-1, R-Q05, R-Q06, AC-QTE-4, AC-QTE-5.
+- **Role:** authenticated buyer, party to the thread.
+- **Data:** `inquiries` (`quoted_price`, `quoted_prep_days`, `quote_expires_at`, `status`); `inquiry_messages`; `listings.price` (the floor of the band, shown as the listing price). Accept inserts `cart_items` (`is_custom=true`, `inquiry_id`, `unit_price` = quoted price).
+- **States:** declined/expired read-only; accept refused after expiry; error on send. **notFound(): yes** if not the buyer’s thread. **Guard E.**
+- **Composes:** `MessageThread`, `Button`, `ErrorRetryCard`.
+- **Binding:** no checkout button. No seller phone. Accept goes to #66.
+
+#### P66 Cart — `/cart`
+- **NEW.** FR-CART-1, R-C02–R-C07, AC-CART-1–7, REG-82, REG-91.
+- **Role:** authenticated buyer. Guest never has rows (R-C01).
+- **Data:** `cart_items` (`quantity`, `unit_price`, `is_custom`, `inquiry_id`, `listing_id`); `listings` (`title_ar`, `title_en`, `stock_qty`, `weight_g`, `status`, `store_id`); `inquiries.quote_expires_at` for custom lines; `stores` name only. Blocked is **derived** (stock or quote expiry), not a column. Delivery figure is the REG-91 projection, not a `cart_items` column and not `store_pickup_addresses`.
+- **States:** empty cart; blocked line named in the error; custom line dropped after restore with a request-a-new-quote prompt (REG-82); error retry. **notFound(): no.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`, `Button`, `ConfirmDialog` for remove. **Gap:** cart line (§8). Do not reuse `ListingCard` as a qty line.
+- **Binding:** running subtotal, one delivery figure, one total (R-C03, AC-CHK-6). No per-seller fee. No commission. Phone gate not encoded (REG-79).
+
+#### P15 Checkout — `/checkout`
+- **v1 #15 AMENDED.** FR-CHK-1, FR-PAY-1, FR-AGR-1, FR-COU-1, FR-COM-1, R-O11–R-O16, R-G02, AC-CHK-1–6, AC-PAY-1, AC-PAY-2, AC-AGR-2, REG-88, REG-89, REG-91, AC-AUTH-4.
+- **Role:** authenticated buyer. Verified phone **holds** on this surface.
+- **Data:** reads `cart_items` and the same joins as #66. Reads own `addresses`. Reads `agreement_acceptances` for the current versions. Writes, all or nothing: `master_orders` (`buyer_id`, `betk_ref`, `delivery_address_id`, recipient snapshot columns, `combined_delivery_total`, `payment_deadline`), N `seller_orders`, N `order_items`, N `shipments`, 2 `payments` per seller order. Stock decrement is part of that write (R-L05). **Does not read** a confirmed `inquiries.status`.
+- **States:** blocked line refuses checkout (AC-CHK-3); version gate blocks completion until acceptance (AC-CHK-4) — the **set** of documents is **OPEN REG-88**, so the panel lists the four R-G05 documents as available and does not hard-code which subset blocks; phone missing → #6 (held); no address → inline add via `AddressForm`; place-order failure leaves no partial master. **notFound(): no.**
+- **Composes:** `AddressForm`, `Button`, `ConfirmDialog`. **Gaps:** checkout seller sections, agreement panel (§8).
+- **Binding:** one master, N seller **sections** (items only), **one** combined delivery total, one order total, deposit = 50% of (subtotal + combined delivery). No delivery-mode picker. No commission line. Rounding of the single transfer across children is **REG-89 OPEN** — the page shows the master 50% and does not encode an allocation. Buyer does not see seller pickup street (AC-VIS-2).
+
+#### P16 Payment instructions — `/checkout/confirmation/[masterId]`
+- **v1 #16 AMENDED.** FR-BUY-7, FR-PAY-1, R-O15, R-O18, R-O21, R-O22, AC-PAY-1, AC-PAY-3, AC-PAY-6, N22.
+- **Role:** the master buyer.
+- **Data:** `master_orders` (`betk_ref`, `combined_delivery_total`, `proof_path`, `transfer_reference`, `proof_uploaded_at`, `payment_deadline`); `admin_settings.betk_instapay_handle` only (REG-69 literal key). Child `payments.proof_path` is written at admin verification, not by this page. Proof file goes to the buyer’s own prefix in the `docs` bucket (`storage.objects`). Seller has no page that reads that object (§9).
+- **States:** instructions always reachable from #18; upload error; window expired → explain restore (REG-82) and link #66. **notFound(): yes** if not the buyer’s master. **Guard E.**
+- **Composes:** `ImageUploader`, `Button`, `ErrorRetryCard`.
+- **Binding:** InstaPay only. No Vodafone/Orange buyer rails. No seller handles. One proof. Cancel offered only before proof upload (AC-PAY-6).
+
+#### P17 Order history — `/orders`
+- **v1 #17 AMENDED.** FR-BUY-8, AC-CLO-2.
+- **Role:** authenticated buyer.
+- **Data:** `master_orders` (`betk_ref`, `created_at`, `combined_delivery_total`); child `seller_orders.status` to derive the master aggregate (no status column on the master, ERD §6.1). Preview from `order_items`.
+- **States:** empty; filter empty; error retry. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`, `ErrorRetryCard`, `Tabs`.
+
+#### P18 Master order — `/orders/[masterId]`
+- **v1 #18 AMENDED.** FR-BUY-9, FR-VIS-1, FR-PAY-2, REG-83, REG-84, R-O03, R-O22, AC-CLO-2, AC-VIS-2.
+- **Role:** the master buyer.
+- **Data:** `master_orders` (buyer snapshot columns — this buyer typed them — and `combined_delivery_total` **once**); child `seller_orders` (`status`, `subtotal`, `display_ref`) — **do not render** each child’s `delivery_fee` (R-O28); `order_items`; `payments` for this buyer (deposit + balance status per seller order); `order_status_history`; `order_messages`; whether a `reviews` / `disputes` / `returns` row exists per seller order. **Do not render** any seller pickup street (`store_pickup_addresses` buyer SELECT is none).
+- **States:** no messages → empty thread prompt. **No** pickup/remote empty shipment state (§2.2). Error retry. **notFound(): yes** if not own. **Guard E.**
+- **Composes:** `OrderTimeline`, `StatusBadge`, `MessageThread`, `Button`.
+- **Binding:** sections per seller order. Review entry on the section → #19 (REG-83). Dispute entry on the section → #20 (REG-84). Return entry on the section → #71, only when that child is `delivered`. Cancel only before proof. No close button. No master-level dispute. Tracking events are buyer-readable via `shipment_tracking_events`; the seller is not the actor who writes them.
+
+#### P19 Review — `/orders/[masterId]/[sellerOrderId]/review`
+- **v1 #19 AMENDED.** FR-BUY-10, R-R01–R-R03, R-O07, REG-83, REG-44.
+- **Role:** buyer of that delivered seller order.
+- **Data:** insert `reviews` (`order_id` = seller order, UNIQUE, `rating`, `body`, `store_id`); `review_photos` ≤ 3. One review per seller order. No master review.
+- **States:** already reviewed → edit if inside `edit_deadline`, else read-only; not delivered → blocked error. **notFound(): yes** if the seller order is not this buyer’s. **Guard E.**
+- **Composes:** `StarRating`, `ImageUploader`, `Button`.
+- **Binding:** the form does not ask for a public name or a location. The published review uses `buyerLabel`.
+
+#### P20 Raise dispute — `/orders/[masterId]/[sellerOrderId]/dispute/new`
+- **v1 #20 AMENDED.** FR-BUY-11, R-D01, R-O06, REG-84.
+- **Role:** buyer of that seller order.
+- **Data:** insert `disputes` (`order_id` = seller order, UNIQUE, `reason`, `description`, `store_id`) and `dispute_evidence`. **Do not** offer return/refund as a dispute reason alias. Returns are #71 (`return_evidence`, not `dispute_evidence`, N25).
+- **States:** ineligible status → blocked error; existing dispute → go to #21. **notFound(): yes** if not own. **Guard E.**
+- **Composes:** `Select`, `Textarea`, `ImageUploader`, `Button`.
+
+#### P21 Buyer dispute — `/disputes/[id]`
+- **v1 #21 KEPT.** FR-BUY-12, R-D04.
+- **Role:** the dispute’s buyer.
+- **Data:** `disputes`, `dispute_evidence`, `dispute_messages`, seller-order summary (`display_ref` or master `betk_ref` for the buyer’s own master — the buyer may see their master ref). Resolution and `resolution_notes`.
+- **States:** no messages yet; resolved → read-only thread. **notFound(): yes** if not own. **Guard E.**
+- **Composes:** `MessageThread`, `StatusBadge`, `SLABadge`, `ErrorRetryCard`.
+
+#### P71 Return request — `/orders/[masterId]/[sellerOrderId]/return`
+- **NEW.** FR-RET-1, R-U01, R-U02, AC-RET-1, AC-RET-2.
+- **Role:** buyer of that seller order.
+- **Data:** insert `returns` (`seller_order_id`, `buyer_id`, `store_id`, `reason`, `status='requested'`) and `return_evidence.storage_path`. Evidence is dedicated. A dispute photo does not count.
+- **States:** not delivered → blocked (AC-RET-1); no evidence → refused; submit error. **notFound(): yes** if not own. **Guard E.**
+- **Composes:** `Textarea`, `ImageUploader`, `Button`.
+- **Binding:** success goes to #72. No buyer name field. Stock is not a control on this page (R-U05).
+
+#### P72 Buyer return — `/returns/[id]`
+- **NEW.** FR-RET-1, R-U03.
+- **Role:** the return’s buyer.
+- **Data:** `returns` (`reason`, `status`, `created_at`, `resolved_at`); `return_evidence`; linked seller-order ref. Seller decision and any later dispute id (`disputes.return_id`) as a link to #21 when present.
+- **States:** waiting on seller; accepted; rejected → dispute link. **notFound(): yes** if not own. **Guard E.**
+- **Composes:** `StatusBadge`, `EmptyState`, `ErrorRetryCard`.
+
+#### P22 Notifications — `/notifications`
+- **v1 #22 KEPT.** FR-BUY-13, R-N07, R-N08, R-F05.
+- **Role:** the signed-in user (buyer or seller; same pattern, own rows).
+- **Data:** `notifications` (`type`, `channel`, `title`, `body`, `data`, `is_read`, `read_at`).
+- **States:** empty; stale deep link → fallback copy; error retry. **notFound(): no.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`. Bell dropdown is not a page.
+- **Binding:** SMS is the launch channel (R-N07). WhatsApp is not a conversation. SLA reminders and breach notices arrive here; they are not their own routes.
+
+### 5.4 Seller
+
+Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it shows no order.
+
+#### P23 Onboarding — `/seller/onboarding`
+- **v1 #23 AMENDED.** FR-SEL-1, FR-CAT-1, R-L20, R-S10, R-G04, AC-AGR-3, AC-AUTH-4, FR-COU-1 (pickup, not modes).
+- **Role:** authenticated user becoming a seller. Verified phone **holds**.
+- **Data:** `seller_profiles`; `stores` (name, bio, slug, public `governorate`/`city`); `store_pickup_addresses` (the pickup street — this seller’s own row); `store_categories` up to the `admin_settings` category limit (default 3, R-M07) — the cap is the setting, not a hardcoded CHECK; `seller_documents` national id, plus food types and `food_social_url` when a food category is selected (R-S10; the URL is admin-only via document policy, not a public profile column); `agreement_acceptances` seller agreement; `categories` picker.
+- **States:** slug taken; missing settlement handle later blocks publish (the handle itself is #29); resume wizard. **notFound(): no.** Stepper is one route.
+- **Composes:** `Stepper`, `Input`, `ImageUploader`, `Select`, `Button`. Link to P68.
+- **Binding:** delivery-mode toggles are absent. Categories are the store-category surface (max 3). Agreement e-sign is required before submit (AC-AGR-3).
+
+#### P24 Application status — `/seller/status`
+- **v1 #24 KEPT.** FR-SEL-2, R-S08.
+- **Role:** seller whose `seller_profiles.status` is not active.
+- **Data:** `seller_profiles.status`, `rejected_reason`, `submitted_at`; `seller_documents` for resubmit.
+- **States:** pending; rejected with resubmit; suspended. **notFound(): no.**
+- **Composes:** `StatusBadge`, `ImageUploader`, `Button`, `ErrorRetryCard`.
+
+#### P25 Dashboard — `/seller`
+- **v1 #25 AMENDED.** FR-SEL-3, FR-SLA-1, REG-90, §9 `revenue_egp`.
+- **Role:** active seller.
+- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`). **`revenue_egp` is not rendered** until §9 closes. `rating_aggregates`; `seller_profiles` (`level`, `level_score`, `avg_response_hours`); recent `seller_orders` on the §4.a allow-list only; low stock derived from `listings.stock_qty` and `low_stock_threshold` (OD-1).
+- **States:** no listings yet → empty CTA; per-widget error. **notFound(): no.**
+- **Composes:** `LevelBadge`, `RatingSummary`, `EmptyState`, `ErrorRetryCard`. **Gap:** seller money trio (§8) for any order row.
+- **Binding:** no acceptance queue. No buyer column. No fee. No order total.
+
+#### P26 Store profile — `/seller/store`
+- **v1 #26 KEPT.** FR-SEL-4, R-S03.
+- **Role:** seller.
+- **Data:** `stores` (`name_ar`, `name_en`, `bio_ar`, `avatar_url`, `cover_url`, `slug`, `slug_changed_at`, public `governorate`, `city`, `min_order_egp`). Approved `store_categories` **read-only** (writes are #23 / admin approval).
+- **States:** slug locked. **notFound(): no.**
+- **Composes:** `Input`, `ImageUploader`, `Button`.
+
+#### P27 Pickup address — `/seller/store/delivery`
+- **v1 #27 AMENDED.** FR-SEL-5, R-K05, R-V03.
+- **Role:** seller.
+- **Data:** `store_pickup_addresses` (`governorate`, `city`, `street_address`, `building_notes`). Do not write `stores.delivery_options`. Do not offer mode toggles.
+- **States:** save error. **notFound(): no.**
+- **Composes:** `AddressForm` only if its fields match this table; otherwise `Input` + `Select`. A mismatch is not a restyle — map fields at the composition boundary.
+- **Binding:** this address is never shown to buyers.
+
+#### P28 Store return policy — `/seller/store/returns`
+- **v1 #28 KEPT.** FR-SEL-6. **OPEN REG-85.**
+- **Role:** seller.
+- **Data:** `stores.return_policy` text. Rendered on #5. Do not decide its relationship to P69.
+- **States:** null allowed; save error. **notFound(): no.**
+- **Composes:** `Textarea`, `Button`.
+
+#### P29 Settlement — `/seller/store/payments`
+- **v1 #29 KEPT.** FR-SEL-7, R-S09.
+- **Role:** seller.
+- **Data:** `stores.payment_methods` (`instapay_handle`, `vodafone_cash`, `orange_cash`). `cod_enabled` stays dead (REG-63) and is not a publish gate. These are BETK→seller settlement destinations.
+- **States:** empty warning until one handle exists. **notFound(): no.**
+- **Composes:** `Input`, `Button`.
+
+#### P30 Listings — `/seller/listings`
+- **v1 #30 KEPT.** FR-SEL-8, R-L10.
+- **Role:** seller.
+- **Data:** own `listings` (`title_ar`, `price`, `stock_qty`, `status`, `view_count`, `deleted_at`); `listing_images` hero.
+- **States:** empty CTA; error retry. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`, `Tabs`, `ConfirmDialog`. **Gap:** data table (§8).
+
+#### P31 Create listing — `/seller/listings/new`
+- **v1 #31 AMENDED.** FR-SEL-9, FR-CAT-1, AC-CAT-1–6, R-L16–R-L22, R-S09.
+- **Role:** seller.
+- **Data:** insert `listings` (`type='product'` only, `price_type='fixed'`, `price`, `title_ar`, `title_en`, `description_ar`, `category_id` ∈ approved `store_categories`, `weight_g`, `length_mm`, `width_mm`, `height_mm`, `specs`, `prep_days`, `stock_qty`, `is_made_to_order`, `low_stock_threshold`); `listing_images`; `listing_tags`. Service publish refused. Prep above the cap refused. Price outside the band refused. The band keys are admin settings, not shown as a seller-editable rate.
+- **States:** draft skips publish checks; publish checklist inline. **notFound(): no.**
+- **Composes:** `Input`, `Textarea`, `Select`, `ImageUploader`, `PriceBlock`, `Button`.
+
+#### P32 Edit listing — `/seller/listings/[id]/edit`
+- **v1 #32 AMENDED.** Same PRD and data as P31, update path.
+- **Role:** owning seller.
+- **States:** same checklist. **notFound(): yes** if not this store’s listing. **Guard E.**
+- **Composes:** same as P31.
+
+#### P33 Inventory — `/seller/inventory`
+- **v1 #33 AMENDED.** FR-SEL-10, FR-STK-1, AC-STK-5, OD-1, R-L07.
+- **Role:** seller.
+- **Data:** `listings.stock_qty`, `low_stock_threshold`, `is_made_to_order`, `status`, `stock_touched_at`. Restock is the seller’s R-L07 act. No `inventory_alerts` table. Waiting buyers are a count of `restock_alerts`, not their identities.
+- **States:** no tracked products → empty. **notFound(): no.**
+- **Composes:** `StockBadge`, `Input`, `Button`, `EmptyState`. **Gap:** data table (§8).
+
+#### P34 Boost listing — `/seller/listings/[id]/boost`
+- **v1 #34 KEPT.** FR-SEL-11, R-B01, R-B02, REG-80. Not expanded.
+- **Role:** seller.
+- **Data:** `boost_packages` (`duration_hours`, `price_egp`, `is_active`); insert `boosts` (`listing_id`, `store_id`, `package_id`, `payment_method`, `amount_paid`, `status='pending_payment'`).
+- **States:** active boost already → blocked. **notFound(): yes** if not own listing. **Guard E.**
+- **Composes:** `Button`, `ErrorRetryCard`.
+- **Binding:** v1 package copy stands. This is the seller’s own boost payment, not an order fee. Do not add fields.
+
+#### P35 Boost history — `/seller/boosts`
+- **v1 #35 KEPT.** FR-SEL-12, R-B05, REG-80.
+- **Role:** seller.
+- **Data:** own `boosts` (`status`, `starts_at`, `expires_at`, `views_during_boost`, `amount_paid`); `boost_packages`; `listings` title.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`, `ErrorRetryCard`.
+
+#### P36 Seller inbox — `/seller/inbox`
+- **v1 #36 AMENDED.** FR-SEL-13, FR-QTE-1, R-V02.
+- **Role:** seller.
+- **Data:** `inquiries` for `store_id = my_store_id()` (`status`, `quoted_at`); `inquiry_messages`; `listings` title. **No buyer name.** Label is `buyerLabel`. Do not join `buyer_id`.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`. No confirm-order action.
+
+#### P37 Seller quote — `/seller/inbox/[inquiryId]`
+- **v1 #37 AMENDED.** FR-QTE-1, R-Q02–R-Q04, R-Q07, AC-QTE-2, AC-QTE-3.
+- **Role:** the store on the inquiry.
+- **Data:** update `inquiries.quoted_price`, `quoted_prep_days`, `quote_expires_at`, `quoted_at`. Band is `[listings.price, ceiling]` with ceiling from admin settings (default 2×). Quote below the listing price or above the ceiling is refused. Prep is required. `inquiry_messages` body. Sender label `buyerLabel`.
+- **States:** send error; band error inline. **notFound(): yes** if not this store. **Guard E.**
+- **Composes:** `MessageThread`, `Input`, `Button`.
+- **Binding:** no checkout-enable control. No buyer phone, address, city, or governorate. The quoted price is a goods price, not a delivery fee.
+
+#### P38 Seller orders — `/seller/orders`
+- **v1 #38 AMENDED.** FR-SEL-14, FR-VIS-1, FR-SLA-1, REG-90, AC-VIS-1, AC-VIS-4.
+- **Role:** seller.
+- **Data:** own `seller_orders` on the §4.a allow-list; `order_items` preview. **Deny-list enforced.** No accept action. No `payments` columns.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`. **Gaps:** data table, seller money trio (§8).
+- **Binding:** columns on screen are order ref, items, prep deadline, subtotal, commission, net. Nothing else about the buyer or the fee.
+
+#### P39 Seller order — `/seller/orders/[id]`
+- **v1 #39 AMENDED.** FR-SEL-15, FR-ESC-1, FR-SLA-1, FR-RET-1, R-E01–R-E03, R-U03, R-K07, AC-ESC-1, AC-ESC-2, AC-COU-4, AC-VIS-1.
+- **Role:** the store on that seller order.
+- **Data:** §4.a allow-list; `order_items`; `order_messages` with `buyerLabel`; `order_status_history`; `returns` for this seller order (`status`, `reason`) and `return_evidence` (seller may accept or reject — R-U03); escalation columns the seller may set: `escalated_at`, `escalation_reason`, `escalation_note`. Seller status writes are only `preparing` and `ready`.
+- **States:** no messages → empty prompt; cancel attempt → refused inline (AC-ESC-1). **notFound(): yes** if not this store. **Guard E.**
+- **Composes:** `OrderTimeline`, `StatusBadge`, `MessageThread`, `Button`, `ConfirmDialog`, `Textarea`. **Gap:** seller money trio (§8).
+- **Binding:** no buyer name, phone, address, city, governorate. No `delivery_fee`, no `total_amount`. No shipment panel and no tracking writer (`shipments` seller SELECT is none). The page shows the order ref and tells the seller to write that ref on the box (R-K07). It does not render the courier label. No sibling seller orders (R-V04: do not read other rows, and do not join `master_orders`). Return reject creates a dispute path for admin; it does not show the buyer. **Do not render `refunded_amount`** (§9).
+
+#### P40 Seller reviews — `/seller/reviews`
+- **v1 #40 AMENDED.** FR-SEL-16, R-R04, REG-44, REG-83.
+- **Role:** seller.
+- **Data:** `reviews` for the store (`rating`, `body`, `seller_reply`, `is_visible`); `review_photos`; `rating_aggregates`. Reply once. **No buyer name, no buyer location, no governorate.**
+- **States:** empty; already replied → read-only. **notFound(): no.**
+- **Composes:** `StarRating`, `RatingSummary`, `Textarea`, `Button`, `EmptyState`.
+
+#### P41 Earnings — `/seller/earnings`
+- **v1 #41 AMENDED.** FR-SEL-17, FR-CLO-1, R-O26, R-O29, AC-CLO-3, REG-90, REG-86.
+- **Role:** seller.
+- **Data:** derived from own `seller_orders` (`subtotal`, `commission_amount`, `confirmed_at`, `balance_confirmed_at`, `delivered_at`, `payout_eligible_at`) and own `payouts`. Eligible display uses subtotal − commission for seller orders whose `payout_eligible_at` has passed and whose balance is confirmed, minus `payouts` in `processed`. **Do not read `payments`.** **Do not read `return_hold_hours`** (admin-only, REG-86). **Do not render `revenue_egp`.** **Do not subtract `refunded_amount`** while §9 is open — say the refund adjustment is not on this screen yet, do not invent a second figure.
+- **States:** no earnings → empty; per-widget error. **notFound(): no.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`. **Gap:** seller money trio (§8).
+- **Binding:** subtotal, commission, net. No fee. No order total. No close control.
+
+#### P42 Transactions — `/seller/transactions`
+- **v1 #42 AMENDED.** FR-SEL-18, REG-90.
+- **Role:** seller.
+- **Data:** one row per own `seller_orders`: ref, `subtotal`, `commission_amount`, net, `status`, `confirmed_at`, `balance_confirmed_at`. Not `payments.amount`, not `payment_type`, not `delivery_fee`, not `total_amount`.
+- **States:** empty; error retry. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`. **Gaps:** data table, seller money trio (§8).
+
+#### P43 Payout list — `/seller/payouts`
+- **v1 #43 AMENDED.** FR-SEL-19, R-O09, R-O10, REG-90.
+- **Role:** seller.
+- **Data:** own `payouts` (`amount`, `method`, `status`, `rejection_reason`, `requested_at`). The available figure is the same derived net as #41.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`. **Gap:** seller money trio for the available figure (§8).
+
+#### P44 Request payout — `/seller/payouts/new`
+- **v1 #44 AMENDED.** FR-SEL-19, R-O09, AC-AUTH-4.
+- **Role:** seller. Verified phone **holds**.
+- **Data:** insert `payouts` (`amount` ≥ `min_payout_egp`, `method`, `account_details`). Amount cannot exceed the derived net from #41.
+- **States:** below minimum → inline; submit error. **notFound(): no.**
+- **Composes:** `Input`, `Select`, `Button`.
+- **Binding:** `payouts.amount` is the number the seller types. It is not a delivery fee. The cap it is checked against must stay fee-free (§4.a net).
+
+#### P45 Level — `/seller/level`
+- **v1 #45 KEPT.** FR-SEL-20, R-S06.
+- **Role:** seller.
+- **Data:** `seller_profiles` (`level`, `level_score`, `total_orders_completed`, `total_reviews_count`, `avg_response_hours`); `rating_aggregates.average_rating`.
+- **States:** new seller at bronze. **notFound(): no.**
+- **Composes:** `LevelBadge`, `ErrorRetryCard`.
+
+#### P46 Analytics — `/seller/analytics`
+- **v1 #46 AMENDED.** FR-SEL-21, REG-80 boost clause retained, REG-90.
+- **Role:** seller.
+- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`, `snapshot_date`). **Omit `revenue_egp`** (§9). `boosts.views_during_boost` for the retained boost ROI clause. Do not chart `total_amount`.
+- **States:** no snapshots yet → empty. **notFound(): no.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`. Charts are composition of existing layout, not a new visual spec. If a chart component is required, it is §8 only when the kit cannot draw a series — **flagged** as ChartSeries in §8 because the kit has none.
+
+#### P47 Seller dispute — `/seller/disputes/[id]`
+- **v1 #47 AMENDED.** FR-SEL-22, R-V02, REG-84, REG-44 if a review is linked.
+- **Role:** the store on the dispute.
+- **Data:** `disputes`, `dispute_evidence`, `dispute_messages`, seller-order allow-list for the linked order. Sender label `buyerLabel`. Admin resolution is read-only.
+- **States:** awaiting seller; resolved → read-only. **notFound(): yes** if not this store. **Guard E.**
+- **Composes:** `MessageThread`, `StatusBadge`, `SLABadge`.
+- **Binding:** no buyer name, phone, address, city. No fee, no order total on the linked summary.
+
+### 5.5 Admin
+
+Admin may see buyer identity and both fees (R-V01, journeys §5.5). That permission does not leak onto seller pages.
+
+#### P48 Admin dashboard — `/admin`
+- **v1 #48 KEPT.** FR-ADM-1.
+- **Role:** admin.
+- **Data:** `platform_snapshots`; live counts `seller_profiles` pending, `disputes` near `sla_deadline`, `flagged_content` pending, seller orders with `escalated_at` set and `escalation_resolved_at` null (link to #75).
+- **States:** no snapshot yet; per-widget error. **notFound(): no.**
+- **Composes:** `SLABadge`, `ErrorRetryCard`, `EmptyState`.
+
+#### P49 Seller approvals — `/admin/sellers/approvals`
+- **v1 #49 AMENDED.** FR-ADM-2, R-S10, R-M01.
+- **Role:** admin.
+- **Data:** `seller_profiles` pending; `stores`; `seller_documents` including food types; `store_categories`; `agreement_acceptances` seller agreement; `store_pickup_addresses` so approval can see the pickup. Signed URLs for documents. Writes `moderation_logs`.
+- **States:** empty queue; signed-URL error. **notFound(): no** on the queue. A missing application inside a drawer is an error, not a new route.
+- **Composes:** `SLABadge`, `ImageUploader` is the wrong tool for a signed view — use a read-only preview. **Gap:** document viewer (§8) if the kit cannot show a signed image without upload chrome.
+- **Binding:** `food_social_url` stays on this admin surface only.
+
+#### P50 Users — `/admin/users`
+- **v1 #50 KEPT.** FR-ADM-3, R-M03, R-M04.
+- **Role:** admin.
+- **Data:** `users`; `seller_profiles`; `seller_strikes`; `moderation_logs`.
+- **States:** filter empty. **notFound(): no.**
+- **Composes:** `ConfirmDialog`, `StatusBadge`. **Gap:** data table (§8).
+
+#### P51 Listings moderation — `/admin/listings`
+- **v1 #51 KEPT.** FR-ADM-4, R-L10.
+- **Role:** admin.
+- **Data:** all `listings`; `flagged_content`; `moderation_logs`.
+- **States:** filter empty. **notFound(): no.**
+- **Composes:** `StatusBadge`. **Gap:** data table (§8).
+
+#### P52 Flags — `/admin/moderation/flags`
+- **v1 #52 KEPT.** FR-ADM-5, R-M05, R-M06.
+- **Role:** admin.
+- **Data:** `flagged_content`; resolved `listings` or `reviews` by `content_id`. Review content still has no buyer name (REG-44).
+- **States:** empty “queue is clear”. **notFound(): no.**
+- **Composes:** `SLABadge`, `EmptyState`.
+
+#### P53 Review moderation — `/admin/reviews`
+- **v1 #53 AMENDED.** FR-ADM-6, R-R06, REG-44.
+- **Role:** admin.
+- **Data:** `reviews` (`admin_verified`, `is_visible`, `rating`, `body`); `review_photos`. Identity of the author is **not** rendered. Moderate the text and photos. The user record stays on #50.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StarRating`, `Button`.
+
+#### P54 Categories — `/admin/categories`
+- **v1 #54 KEPT.** FR-ADM-7.
+- **Role:** admin.
+- **Data:** `categories` CRUD.
+- **States:** empty seed prompt; slug collision. **notFound(): no.**
+- **Composes:** `Input`, `Button`.
+
+#### P55 Admin orders — `/admin/orders`
+- **v1 #55 AMENDED.** FR-ADM-8, R-V01, AC-VIS-3. Detail is a **drawer**, one route.
+- **Role:** admin.
+- **Data:** `master_orders` including recipient snapshot and `combined_delivery_total`; child `seller_orders` including `delivery_fee` and `total_amount` (admin may see both); `order_items`; `payments`; `order_status_history`; `shipments`; `store_pickup_addresses`.
+- **States:** filter empty. **notFound(): no** (unknown id inside the drawer is an inline error).
+- **Composes:** `StatusBadge`, `OrderTimeline`. **Gap:** data table (§8).
+- **Binding:** this is where per-seller fees are visible. Do not reuse this drawer on a seller route.
+
+#### P56 Admin disputes — `/admin/disputes`
+- **v1 #56 AMENDED.** FR-ADM-9, REG-84.
+- **Role:** admin.
+- **Data:** `disputes` queue (`reason`, `status`, `sla_deadline`, `assigned_to`). Each row is one seller order.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `SLABadge`, `EmptyState`. **Gap:** data table (§8).
+
+#### P57 Admin dispute detail — `/admin/disputes/[id]`
+- **v1 #57 AMENDED.** FR-ADM-9, AC-ADM-9, R-U04, R-D03.
+- **Role:** admin.
+- **Data:** `disputes`, `dispute_evidence`, `dispute_messages`, `seller_orders`, `payments` for refund context, `moderation_logs`. Refund is full or partial **for that seller order**.
+- **States:** resolution error. **notFound(): yes** if the id does not exist. **Guard E.**
+- **Composes:** `MessageThread`, `SLABadge`, `Select`, `Textarea`, `ConfirmDialog`.
+
+#### P58 Payments / deposit queue — `/admin/payments`
+- **v1 #58 AMENDED.** FR-ADM-10, FR-ADM-18, FR-PAY-1, FR-PAY-2, R-O19, R-O20, R-O23, R-O25, AC-PAY-3–8, AC-ADM-18, AC-CLO-1.
+- **Role:** admin.
+- **Data:** `master_orders.proof_path` (signed URL from `storage.objects` in the `docs` bucket), `transfer_reference`, `proof_uploaded_at`; child `payments` (`payment_type`, `amount`, `status`, `method`). **One** confirm action copies the proof onto every deposit row and releases every child (`seller_orders.confirmed_at`, `prep_deadline`). Reject cancels, restores tracked stock, refunds if the transfer was taken. Separate action confirms a child’s COD balance **after** remit (`balance_confirmed_at`). **No control whose only job is “close”.**
+- **States:** filter empty; illegible proof → reject path. **notFound(): no.**
+- **Composes:** `Button`, `ConfirmDialog`, `StatusBadge`. **Gap:** proof viewer (§8) — admin must see the screenshot; the kit’s uploader is the wrong chrome.
+- **Binding:** this is the only deposit-verification queue. Seller pages do not link to the proof object.
+
+#### P59 Admin payouts — `/admin/payouts`
+- **v1 #59 KEPT.** FR-ADM-11, R-O10, R-O27.
+- **Role:** admin.
+- **Data:** `payouts`. Manual process or reject. Net of commission is already in the seller’s derived balance; this page does not recompute a fee.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `StatusBadge`, `ConfirmDialog`, `Button`.
+
+#### P60 Collections — `/admin/collections`
+- **v1 #60 KEPT.** FR-ADM-12.
+- **Role:** admin.
+- **Data:** `collections`.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `EmptyState`, `Button`.
+
+#### P61 Collection editor — `/admin/collections/[id]`
+- **v1 #61 KEPT.** FR-ADM-12.
+- **Role:** admin.
+- **Data:** `collections`; `collection_listings`; `listings` picker.
+- **States:** save error. **notFound(): yes** if missing. **Guard E.**
+- **Composes:** `Input`, `Button`.
+
+#### P62 Broadcast — `/admin/notifications`
+- **v1 #62 KEPT.** FR-ADM-13, OD-3, R-N02.
+- **Role:** admin.
+- **Data:** fan-out `notifications`. `whatsapp_templates` for the WhatsApp channel selector. No campaign table.
+- **States:** confirm before a large send. **notFound(): no.**
+- **Composes:** `Select`, `Textarea`, `ConfirmDialog`, `Button`.
+
+#### P63 Admin settings — `/admin/settings`
+- **v1 #63 AMENDED.** FR-ADM-15, FR-ADM-14, FR-COU-1, R-M07, R-M08, REG-80 boost-package clause retained.
+- **Role:** admin. Sensitive keys superadmin, as v1.
+- **Data:** `admin_settings` keys named by R-M07 (price band, commission %, quote ceiling, quote validity, payment window, prep cap, seller category limit, return window, food requirements, low-stock default). **Not** status enums and **not** a “sellers may cancel” switch (R-M08). `whatsapp_templates` on the Notifications **tab** (not a page). `boost_packages` management stays, v1 text, not expanded. `courier_rates` (`origin_governorate`, `destination_governorate`, `weight_min_g`, `weight_max_g`, `fee_egp`) on a **Rates tab** of this same route.
+- **States:** per-key validation; empty template list on the notifications tab. **notFound(): no.**
+- **Composes:** `Tabs`, `Input`, `Button`. **Gap:** rate matrix editor (§8).
+- **Binding:** `delivery_fee_flat_egp` is not the control that sets the buyer fee. Do not delete the key row (ERD §6.3); do not present it as the live fee.
+
+#### P64 Moderation log — `/admin/moderation/log`
+- **v1 #64 KEPT.** FR-ADM-16, R-M02.
+- **Role:** admin.
+- **Data:** `moderation_logs` read-only.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `EmptyState`. **Gap:** data table (§8).
+
+#### P65 Boost approval — `/admin/boosts`
+- **v1 #65 KEPT.** FR-ADM-17, R-B02, REG-80. Not expanded.
+- **Role:** admin.
+- **Data:** `boosts` where `status='pending_payment'`; `boost_packages`.
+- **States:** empty. **notFound(): no.**
+- **Composes:** `Button`, `StatusBadge`, `EmptyState`.
+
+#### P73 Admin returns queue — `/admin/returns`
+- **NEW.** FR-RET-1, FR-ADM-9.
+- **Role:** admin.
+- **Data:** `returns` (`status`, `reason`, `seller_order_id`, `created_at`).
+- **States:** empty queue. **notFound(): no.**
+- **Composes:** `StatusBadge`, `EmptyState`. **Gap:** data table (§8).
+
+#### P74 Admin return detail — `/admin/returns/[id]`
+- **NEW.** FR-ADM-9, R-U04, AC-RET-4, N25.
+- **Role:** admin.
+- **Data:** `returns`; `return_evidence` (not `dispute_evidence`); linked `seller_orders`; `payments.refunded_amount` for the partial or full refund of **that** child. Sibling seller orders stay untouched.
+- **States:** decision error. **notFound(): yes** if missing. **Guard E.**
+- **Composes:** `Button`, `Input`, `ConfirmDialog`. **Gap:** evidence viewer (§8) — same signed-image need as proofs.
+
+#### P75 Escalations — `/admin/escalations`
+- **NEW.** FR-ADM-20, FR-ESC-1, R-E04, R-F04, AC-ESC-3–5, AC-ADM-20, AC-SLA-4.
+- **Role:** admin.
+- **Data:** `seller_orders` where `escalated_at` is not null (`escalation_reason`, `escalation_note`, `prep_deadline`, `escalation_resolved_at`). Resolution is one of: cancel + refund + stock rule (R-L13 zeroes stock on out-of-stock; other reasons restore), reinstate with a new `prep_deadline`, or cancel + a manual `seller_strikes` row. Strike is never automatic. One route: the resolution form is a **drawer**, not a second pattern.
+- **States:** empty queue. **notFound(): no.**
+- **Composes:** `Select`, `Textarea`, `ConfirmDialog`, `Button`, `EmptyState`. **Gap:** data table (§8).
+- **Binding:** cancelling one child does not cancel the master (AC-ESC-3). Buyer and seller are notified (R-N08); that is not a page.
+
+#### P76 Ready for pickup — `/admin/ready-for-pickup`
+- **NEW.** FR-ADM-19, FR-COU-1, R-K07, R-K09, AC-COU-3, AC-COU-4, AC-VIS-3, REG-78.
+- **Role:** admin.
+- **Data:** `seller_orders` where `status='ready'`; `store_pickup_addresses`; `master_orders` recipient name, phone, and address snapshot; `shipments` admin write to mark `dispatched`. The label is rendered from those reads in the admin session (ERD §3.1). No courier user. No `SECURITY DEFINER` label function.
+- **States:** empty queue. **notFound(): no.**
+- **Composes:** `Button`, `StatusBadge`, `EmptyState`. **Gap:** courier label sheet (§8).
+- **Binding:** the seller never opens this page and never receives the label payload. Handoff mechanism (API vs manual) stays the courier gate; this page is the admin queue either way.
+
+#### P77 Seller performance — `/admin/sellers/[id]/performance`
+- **NEW.** FR-ADM-21, AC-ADM-21, R-F04.
+- **Role:** admin.
+- **Data:** derived, no performance table (ERD §10.1): escalation columns, `listings.stock_touched_at`, `inquiries.quoted_at`, `reviews`, `agreement_acceptances`, `seller_documents`, `seller_strikes`, `users.last_login_at`. Stock-accuracy leads. SLA breach is visible and does not imply a strike was issued.
+- **States:** thin history → empty sections, not zeros presented as measured. **notFound(): yes** if the seller id does not exist. **Guard E.**
+- **Composes:** `EmptyState`, `ErrorRetryCard`.
+
+---
+
+## 6. Seller-page proof (N28 + REG-90)
+
+Every seller-role pattern. “Pass” means the §5 block’s data list contains no buyer name, phone, address, city, or governorate, and does not render `delivery_fee` or `total_amount`.
+
+| Page | Buyer identity | Delivery fee | Order total | Verdict |
+|---|---|---|---|---|
+| P23 Onboarding | Pickup is the **seller’s** address. No buyer fields. | Not shown. | Not shown. | Pass |
+| P24 Status | None. | None. | None. | Pass |
+| P25 Dashboard | Recent orders use the allow-list. No `buyer_id` render. | Not rendered. | Not rendered. | Pass |
+| P26 Store profile | Store city is the store’s public city, not the buyer’s. | None. | None. | Pass |
+| P27 Pickup | Seller’s own pickup. Buyer SELECT of this table is none, so buyers do not see it. | None. | None. | Pass |
+| P28 Return policy | None. | None. | None. | Pass |
+| P29 Settlement | Seller’s own handles. | None. | None. | Pass |
+| P30–P33 Listings / inventory | None. | None. | None. | Pass |
+| P34–P35 Boosts | None. `boosts.amount_paid` is the seller’s boost price, not an order fee. | None. | None. | Pass |
+| P36–P37 Inbox / quote | `buyerLabel` only. No join to `buyer_profiles` or `users.phone_number`. | Quote is `quoted_price` (goods). | Not shown. | Pass |
+| P38 Orders | Allow-list. | Denied. | Denied. | Pass |
+| P39 Order detail | Allow-list. Messages use `buyerLabel`. No `shipments`. No label. | Denied. | Denied. | Pass |
+| P40 Reviews | REG-44 neutral label. | None. | None. | Pass |
+| P41 Earnings | Derived from subtotal and commission. | Denied. | Denied. | Pass |
+| P42 Transactions | Seller-order subtotal, commission, net. No `payments`. | Denied. | Denied. | Pass |
+| P43–P44 Payouts | `payouts.amount` is seller-entered against the fee-free net. | Denied. | Denied. | Pass |
+| P45 Level | Counts and rating. | None. | None. | Pass |
+| P46 Analytics | Views, inquiries, orders, boost views. `revenue_egp` omitted. | Denied. | Denied. | Pass |
+| P47 Dispute | `buyerLabel`. Linked summary is the allow-list. | Denied. | Denied. | Pass |
+
+Buyer-facing pages that must also stay clean of the **per-seller** fee and of commission: P66, P15 (one combined delivery, no commission line, no split), P16 (InstaPay deposit on the master), P17, P18 (combined delivery once). Admin P55, P58, and P76 are allowed to see the split, the proof, and the label.
+
+---
+
+## 7. Acceptance matrix
+
+### 7.1 PRD FR → at least one page
+
+| FR | Page |
+|---|---|
+| FR-PUB-1 | P01 |
+| FR-PUB-2 | P02 |
+| FR-PUB-3 | P03 |
+| FR-PUB-4 | P04 |
+| FR-PUB-5 | P05 |
+| FR-AUTH-1 | P06 |
+| FR-AUTH-2 | P07 |
+| FR-AUTH-3 | P08 |
+| FR-AUTH-4 | P06, P07. Trigger **OPEN REG-79**. Holds also bite on P15, P23, P44. |
+| FR-BUY-1 | P09 |
+| FR-BUY-2 | P10 |
+| FR-BUY-3 | P11 |
+| FR-BUY-4 | P12 |
+| FR-BUY-5 | P13, P14 |
+| FR-BUY-6 | **Superseded.** No page. Successor is P15 (FR-CHK-1). Not a gap. |
+| FR-BUY-7 | P16 |
+| FR-BUY-8 | P17 |
+| FR-BUY-9 | P18 |
+| FR-BUY-10 | P19, entry on P18 |
+| FR-BUY-11 | P20 |
+| FR-BUY-12 | P21 |
+| FR-BUY-13 | P22 |
+| FR-SEL-1 | P23 |
+| FR-SEL-2 | P24 |
+| FR-SEL-3 | P25 |
+| FR-SEL-4 | P26 |
+| FR-SEL-5 | P27 |
+| FR-SEL-6 | P28 |
+| FR-SEL-7 | P29 |
+| FR-SEL-8 | P30 |
+| FR-SEL-9 | P31, P32 |
+| FR-SEL-10 | P33 |
+| FR-SEL-11 | P34 |
+| FR-SEL-12 | P35 |
+| FR-SEL-13 | P36, P37 |
+| FR-SEL-14 | P38 |
+| FR-SEL-15 | P39 |
+| FR-SEL-16 | P40 |
+| FR-SEL-17 | P41 |
+| FR-SEL-18 | P42 |
+| FR-SEL-19 | P43, P44 |
+| FR-SEL-20 | P45 |
+| FR-SEL-21 | P46 |
+| FR-SEL-22 | P47 |
+| FR-ADM-1 | P48 |
+| FR-ADM-2 | P49 |
+| FR-ADM-3 | P50 |
+| FR-ADM-4 | P51 |
+| FR-ADM-5 | P52 |
+| FR-ADM-6 | P53 |
+| FR-ADM-7 | P54 |
+| FR-ADM-8 | P55 |
+| FR-ADM-9 | P56, P57, P73, P74 |
+| FR-ADM-10 | P58 |
+| FR-ADM-11 | P59 |
+| FR-ADM-12 | P60, P61 |
+| FR-ADM-13 | P62 |
+| FR-ADM-14 | Tab of P63. Not a page. |
+| FR-ADM-15 | P63 |
+| FR-ADM-16 | P64 |
+| FR-ADM-17 | P65 |
+| FR-CART-1 | P66 |
+| FR-CHK-1 | P15 |
+| FR-PAY-1 | P16, P58 |
+| FR-PAY-2 | P58, P18 (buyer sees balance status) |
+| FR-ADM-18 | P58 |
+| FR-QTE-1 | P04, P14, P37, P66 |
+| FR-SLA-1 | P39 (deadline), P22 (reminders), P75 (breach) |
+| FR-ESC-1 | P39 |
+| FR-ADM-20 | P75 |
+| FR-STK-1 | P33, P15, P75 |
+| FR-RET-1 | P71, P72, P39, P73, P74 |
+| FR-AGR-1 | P08, P15, P23, P67, P68, P69, P70 |
+| FR-COU-1 | P15, P66, tab of P63, P76 |
+| FR-ADM-19 | P76 |
+| FR-VIS-1 | P38, P39, P18, P55, P76 |
+| FR-CLO-1 | P41, P18, P58 (no close control) |
+| FR-COM-1 | P15 (hidden), P38, P39, P41 |
+| FR-CAT-1 | P23, P31, P32 |
+| FR-ADM-21 | P77 |
+
+No FR with a UI surface is unmapped. FR-BUY-6 is superseded, not missing.
+
+### 7.2 PRD AC → at least one page
+
+| AC | Page |
+|---|---|
+| AC-CART-1–7 | P66. AC-CART-4 and AC-CART-5 also refuse P15. AC-CART-7 restore prompt is P66. |
+| AC-CHK-1–6 | P15 |
+| AC-PAY-1, AC-PAY-2, AC-PAY-6 | P16, P15 |
+| AC-PAY-3, AC-PAY-4, AC-PAY-5, AC-PAY-7, AC-PAY-8 | P58 |
+| AC-QTE-1 | P04 → P06 |
+| AC-QTE-2, AC-QTE-3 | P37 |
+| AC-QTE-4, AC-QTE-5 | P14, P66 |
+| AC-QTE-6 | P66, P04 |
+| AC-SLA-1, AC-SLA-2 | P39 (displays `prep_deadline`; the stamp is server-side) |
+| AC-SLA-3, AC-SLA-4 | P22, P75 |
+| AC-SLA-5 | P75 (no auto strike) |
+| AC-ESC-1, AC-ESC-2 | P39 |
+| AC-ESC-3, AC-ESC-4, AC-ESC-5 | P75 |
+| AC-STK-1 | P15, P33 |
+| AC-STK-2, AC-STK-5 | P33 |
+| AC-STK-3 | P75, P33 |
+| AC-STK-4 | P15 |
+| AC-RET-1, AC-RET-2 | P71 |
+| AC-RET-3 | P39, P72 |
+| AC-RET-4 | P74 |
+| AC-RET-5 | P33 (no stock control on P71) |
+| AC-AGR-1 | P08 |
+| AC-AGR-2 | P15 |
+| AC-AGR-3 | P23 |
+| AC-AGR-4 | P67, P68, P69, P70 |
+| AC-AGR-5 | P08 vs P23 (separate `agreement_acceptances` rows) |
+| AC-COU-1, AC-COU-2 | P15, P66 (one sum). Stored per-seller fee is admin-visible on P55, not seller-visible. |
+| AC-COU-3, AC-COU-4 | P76, P39 (seller cannot mark dispatched) |
+| AC-COU-5 | P58, P18 |
+| AC-COU-6 | No courier page. P76 is admin. |
+| AC-VIS-1 | P38, P39 |
+| AC-VIS-2 | P18, P05, P15 |
+| AC-VIS-3 | P55, P76 |
+| AC-VIS-4 | P39 (no master join) |
+| AC-CLO-1 | P41, P58 |
+| AC-CLO-2 | P17, P18 |
+| AC-CLO-3 | P41. Refund leg withheld — §9, not a silent formula. |
+| AC-COM-1, AC-COM-2 | P39, P41 (snapshot already stored; page does not recompute against delivery) |
+| AC-COM-3 | P15, P66 |
+| AC-CAT-1–6 | P31, P32 |
+| AC-AUTH-4 | P15, P23, P44. Add-to-cart **not asserted** (REG-79). |
+| AC-ADM-18 | P58 |
+| AC-ADM-19 | P76 |
+| AC-ADM-20 | P75 |
+| AC-ADM-21 | P77 |
+| AC-AUTH-2 (v1, holds) | P07 |
+| AC-ADM-9 (v1, holds) | P57 |
+| AC-BUY-6 | **RETIRED.** No page. |
+| AC-SEL-14 | **RETIRED.** No page. |
+
+### 7.3 Page → at least one PRD code
+
+| Pages | Code |
+|---|---|
+| P01 | FR-PUB-1 |
+| P02 | FR-PUB-2 |
+| P03 | FR-PUB-3 |
+| P04 | FR-PUB-4 |
+| P05 | FR-PUB-5 |
+| P06 | FR-AUTH-1 |
+| P07 | FR-AUTH-2 |
+| P08 | FR-AUTH-3 |
+| P09 | FR-BUY-1 |
+| P10 | FR-BUY-2 |
+| P11 | FR-BUY-3 |
+| P12 | FR-BUY-4 |
+| P13 | FR-BUY-5 |
+| P14 | FR-QTE-1 |
+| P15 | FR-CHK-1 |
+| P16 | FR-BUY-7 |
+| P17 | FR-BUY-8 |
+| P18 | FR-BUY-9 |
+| P19 | FR-BUY-10 |
+| P20 | FR-BUY-11 |
+| P21 | FR-BUY-12 |
+| P22 | FR-BUY-13 |
+| P23 | FR-SEL-1 |
+| P24 | FR-SEL-2 |
+| P25 | FR-SEL-3 |
+| P26 | FR-SEL-4 |
+| P27 | FR-SEL-5 |
+| P28 | FR-SEL-6 |
+| P29 | FR-SEL-7 |
+| P30 | FR-SEL-8 |
+| P31, P32 | FR-SEL-9 |
+| P33 | FR-SEL-10 |
+| P34 | FR-SEL-11 |
+| P35 | FR-SEL-12 |
+| P36 | FR-SEL-13 |
+| P37 | FR-QTE-1 |
+| P38 | FR-SEL-14 |
+| P39 | FR-SEL-15 |
+| P40 | FR-SEL-16 |
+| P41 | FR-SEL-17 |
+| P42 | FR-SEL-18 |
+| P43, P44 | FR-SEL-19 |
+| P45 | FR-SEL-20 |
+| P46 | FR-SEL-21 |
+| P47 | FR-SEL-22 |
+| P48 | FR-ADM-1 |
+| P49 | FR-ADM-2 |
+| P50 | FR-ADM-3 |
+| P51 | FR-ADM-4 |
+| P52 | FR-ADM-5 |
+| P53 | FR-ADM-6 |
+| P54 | FR-ADM-7 |
+| P55 | FR-ADM-8 |
+| P56, P57 | FR-ADM-9 |
+| P58 | FR-ADM-18 |
+| P59 | FR-ADM-11 |
+| P60, P61 | FR-ADM-12 |
+| P62 | FR-ADM-13 |
+| P63 | FR-ADM-15 |
+| P64 | FR-ADM-16 |
+| P65 | FR-ADM-17 |
+| P66 | FR-CART-1 |
+| P67, P68, P69, P70 | FR-AGR-1 |
+| P71, P72 | FR-RET-1 |
+| P73, P74 | FR-ADM-9 |
+| P75 | FR-ADM-20 |
+| P76 | FR-ADM-19 |
+| P77 | FR-ADM-21 |
+
+Both directions are filled. Open items in §9 are unpinned facts, not missing pages.
+
+---
+
+## 8. Claude Design handoff — gap list
+
+This is input to Stage D, which is already running. It is not a design.
+
+| Gap | Needed by | Why the kit lacks it |
+|---|---|---|
+| **CartLine** | P66, P15 | `ListingCard` is a discovery card. It has no quantity editor, no blocked state, and no “request a new quote” prompt. |
+| **CheckoutSellerSections** | P15 | Nothing groups lines under N sellers while exposing only one combined total and hiding the per-seller fee and commission. |
+| **SellerOrderMoney** | P25, P38, P39, P41, P42, P43 | `PriceBlock` renders a listing price. Nothing has slots for subtotal, commission, and net **and no slot** for a fee or an order total. A slot that exists will get filled. |
+| **DataTable** | P30, P33, P38, P42, P50, P51, P55, P56, P64, P73, P75 | `components/ui` has no table. `components/shared` has no table. Admin and seller lists should not each invent one. |
+| **RateMatrixEditor** | P63 Rates tab | No grid for origin × destination × weight band (`courier_rates`). |
+| **CourierLabelSheet** | P76 | No print/label primitive. The payload includes buyer name, phone, and address and must be **unable** to mount on a seller route. |
+| **ProofViewer** | P58, P49, P74 | `ImageUploader` is an upload control. Admin review needs a signed-URL viewer without an upload affordance. |
+| **ChartSeries** | P46 | No chart primitive. Do not specify axes, colors, or chart chrome here. |
+| **ShareButton** | P04, P05 | No share primitive. **Absorbs REG-51.** Channel-agnostic public-link share. Downstream apps stay unenumerated. |
+| **Navigable store identity** | P01, P02, P03, P04, P05, P12 | `ListingCard`, `SellerMiniCard`, and `StoreCard` render the store name as non-interactive text and expose no `href`. **Absorbs REG-72.** |
+
+### 8.1 CD-DELTA-5 reconciliation
+
+| Item | Absorbed? |
+|---|---|
+| **REG-51** share | **Yes.** ShareButton row. |
+| **REG-72** store name is not a link | **Yes.** Navigable store identity row. Same class as REG-60, but REG-60 itself is not this row. |
+| **REG-58** dark search-bar contrast | **No.** Existing `SearchBar` defect. Stays open CD-DELTA-5. Not restated as a color spec. |
+| **REG-59** `/account` unstyled | **No.** Existing shell defect on P09. Stays open. |
+| **REG-60** seller-console logo does not navigate home | **No.** Existing chrome defect. Stays open. Not folded into REG-72. |
+
+REG-52 (onboarding category picker UX) is also open CD-DELTA-5 and is **not** a new component in this list. P23 composes `Select` until Claude Design replaces the picker. Do not invent the picker layout here.
+
+---
+
+## 9. STOP-and-flags
+
+| ID | Flag | Why it is not filled |
+|---|---|---|
+| **REG-90** | **CLOSED** pin. Seller sees subtotal, commission, net. Never `delivery_fee`, never `total_amount`. | Propagated to the ERD (seller read = NO) and the PRD. Implementation of the column grant is **open for B5 / Stage C**: grants are per Postgres role, and admin is also `authenticated`, so this cannot be a plain `REVOKE` from `authenticated`. |
+| **REG-90 check — `seller_orders.refunded_amount`** | **FLAGGED. Not fee-free.** The column is the rollup of `payments.refunded_amount` (ERD §6.2). Deposit is 50% of (subtotal + delivery) (R-O16), so a refund of what the buyer paid can include delivery-fee money. Seller pages **do not render it**. Displayed net does **not** subtract it. | Do not add a column. B5 decides whether the seller-visible rollup is goods-only. |
+| **REG-90 check — `payouts.amount`** | **Fee-free as a seller-entered number**, provided the cap is the §4.a net. | The contamination path is only `refunded_amount`, which is withheld. |
+| **REG-90 check — `seller_snapshots.revenue_egp`** | **FLAGGED.** The column is seller-readable. No cron writer in the shipped snapshot jobs defines it. Platform `gmv_egp` is `SUM(total_amount)`, which **includes** `delivery_fee`. A writer that copies that pattern would leak the fee. | P25 and P46 omit the column. Do not add a table. Stage C pins the writer to subtotal − commission, or the column stays off seller screens. |
+| **REG-91** | **OPEN.** Buyer cart and checkout need one combined delivery total. Buyer SELECT on `store_pickup_addresses` is none. `courier_rates` is readable by any authenticated user, so the client must not also be handed the origin. | Not a new table. `master_orders.combined_delivery_total` is the stored result at checkout. The pre-checkout projection is B5. Pages do not select the pickup row. |
+| **REG-79** | **OPEN.** Gate page exists (P06, P07). Trigger vs add-to-cart is not encoded. | |
+| **REG-85** | **OPEN.** P05 and P28 show store policy. Relationship to P69 is not decided. | |
+| **REG-88** | **OPEN.** P15 has a version-gate panel. Which of the four documents block completion is not hard-coded. | |
+| **REG-81** | **OPEN.** P38/P39 show `display_ref` only when non-null. No format invented. Legacy `betk_ref` on old rows is an order number. | |
+| **REG-89** | **OPEN.** P15 shows the master 50% and does not encode child allocation. | |
+| **REG-50** | Support page **not** in the 77. | |
+| **storage.objects** | N28’s betk-schema proof did not cover the `docs` bucket (payment-proof screenshots, seller documents). Seller pages do not read those objects. Admin P58 and P49 do, via signed URL. | Stage C input. Not a new table in `betk`. |
+| **Un-ERD’d table** | **None.** Every page’s data list is an OD-20 table. Low stock has no alert-log table (OD-1). Performance has no table (FR-ADM-21 derived). Legal prose is not a table (R-G07). | |
+
+---
+
+*End of v2 contract. The historical v1 spec follows and is not deleted.*
+
+---
+
+# Historical v1 UI spec (superseded in place — not deleted)
+
+> **SUPERSEDED (B4, 2026-09-22).** The text below is the v1 spec. Its headline count of 59 is a heading count (60 headings minus the WhatsApp Templates tab). Measured under the v2 counting rule (§0 above) that same source is 65 route patterns. The v2 contract is §0–§9. **OD-21** freezes 77 pages and supersedes the freeze sentence in the acceptance matrix below. Do not cite this block as the v2 page inventory. Nothing in this block was deleted.
+# BETK_UI_SPEC.md
 
 > **Source & provenance note.** The uploaded corpus consists of the three BETK Architecture Review conversations: **C1 — Domain Modeling & Entity Discovery**, **C2 — ERD & Database Architecture**, and **C3 — Supabase Production Schema (SQL, RLS, pg_cron)**. No standalone *Dev OS* file and no standalone *Wireframes* file were present in the uploads. The page-by-page UI surface is nevertheless fully specified *inside* these documents as: the 70-row Use Case Coverage Matrix (C2 §6), the Actor User Journeys and Marketplace Workflows WF1–WF10 (C1 §1.3–1.4), and the explicit screen/tab references embedded in the Entity Catalog "Use Case(s)" columns (e.g. *Seller Inbox*, *Wishlist & Saved*, *Followed Sellers tab*, *Seller Dashboard*, *Level Progress*, *Store Header*, *Moderation Log tab*, *Homepage featured strip*). Every page below maps to one or more of those documented surfaces. Data requirements are cross-referenced against the physical tables, columns, enums, and RLS policies defined in C2 §3 / C3 §3–5. No page or feature has been invented; gaps in either direction are flagged inline as **[DATA GAP]** or **[UI GAP]**.
 >

@@ -10,16 +10,18 @@
 > **Numbers taken at mint (re-read 2026-09-22 before taking):** occupied ODs ended at OD-19 (next free **OD-20**). Occupied REGs ended at REG-87 (next free **REG-88**). **Took OD-20** (this freeze) and **REG-88, REG-89** (gaps in §12). Did **not** take an ADR number. Next free after this mint: **OD-21**, **REG-90**. Next free ADR for B5: **ADR-020** (`ADR.md` ends at ADR-019).
 >
 > **B3-FIX (2026-09-22)** amended §3.1, §3.2, §3.6, §4, §6.2, §7, §8, §9, §11, §12, and §13 in place. Register re-read before any mint: header REG-01..REG-89, next free **REG-90**. **No REG taken. No OD taken. No ADR written.** Next free stays **REG-90**, **OD-21**, **ADR-020**.
+>
+> **B4 (2026-09-22)** re-read before taking: occupied ODs ended at OD-20 (next free **OD-21**); occupied REGs ended at REG-89 (next free **REG-90**). **Took REG-90** (closed seller-money pin, §3.10) and **REG-91** (open buyer delivery projection). **Took OD-21** in `BETK_MVP_SCOPE.md` / `BETK_UI_SPEC.md` (page count 77), not as a schema change. No ADR. Next free after B4: **OD-22**, **REG-92**, **ADR-020**.
 
 ---
 
-> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE STILL UNFROZEN pending B4.
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
 >
 > Live physical tables **today** = **43** (`betk` 41 + `betk_analytics` 2), measured in §1. That figure is **TRUE TODAY**.
 >
 > The v2 **target** inventory is **51** physical tables (`betk` 49 + `betk_analytics` 2). **OD-20 supersedes OD-6.** The baseline ~50 figure was an estimate and is not this freeze.
 >
-> Page count is **not** frozen here.
+> **B4 froze the page count at 77** under **OD-21** (`BETK_UI_SPEC.md` §0–§3). The baseline ~73 figure was an estimate. This file still does not design pages. It records the seller money pin (REG-90) because that pin changes which columns a seller read may return.
 
 ---
 
@@ -126,7 +128,7 @@ Not new, on purpose: escalation is columns on the seller order (OD-14, baseline 
 | New | 8 |
 | **v2 target** | **51** (`betk` 49 + `betk_analytics` 2) |
 
-**OD-20.** v2 physical table count is **51**. This supersedes OD-6. Pages are not frozen.
+**OD-20.** v2 physical table count is **51**. This supersedes OD-6. This OD does not freeze pages. **OD-21** freezes them at 77 (`BETK_UI_SPEC.md` §0–§3).
 
 ## 3. Binding design inputs
 
@@ -198,6 +200,23 @@ The table accepts `document = buyer_terms` for any user, and `seller_agreement` 
 ### 3.9 R-V01 clarification (buyer’s own address book)
 
 R-V01’s sentence “addresses are never exposed to buyer or seller” is applied as **cross-party** exposure. The buyer still selects and reads their own `addresses` rows (they typed them; checkout cannot work otherwise). R-V03 / AC-VIS-2 is the buyer not reading the seller pickup street. R-V02 is the seller not reading buyer name, phone, address, or city.
+
+### 3.10 REG-90 — seller order money (amended B4, 2026-09-22)
+
+**Closed product pin.** The seller sees `subtotal`, `commission_amount`, and net (= subtotal − commission) only. Never `delivery_fee`. Never `total_amount`. Reason: the fee is origin × destination × weight, so a seller-visible fee lets the seller infer the buyer’s destination zone (N28). Commission is on subtotal only (R-O27), so the net needs neither the fee nor the total.
+
+Seller SELECT of `seller_orders.delivery_fee` and `seller_orders.total_amount` = **NO**. The columns stay. Buyer and admin still read them. `total_amount`’s CHECK remains `subtotal + delivery_fee`.
+
+**Implementation is open for B5 / Stage C.** Column grants are per Postgres role. Admin is also `authenticated`. A plain `REVOKE` of those two columns from `authenticated` would also hide them from admin. This is not a policy-only change (REG-42: row policy cannot choose columns) and it is not a one-line revoke. B5 writes the grant shape. No new table.
+
+**Other seller-readable money, checked in B4. Not a new table.**
+
+| Value | Derivable without the delivery fee? |
+|---|---|
+| `subtotal`, `commission_rate`, `commission_amount` | Yes. Commission is on subtotal only. |
+| `payouts.amount` | Yes, as a seller-entered withdrawal, **if** the eligible balance it is capped against is subtotal − commission and does not subtract a fee-bearing refund. |
+| `seller_orders.refunded_amount` | **No.** Rollup of `payments.refunded_amount`. A refund of the buyer’s payment can include the delivery fee (R-O16). Seller UI does not render it until B5 pins a goods-only figure. |
+| `seller_snapshots.revenue_egp` | **Not proven.** Seller SELECT exists (`seller_snap_own`). No shipped cron writer defines the column. Platform `gmv_egp` is `SUM(total_amount)`, which includes `delivery_fee`. A writer that copies that pattern fails this pin. Seller screens omit `revenue_egp` until the writer is pinned to subtotal − commission. |
 
 ## 4. N27 feasibility
 
@@ -500,10 +519,10 @@ ON DELETE is stated on every FK. “NO ACTION” means no `ON DELETE` clause (Po
 | `display_ref` | `varchar(64)` | YES | **NEW.** REG-81. Partial unique where not null. No format CHECK. |
 | `inquiry_id` | `uuid` | YES | Kept. New checkout writes NULL (R-O11). FK NO ACTION. |
 | `delivery_method` | `delivery_preference` | NO | Kept. F-MODE. New rows write `delivery`. |
-| `delivery_fee` | `numeric(10,2)` | NO | default `0`. Snapshot of the matrix fee (R-K04). |
+| `delivery_fee` | `numeric(10,2)` | NO | default `0`. Snapshot of the matrix fee (R-K04). **Seller SELECT = NO (REG-90, amended B4 2026-09-22).** Buyer and admin may read it. The column stays. Hiding it is not a dropped column. |
 | `courier_rate_id` | `uuid` | YES | **NEW.** FK → `courier_rates(id)` ON DELETE SET NULL. |
 | `subtotal` | `numeric(10,2)` | NO | Kept. |
-| `total_amount` | `numeric(10,2)` | NO | Kept. CHECK `total_amount = subtotal + delivery_fee`. |
+| `total_amount` | `numeric(10,2)` | NO | Kept. CHECK `total_amount = subtotal + delivery_fee`. **Seller SELECT = NO (REG-90).** The CHECK identity is `subtotal + delivery_fee`, so a seller who can read `total_amount` can recover the fee. Buyer and admin may read it. |
 | `status` | `order_status` | NO | default `pending`. |
 | `prep_deadline` | `timestamptz` | YES | **NEW.** Set at release: `confirmed_at + max(item prep)` (R-F01). |
 | `escalated_at` | `timestamptz` | YES | **NEW.** R-E02. |
@@ -517,7 +536,7 @@ ON DELETE is stated on every FK. “NO ACTION” means no `ON DELETE` clause (Po
 | `confirmed_at` | `timestamptz` | YES | Stamped at **admin release**, not seller acceptance. This is the deposit-confirmed fact the seller reads. No second deposit timestamp. |
 | `delivered_at` | `timestamptz` | YES | Kept. |
 | `balance_confirmed_at` | `timestamptz` | YES | **NEW.** Stamped when that child balance `payments` row is confirmed. No proof column. |
-| `refunded_amount` | `numeric(10,2)` | NO | **NEW.** Default `0`. CHECK `>= 0`. Rollup of that child’s `payments.refunded_amount`. No proof column. |
+| `refunded_amount` | `numeric(10,2)` | NO | **NEW.** Default `0`. CHECK `>= 0`. Rollup of that child’s `payments.refunded_amount`. No proof column. **B4 flag (REG-90 check):** this rollup is **not** proven free of the delivery fee. Deposit is 50% of (subtotal + delivery) (R-O16), so a refund of what the buyer paid can include fee money. Seller pages do not render it until B5 pins a goods-only figure. Do not add a column for that figure here. |
 | `payout_eligible_at` | `timestamptz` | YES | **NEW.** Stamped on `delivered` as `delivered_at` plus the then-current `return_hold_hours`, inside the DEFINER transition. The seller reads the timestamp. The settings key stays admin-only (REG-86). |
 | `commission_rate` | `numeric(5,2)` | YES | CHECK 0–100. Snapshot at insert (R-O27). |
 | `commission_amount` | `numeric(10,2)` | YES | CHECK `>= 0`. Subtotal only, never delivery. |
@@ -533,7 +552,8 @@ CHECK `(escalated_at IS NULL) OR (escalation_reason IS NOT NULL)`.
 - hold elapsed = `payout_eligible_at IS NOT NULL AND now() >= payout_eligible_at`
 - no blocking dispute or return = seller SELECT on `disputes` and `returns` for `store_id = my_store_id()`
 - already paid out = seller SELECT on own `payouts`
-- amount = `subtotal - commission_amount - refunded_amount`
+- amount = `subtotal - commission_amount - refunded_amount` on the **stored** formula
+- **Seller display (REG-90, B4):** subtotal, commission, and net only. Displayed net = `subtotal - commission_amount`. Do not subtract `refunded_amount` on a seller screen while the rollup may include `delivery_fee`. Do not display `delivery_fee` or `total_amount`.
 
 The seller has no UPDATE grant on `balance_confirmed_at`, `refunded_amount`, or `payout_eligible_at`. The payment trigger and the delivery transition stamp them. Three-layer (§8).
 
@@ -723,7 +743,7 @@ Seller predicate `store` means `store_id = my_store_id()` or the parent row’s 
 | `inquiries` | buyer or store or admin | buyer | store or admin (quote columns) | none | no |
 | `inquiry_messages` | thread parties | thread parties | sender content (no MVP surface) + receiver `is_read` only (REG-42 grant) | none | receiver `is_read` is column GRANT + policy (two of the three layers; no OLD transition) |
 | `master_orders` | buyer self or admin. **Seller none.** | buyer, plus restrictive phone gate | buyer proof columns only, or admin | none | **YES** buyer proof update |
-| `seller_orders` | buyer (`buyer_id = auth.uid()`), or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release. Seller has no UPDATE on `balance_confirmed_at`, `refunded_amount`, `payout_eligible_at`. | none | **YES** |
+| `seller_orders` | buyer (`buyer_id = auth.uid()`), or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release. Seller has no UPDATE on `balance_confirmed_at`, `refunded_amount`, `payout_eligible_at`. **Seller SELECT excludes `delivery_fee` and `total_amount` (REG-90, §3.10).** The grant is B5: admin is also `authenticated`, so this is not a plain revoke. | none | **YES** |
 | `order_items` | buyer via seller order, or store, or admin | checkout | none | none | no |
 | `order_status_history` | buyer via seller order, or store, or admin | trigger/actor | none (rule) | none (rule) | no |
 | `order_messages` | buyer via seller order, or store, or admin | those parties | sender `is_read` pattern as inquiry, if used | none | no |
@@ -823,7 +843,7 @@ Codes that are behaviour-only (no new stored fact) are marked derived. A code wi
 | R-O25 | derived. No column. No enum member. |
 | R-O26 | derived. No ledger table. |
 | R-O27 | `seller_orders.commission_rate` / `commission_amount` |
-| R-O28 | no column; buyer SELECT does not include commission or per-seller fee breakdown (app projection). Per-seller `delivery_fee` is seller-visible on `seller_orders`. |
+| R-O28 | no column; buyer SELECT does not include commission or per-seller fee breakdown (app projection, REG-91). **Amended B4 (REG-90):** per-seller `delivery_fee` is **not** seller-visible. Seller SELECT of `seller_orders.delivery_fee` and `total_amount` is NO. |
 | R-O29 | existing `return_hold_hours`. Not added to REG-62 (REG-86). |
 | R-Q01–R-Q08 | `inquiries` quote columns + `cart_items.inquiry_id` |
 | R-F01, R-F02 | `prep_deadline`, `order_items.prep_days_snapshot`, `listings.prep_days`, `quoted_prep_days` |
@@ -925,6 +945,8 @@ Minted this session (next free was REG-88; no REG-88 row existed):
 |---|---|
 | **REG-88** | R-G02 says a version gate blocks order completion until the buyer has accepted the “current required versions”, and R-G05 names four documents. Which of the four are inside that gate is not pinned. `agreement_acceptances` stores all four. Stage C must not hard-code the set. |
 | **REG-89** | **OPEN.** One transfer covers the whole master (R-O18). The invariants, not yet accepted: the sum of the child deposit rows equals that single transfer amount, and each child deposit plus that child’s balance equals that child’s total. **Engineering candidate for B5, not a product pin:** round the master deposit once onto `NUMERIC(10,2)`, allocate that rounded amount across children by largest remainder with a deterministic tiebreak, and set each child balance to child total minus child deposit. Stage C does not implement this until B5 accepts it. |
+| **REG-90** | **CLOSED** (B4, 2026-09-22, scope owner). Seller sees subtotal, commission, and net only. Seller SELECT of `seller_orders.delivery_fee` and `total_amount` = NO (§3.10). Implementation of the grant is open for B5: not a plain revoke. `refunded_amount` and `seller_snapshots.revenue_egp` are flagged in that same section; neither is a new column. |
+| **REG-91** | **OPEN** (B4). The buyer cart and checkout show one combined delivery total (R-C03, R-K03) and must not read `store_pickup_addresses` (buyer SELECT is none) and must not be handed the origin governorate alongside a readable `courier_rates` matrix. `master_orders.combined_delivery_total` is the stored checkout result. The pre-checkout projection is B5. Not a new table. |
 
 Not minted (the spec already refuses the invention):
 
@@ -947,8 +969,11 @@ Not minted (the spec already refuses the invention):
 - New tables in §6.1. Policies in §8, including the eight live tables that have RLS and zero policies.
 - `checkout_from_cart` replaces `create_order_from_inquiry`.
 - Stock decrement moves to checkout. Confirm trigger comes off.
-- No SQL in this document. No page inventory.
+- No SQL in this document. Page inventory is `BETK_UI_SPEC.md` (OD-21 = 77). This file does not design routes.
 - **B4:** reviews render no buyer name and no buyer location (§9).
+- **REG-90 grant (open, B5):** seller SELECT must exclude `seller_orders.delivery_fee` and `total_amount`. Do not implement that as `REVOKE` of those columns from `authenticated` alone. Admin is `authenticated`. §3.10.
+- **REG-91 (open, B5):** a buyer-safe combined delivery total that does not return the pickup origin. Not a new table. Not a seller read of the fee.
+- **`storage.objects` (B4, Stage C):** the N28 proof in §9 covered the `betk` schema only. The `docs` bucket holds payment-proof screenshots and seller documents. Seller read of those objects is **NO**, same verdict as N28. Admin signed-URL read of a proof or a seller document stays. Do not add a `betk` table for this.
 
 ---
 
