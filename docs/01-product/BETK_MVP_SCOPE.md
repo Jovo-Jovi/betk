@@ -9,13 +9,13 @@
 
 ---
 
-> ## COUNTS ARE UNFROZEN pending B3 (tables) and B4 (pages)
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE STILL UNFROZEN pending B4.
 >
 > The v1 freeze of **43 tables** and **59 pages** is **SUPERSEDED**. It is not the v2 inventory.
 >
-> Live introspection **today** (B1 session, 2026-09-19, MCP `list_tables` on schemas `betk` + `betk_analytics`, namespace `project-0-BETK-supabase-betk`) still measures **43** physical tables: `betk` **41** + `betk_analytics` **2**. That figure is **TRUE TODAY**. OD-6 is superseded because the **count is unfrozen pending B3**, not because 43 was wrong.
+> Live introspection (B3, 2026-09-22, `pg_tables` on `betk` + `betk_analytics`) still measures **43** physical tables: `betk` **41** + `betk_analytics` **2**. That figure is **TRUE TODAY**.
 >
-> The figures **~50 tables** and **~73 pages** (`BETK_V2_SCOPE_BASELINE.md` §1 table, §10) are **ESTIMATES** only. They MUST NOT be cited as frozen. B3 freezes tables. B4 freezes pages. This document does not freeze either.
+> **B3 froze the target at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. The ~50 / ~73 figures (`BETK_V2_SCOPE_BASELINE.md` §1, §10) remain **estimates**. **Pages are not frozen.**
 
 ---
 
@@ -36,7 +36,7 @@ BETK is an Arabic-first, RTL digital marketplace for Egypt's informal creative e
 | Seller | Buyer who completed onboarding (including pickup address and seller-agreement e-signature) and was admin-approved. Owns exactly one store. Sees order ref + items + prep deadline only — **never** buyer name, phone, address, or city (N28; `BETK_V2_ROLE_JOURNEYS.md` §5.4). **Cannot cancel** an order (`BETK_V2_SCOPE_BASELINE.md` §2.6). | role: seller |
 | Admin / Superadmin | Internal operator. Seller/food approval, **one** deposit verification across all deposit rows under a master, courier handoff, escalations, returns/disputes, payouts, performance audit, configuration, moderation. Only admin (plus the courier) sees addresses (`BETK_V2_SCOPE_BASELINE.md` §2.5). | role: admin |
 
-**FLAG (courier is not a new authenticated actor) — REG-78.** `BETK_V2_ROLE_JOURNEYS.md` §5.6 treats Courier as a fulfilment participant; `BETK_V2_SCOPE_BASELINE.md` §12 Courier gate names “order-handoff mechanism (API or manual)”. Authority does **not** pin a courier login, courier role, or courier-facing page inventory. N28/OD-17 still requires courier-visible addresses. **B3 must resolve how RLS expresses the courier principal.** B1 does not invent a courier app role.
+**FLAG (courier is not a new authenticated actor) — REG-78. Resolved by B3 (2026-09-22), not re-opened here.** `BETK_V2_ROLE_JOURNEYS.md` §5.6 treats Courier as a fulfilment participant; `BETK_V2_SCOPE_BASELINE.md` §12 Courier gate names “order-handoff mechanism (API or manual)”. Authority does **not** pin a courier login. B3’s resolution (`BETK_ERD.md` §3.1): there is **no** courier RLS principal. An admin-invoked service-role label function emits the address artifact. AC-COU-6 holds. ADR candidate for B5. This section does not design that function.
 
 v1 “Guest cannot wishlist, follow, inquire, or transact” is **held** and **extended** by N21 (account before add-to-cart) and by §5.1 (guest cannot request a price).
 
@@ -92,7 +92,7 @@ Master status is **derived, never written directly** (`BETK_V2_SCOPE_BASELINE.md
 - Courier collects from the seller's pickup address and delivers to the buyer.
 - Delivery-method selection at checkout is **removed** (`BETK_V2_SCOPE_BASELINE.md` §10 “Removed”). `/seller/store/delivery` is **repurposed** to a pickup-address page (same §10).
 
-**FLAG for B3 / Stage C — `delivery_preference` schema tension (do not resolve here).** Live v1 enum (REG-14, ERD, `SESSION_CONTEXT.md`) is `{delivery, pickup, remote}`. v2 makes the mode single-valued / information-free (`BETK_V2_SCOPE_BASELINE.md` §2.5: “`delivery_preference` becomes single-valued and therefore carries no information”; §10 Dead: retained but blocked at the app layer, REG-63 pattern; §11 REG-14 and REG-53 **Close**). Whether B3 collapses the enum, keeps dead members, or replaces the column is **not decided here**.
+**FLAG for B3 / Stage C — `delivery_preference` schema tension. Resolved by B3 (2026-09-22).** Live v1 enum is `{delivery, pickup, remote}`. v2 behaviour is courier-only (`BETK_V2_SCOPE_BASELINE.md` §2.5). **Resolution (`BETK_ERD.md` §3.5):** the enum and the column stay; `pickup` and `remote` are dead (REG-63 pattern); new rows write `delivery`; existing order values are not rewritten. Fee comes from the rate matrix, not this column.
 
 **OD:** OD-10.
 
@@ -128,6 +128,8 @@ The quote is validated against the tolerance band at send time, so quoting canno
 | **Seller** | **Never** | Must escalate | §2.6 |
 
 Escalation is the **only** seller exit (seller-reported or SLA auto-breach). After the deposit is confirmed the buyer's exit is return/refund/dispute, never cancellation (`BETK_V2_ROLE_JOURNEYS.md` §5.2). Every cancellation restores stock (see §3.6), notifies the buyer, and — where a deposit was already confirmed — triggers a refund (`BETK_V2_SCOPE_BASELINE.md` §2.6). Escalation is **columns on the seller order**, not a table (`BETK_V2_SCOPE_BASELINE.md` §10).
+
+**Amended 2026-09-22 (REG-82 closed, scope owner).** Payment-window expiry also restores the cart. Fixed-price lines restore as-is. Custom-quote lines restore only if the quote is still inside its 24h validity; otherwise they are dropped and the buyer is prompted to request a new quote. The earlier reading that this section named stock restore and notify but not cart restore is superseded by this pin. Stock restore still holds (§3.6).
 
 **OD:** OD-14.
 
@@ -230,7 +232,9 @@ Buyer requests a return with reason + evidence. Seller accepts → return → re
 2. Repo-wide search for `OD-9` / `OD-10` / higher: **no minted OD above OD-8**. The only `OD-9` strings are (a) REG-50's **hypothesis** that a support page “would be OD-9” (never minted, never authorized) and (b) `BETK_MODIFICATION_SPEC_REVIEW.md` stating “OD-9/OD-10 are the wrong instrument”.
 3. Therefore **occupied at mint time = OD-1…OD-8**. **Next free at mint time = OD-9.** REG-50 did **not** reserve OD-9.
 
-**Took at mint time: OD-9 through OD-19.** Next free after this mint = **OD-20**.
+**Took at mint time (B1): OD-9 through OD-19.** Next free after that mint was **OD-20**.
+
+**B3 (2026-09-22) re-read before taking:** occupied ODs were OD-1…OD-19. No OD-20 row. **Took OD-20** (table count 51). Next free after B3 = **OD-21**.
 
 ### 4.1 v1 OD dispositions (OD-1…OD-8)
 
@@ -243,7 +247,7 @@ Each row is exactly one verdict. Disposition authority: `BETK_V2_SCOPE_BASELINE.
 | **OD-3** | Broadcast = **no campaign entity** (fan-out to `notifications`). Schema: NO. | **HOLDS UNCHANGED** | Same §11 row. |
 | **OD-4** | Google OAuth **IN**. `users.phone_number` nullable+UNIQUE; `auth_provider`. Phone-OTP + Google OAuth. **Verified phone required before transacting** (v1 named surfaces: checkout / become seller / payout). Schema: YES. | **HOLDS UNCHANGED** | Same §11 row. **FLAG on *where* the verified-phone gate bites — see below. This FLAG is not an amendment.** |
 | **OD-5** | Sessions UI **OUT**; WhatsApp templates under Admin → Settings → Notifications. Schema: NO. | **HOLDS UNCHANGED** | Same §11 row. Launch notification channel is SMS (`BETK_V2_SCOPE_BASELINE.md` §7); WhatsApp remains a BETK→user template surface, not a conversation. |
-| **OD-6** | Table count **43** (documentation). Authoritative inventory in `BETK_ERD.md` §1.1. Schema: NO. | **SUPERSEDED** | `BETK_V2_SCOPE_BASELINE.md` §11: “OD-6 (43 tables) — Superseded by the v2 count”. **43 is TRUE TODAY** (live: `betk` 41 + `betk_analytics` 2 = 43, MCP `list_tables` 2026-09-19). **Superseded means the count is UNFROZEN pending B3, NOT that 43 was wrong.** No v2 table count is frozen in this document. The ~50 figure in baseline §1 / §10 is an **ESTIMATE**. |
+| **OD-6** | Table count **43** (documentation). Authoritative inventory in `BETK_ERD.md` §1.1. Schema: NO. | **SUPERSEDED by OD-20** | `BETK_V2_SCOPE_BASELINE.md` §11: “OD-6 (43 tables) — Superseded by the v2 count”. **43 is TRUE TODAY** (B3 `pg_tables`, 2026-09-22: `betk` 41 + `betk_analytics` 2). **The v2 target is frozen at 51 by OD-20.** 43 was not wrong; it was the pre-migration count. |
 | **OD-7** | Bilingual AR/EN + light/dark theme. Presentation-layer only. Schema: NO. | **HOLDS UNCHANGED** | Same §11 row; also §1 “Unchanged and load-bearing”. |
 | **OD-8** | Custodial payments & platform commission **IN** (signed 2026-07-23; ADR-016). Buyer pays BETK; admin deposit verification; seller acceptance stays the seller's act; derived seller balance; 50/50 split; no pure-COD. Schema: YES (3 additive columns landed). | **HOLDS WITH AMENDMENT** | `BETK_V2_SCOPE_BASELINE.md` §11: “OD-8 custodial payments — Amended — still custodial; now InstaPay-only, 2 rows per *seller order*, deposit on subtotal+delivery, **no seller acceptance gate**”. Amendment text in the next block. |
 
@@ -271,12 +275,12 @@ v1 OD-8 sentences that **no longer hold:** “order acceptance stays the seller'
 
 ### 4.2 v2 ODs minted this session
 
-Schema marker is YES/NO only. **No table count and no page count is asserted.** Indicative names in `BETK_V2_SCOPE_BASELINE.md` §10 are **ESTIMATES** for B3.
+Schema marker is YES/NO only, except **OD-20**, which freezes the table count. **No page count is asserted.** Indicative names in `BETK_V2_SCOPE_BASELINE.md` §10 were estimates; the frozen inventory is `BETK_ERD.md` §2.
 
 | OD | One-line decision | Authority | Schema |
 |---|---|---|---|
 | **OD-9** | Order shape is **one cart → one master order → N seller orders → N shipments**. Master owns buyer, address, the single proof, aggregate status, combined delivery total. Seller order owns items, own delivery fee, commission snapshot, prep deadline, shipment, two payment rows, escalation. | `BETK_V2_ROLE_JOURNEYS.md` core concept + §5.3; `BETK_V2_SCOPE_BASELINE.md` §3, §4.1–§4.2 | **YES** — new tables / rename / FKs. Indicative names in baseline §10 (`cart_items`, `master_orders`; `orders` → `seller_orders`). Live today already has `shipments` / `shipment_tracking_events` (MCP `list_tables` 2026-09-19). B3 freezes the inventory. |
-| **OD-10** | **Courier-only delivery.** Fee from origin × destination × weight **rate matrix**, computed per seller order; buyer sees **one combined total**; each seller order stores its own fee. No pickup, remote, or self-delivery. | `BETK_V2_SCOPE_BASELINE.md` §2.5, §1 table | **YES** — indicative `courier_rates` (baseline §10). **`delivery_preference` tension FLAGGED for B3/Stage C** (§3.3). |
+| **OD-10** | **Courier-only delivery.** Fee from origin × destination × weight **rate matrix**, computed per seller order; buyer sees **one combined total**; each seller order stores its own fee. No pickup, remote, or self-delivery. | `BETK_V2_SCOPE_BASELINE.md` §2.5, §1 table | **YES** — `courier_rates` (baseline §10). **`delivery_preference` resolved by B3** (§3.3): enum kept, dead members retained, column not rewritten. |
 | **OD-11** | Custom-item quoting is **price discovery** feeding a cart line. Band = `[listing price, 2 × listing price]` (N23), valid 24h, carries prep time. Inquiry is not the ordering mechanism. | `BETK_V2_SCOPE_BASELINE.md` §1, §2.2, §13 N23; `BETK_V2_ROLE_JOURNEYS.md` §5.2 | **YES** — indicative inquiry quote columns (baseline §10: `quoted_price`, `quote_expires_at`, `quoted_prep_days`). |
 | **OD-12** | Returns are in scope with a **dedicated evidence table**. Do not reuse `dispute_evidence` (N25). | `BETK_V2_SCOPE_BASELINE.md` §13 N25; `BETK_V2_ROLE_JOURNEYS.md` §5.2 RETP | **YES** — indicative `returns` + dedicated returns-evidence table (baseline §10; N25). |
 | **OD-13** | Agreements / T&C: capture at **signup**; **version-gate** before any order can complete; `agreement_acceptances` covers **buyers and sellers** (N26). Seller Agreement e-signed at onboarding. | `BETK_V2_SCOPE_BASELINE.md` §8, §13 N26; `BETK_V2_ROLE_JOURNEYS.md` §5.4 ONB (seller-agreement e-signature) | **YES** — indicative `agreement_acceptances` (baseline §10). |
@@ -285,7 +289,8 @@ Schema marker is YES/NO only. **No table count and no page count is asserted.** 
 | **OD-16** | Prep SLA: deadline = `confirmed_at + MAX(prep_days)` across that seller order's items; 50% reminder · 80% urgent · **breach auto-escalates**. Catalogue cap 3 days; custom prep comes from the quote. | `BETK_V2_SCOPE_BASELINE.md` §2.8; `BETK_V2_ROLE_JOURNEYS.md` §5.4 | **YES** — indicative `listings.prep_days` and seller-order deadline (baseline §10). |
 | **OD-17** | Addresses visible to **admin + courier only**. Seller sees no buyer identity or location (not name, not phone, not address, not city) (N28). Buyer never sees seller address. | `BETK_V2_SCOPE_BASELINE.md` §2.5, §13 N28; `BETK_V2_ROLE_JOURNEYS.md` §5.2, §5.4 | **NO** — read restriction / RLS. Indicative store pickup-address **columns** are listed in baseline §10; B3 owns them. This OD does not freeze that column list. Courier principal for RLS = **REG-78**. |
 | **OD-18** | Closure is **derived** (seller order: both payment rows confirmed AND delivered; master: every child terminal). Seller balance is **derived**. **No close action. No invented enum member.** | `BETK_V2_SCOPE_BASELINE.md` §4.2, §2.4; §11 REG-56 Amend; `BETK_V2_ROLE_JOURNEYS.md` §5.4 PAYS (derived balance) | **NO** — derived; forbids a new `order_status` member. |
-| **OD-19** | Catalogue: **products only**; **fixed price** on every listing; shipping attributes mandatory; seller categories capped at 3; eligibility band. | `BETK_V2_SCOPE_BASELINE.md` §2.1 | **YES** — indicative `store_categories`, listing shipping/specs columns; dead `price_type` / `type='service'` members blocked at the app layer (baseline §10). B3 freezes. |
+| **OD-19** | Catalogue: **products only**; **fixed price** on every listing; shipping attributes mandatory; seller categories capped at 3; eligibility band. | `BETK_V2_SCOPE_BASELINE.md` §2.1 | **YES** — `store_categories`, listing shipping/specs columns; dead `price_type` / `type='service'` members blocked at the app layer (baseline §10). Frozen inside OD-20’s inventory. |
+| **OD-20** | v2 physical table count is **51** (`betk` 49 + `betk_analytics` 2). Supersedes OD-6. Live today remains 43 until Stage C migrates. **Pages are not frozen.** | B3 `BETK_ERD.md` §2. Inventory: 43 live, 0 dropped, 1 renamed (`orders` → `seller_orders`), 8 new. | **YES** — the inventory itself. |
 
 ### 4.3 Historical v1 freeze text (superseded in place — not deleted)
 
@@ -299,7 +304,7 @@ The 2026-06-13 freeze sheet and the OD-7 / OD-8 amendment blocks that previously
 - **OD-3 — Broadcast tracking (MW4): NO-CAMPAIGN-ENTITY.** Broadcasts create `notifications` rows; per-notification delivery status only. No campaign entity/analytics/dashboard/audience snapshot. Post-MVP: `notification_campaigns` + reporting. *Schema change: NO.*
 - **OD-4 — Google OAuth: IN.** Sign-in via phone-OTP **or** Google OAuth (Supabase Auth links both). `users.phone_number` becomes nullable+UNIQUE; `users.auth_provider` records origin. **Verified phone required before transacting** (checkout / become seller / payout). *Schema change: YES (phone nullable + `auth_provider`).*
 - **OD-5 — Sessions UI OUT / WhatsApp templates merged.** No sessions/active-sessions page. WhatsApp template management lives under **Admin → Settings → Notifications** (no standalone page). *Schema change: NO.*
-- **OD-6 — Table count: 43 (documentation).** Authoritative inventory + counting methodology added to `BETK_ERD.md §1.1`. *Schema change: NO.* **SUPERSEDED — count UNFROZEN pending B3; 43 remains true of today's live schema.**
+- **OD-6 — Table count: 43 (documentation).** Authoritative inventory + counting methodology added to `BETK_ERD.md §1.1`. *Schema change: NO.* **SUPERSEDED by OD-20 — target frozen at 51; 43 remains true of today's live schema.**
 - **OD-7 — Bilingual AR/EN web app + light/dark theme: IN (no translation service).** App becomes bilingual Arabic/English and light/dark themed over the then-existing page set — no new pages, no new tables, no new content columns, no new dependency. (v1 “over the existing 59 pages” is a **count that is UNFROZEN**; the presentation-layer rule HOLDS.)
 - **OD-8 — Custodial payments & platform commission: IN (amended 2026-07-23).** Historical full record: `docs/10-ai-development/OD8_CUSTODIAL_PAYMENTS.md`. v2 operative text is §4.1 amendment. Sentences in that record that freeze table count 43 / page count 59, keep seller acceptance, or keep three buyer rails are **superseded** by this file.
 
@@ -425,6 +430,7 @@ Preserved from v1 (v2 does not replace this table). G3's “supported local meth
 - **2026-09-19 — B1.** This file rewritten. OD-1…OD-8 dispositions recorded. **OD-9…OD-19 minted.** Counts remain **UNFROZEN** pending B3 (tables) and B4 (pages). Next: B2 (PRD rewrite) cites §1–§11; B2 does not mint ODs.
 - **2026-09-19 — B1-FIX.** OD-9…OD-19 authority citations confirmed in §4.2. Communication-posture + PRECEDENTS self-delivery-as-courier clause marked **SUPERSEDED in place** (seller sees no buyer identity or location). Minted **REG-78** (courier RLS principal), **REG-79** (OD-4 gate location), **REG-80** (boosts in-or-out).
 - **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP as retained v1 scope. The §10 flag no longer says in-or-out is undecided. No boost requirement was added.
+- **2026-09-22 — B3.** **OD-20** minted (table count **51**). Pages still unfrozen. REG-82 propagated into §3.5. REG-78 and the `delivery_preference` flag marked resolved by the ERD, not redesigned here.
 
 After this rewrite, additions still require a written change request and re-baselining of the PRD and phases. B2 writes FRs/ACs against this scope; B3 freezes tables; B4 freezes pages.
 
