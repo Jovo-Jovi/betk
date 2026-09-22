@@ -5,7 +5,7 @@
 >
 > **Layer:** this document writes **observable behaviour**. It does **not** design tables, columns, enums, policies, or RLS (B3). It does **not** enumerate or count pages (B4). Domain words (cart line, master order, seller order, shipment, deposit obligation, COD-balance obligation) are product concepts from MVP_SCOPE §3; storage and routes are out of this layer.
 >
-> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) is B3’s; courier requirements are **what the courier must do**, never how the principal is authenticated. REG-80 (boosts in-or-out) is **UNDECIDED** — v1 boost requirements are marked PENDING in place, neither rewritten nor deleted.
+> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) is B3’s; courier requirements are **what the courier must do**, never how the principal is authenticated. REG-80 (boosts) is **CLOSED** (2026-09-22, scope owner) — boosts are in for v2 MVP as retained v1 scope; those codes are **RETAINED** (v1 text stands), neither rewritten nor expanded.
 
 ---
 
@@ -119,15 +119,15 @@ No pre-existing **R-C / R-Q / R-E / R-F / R-U / R-G / R-K / R-V** families. No p
 | AC-CAT (new) | **AC-CAT-1–6** | AC-CAT-7 |
 | AC-ADM | **AC-ADM-18–21** | AC-ADM-22 |
 
-**Not taken:** R-B06, FR-PUB-6, FR-BUY-14, FR-SEL-23, any new boost AC. Boost families stay PENDING REG-80.
+**Not taken:** R-B06, FR-PUB-6, FR-BUY-14, FR-SEL-23, any new boost AC. Boost families are **RETAINED** (REG-80 closed); no new boost ID was minted.
 
-**R-R08 / R-D07** not taken: unit-of-review and unit-of-dispute under a multi-seller master are **FLAGGED** (§8 F-REV, F-DSP), not invented.
+**R-R08 / R-D07** not taken: unit-of-review and unit-of-dispute under a multi-seller master are **OPEN** (REG-83, REG-84), not invented.
 
 ---
 
 ## 1. v1 requirement disposition
 
-Exactly one verdict per v1 code: **HOLDS UNCHANGED** / **HOLDS WITH AMENDMENT** / **SUPERSEDED** / **RETIRED** / **PENDING REG-80**. Amendment rows state the **text**, not just “amended”.
+Exactly one verdict per v1 code: **HOLDS UNCHANGED** / **HOLDS WITH AMENDMENT** / **SUPERSEDED** / **RETIRED** / **RETAINED**. **RETAINED** means the v1 text stands (REG-80 closed 2026-09-22 — boosts in for v2 MVP). Amendment rows state the **text**, not just “amended”.
 
 ### 1.1 Business rules (R-*)
 
@@ -155,21 +155,21 @@ Exactly one verdict per v1 code: **HOLDS UNCHANGED** / **HOLDS WITH AMENDMENT** 
 | **R-L05** | Stock decremented on seller confirm, not at checkout | **HOLDS WITH AMENDMENT** | **Amendment:** stock **decrements at checkout**, inside the order-creation attempt (all-or-nothing). It does **not** decrement on seller acceptance (acceptance is retired, AC-SEL-14). MVP_SCOPE §3.6, §7. |
 | **R-L06** | Stock 0 → sold_out | **HOLDS UNCHANGED** | Still the observable effect when tracked stock reaches zero, including after checkout decrement or out-of-stock escalation zeroing — §3.6. |
 | **R-L07** | Restock → active | **HOLDS UNCHANGED** | Untouched. |
-| **R-L08** | One active boost per listing | **PENDING REG-80** | Boosts in-or-out undecided. Not rewritten, not deleted. |
+| **R-L08** | One active boost per listing | **RETAINED** | v1 text stands. REG-80 closed 2026-09-22 (scope owner): boosts are in for v2 MVP as retained v1 scope. Not rewritten, not expanded. |
 | **R-L09** | Service listings hide/omit stock; four `price_type` variants | **HOLDS WITH AMENDMENT** | **Amendment:** `type='service'` is **blocked at the app layer** (enum member retained for later — B3 owns storage). Custom / made-to-order items remain **untracked** (skipped by decrement / restore / zeroing). Four price variants are **retired** in favour of fixed price (R-L17). MVP_SCOPE §3.6, §3.10, §7. |
 | **R-L10** | Soft-delete; removed → public 404 | **HOLDS UNCHANGED** | Untouched. |
 | **R-O01** | Order only from a seller-confirmed inquiry | **SUPERSEDED** | Replaced by R-O11 (cart → checkout). Inquiry is price discovery (OD-11). MVP_SCOPE §7 AC-BUY-6 retired row; §3.1, §3.4. |
-| **R-O02** | BETK-ref `BETK-YYYYMMDD-XXXX` on the (single) order | **HOLDS WITH AMENDMENT** | **Amendment:** the buyer-facing order number is owned by the **master** (§3.1). Child seller-order identifier **shape** is unpinned (FLAG F-REF, B3). The journeys §5.3 example `BETK-2026-000123` is **illustrative**, not a format pin. |
-| **R-O03** | Buyer cancel only while pending | **HOLDS WITH AMENDMENT** | **Amendment:** buyer may cancel the **master** **only before uploading payment proof**. After proof upload, buyer cancel is refused. After deposit confirmation, the buyer’s exit is return / refund / dispute, never cancellation. MVP_SCOPE §3.5. (This product-resolves REG-73’s D6 hole; the register row is not closed here — code close is later.) |
+| **R-O02** | BETK-ref `BETK-YYYYMMDD-XXXX` on the (single) order | **HOLDS WITH AMENDMENT** | **Amendment:** the buyer-facing order number is owned by the **master** (§3.1). Child seller-order identifier **shape** is unpinned (**OPEN REG-81**). The journeys §5.3 example `BETK-2026-000123` is **illustrative**, not a format pin. |
+| **R-O03** | Buyer cancel only while pending | **HOLDS WITH AMENDMENT** | **Amendment:** buyer may cancel the **master** **only before uploading payment proof**. After proof upload, buyer cancel is refused. After deposit confirmation, the buyer’s exit is return / refund / dispute, never cancellation. **Citation (resolves REG-73):** `BETK_V2_ROLE_JOURNEYS.md` §5.2 — “Buyer may cancel only before uploading proof. After the deposit is confirmed the exit is return/refund/dispute, never cancellation.” Cancel-window row: `BETK_V2_SCOPE_BASELINE.md` §2.6 — Buyer / Yes / “Only before uploading payment proof.” MVP_SCOPE §3.5 repeats that pin. |
 | **R-O04** | COD auto-confirm | **RETIRED** | Already retired by v1 OD-8. v2 **holds that retirement**. MVP_SCOPE §7. |
 | **R-O05** | Admin verifies the deposit (v1: one order, one deposit row) | **HOLDS WITH AMENDMENT** | **Amendment:** **one** admin action confirms **every** deposit obligation under that master **and RELEASES** every child seller order (status meaning: admin-approved and with the seller — not seller-accepted). MVP_SCOPE §3.2, §4.1 OD-8 items 3–4. |
-| **R-O06** | One active dispute per order | **HOLDS WITH AMENDMENT** | **Amendment:** one active dispute per **seller order** (the unit that owns cancellation and refund — §3.1). FLAG F-DSP if a master-level dispute is later wanted — not invented here. |
-| **R-O07** | One review per order | **HOLDS UNCHANGED** | §3 does not pin the review unit under a multi-seller master. **FLAG F-REV** — do not invent master-vs-seller-order. |
+| **R-O06** | One active dispute per order | **HOLDS WITH AMENDMENT** | **Amendment:** one active dispute per **seller order** (the unit that owns cancellation and refund — §3.1). Whether a master-level dispute is wanted is **OPEN REG-84** — not invented here. |
+| **R-O07** | One review per order | **HOLDS UNCHANGED** | §3 does not pin the review unit under a multi-seller master. **OPEN REG-83** — do not invent master-vs-seller-order. |
 | **R-O08** | Return only after delivered | **HOLDS WITH AMENDMENT** | **Amendment:** return is requested against a **delivered seller order**; evidence is **dedicated returns evidence** (N25), not dispute evidence. Stock is **not** restored on return (R-L12). MVP_SCOPE §3.11, §3.6. |
 | **R-O09** | Payout min EGP 100 | **HOLDS UNCHANGED** | Untouched. |
 | **R-O10** | Payouts processed manually | **HOLDS UNCHANGED** | Baseline §1 unchanged: no automated payouts. |
-| **R-R01** | Review only if delivered + buyer match | **HOLDS UNCHANGED** | + FLAG F-REV (unit). |
-| **R-R02** | One review per order | **HOLDS UNCHANGED** | + FLAG F-REV. |
+| **R-R01** | Review only if delivered + buyer match | **HOLDS UNCHANGED** | + OPEN REG-83 (unit). |
+| **R-R02** | One review per order | **HOLDS UNCHANGED** | + OPEN REG-83. |
 | **R-R03** | Edit ≤48h | **HOLDS UNCHANGED** | Untouched. |
 | **R-R04** | One immutable seller reply | **HOLDS UNCHANGED** | Untouched. |
 | **R-R05** | Review goes live ~5 min | **HOLDS UNCHANGED** | Untouched. |
@@ -193,11 +193,11 @@ Exactly one verdict per v1 code: **HOLDS UNCHANGED** / **HOLDS WITH AMENDMENT** 
 | **R-M04** | Permanent ban needs confirm | **HOLDS UNCHANGED** | Untouched. |
 | **R-M05** | Flagged-content review 24h | **HOLDS UNCHANGED** | Untouched. |
 | **R-M06** | Auto-flag keywords | **HOLDS UNCHANGED** | Untouched. |
-| **R-B01** | One active boost per listing | **PENDING REG-80** | In-or-out undecided. Not rewritten, not deleted. |
-| **R-B02** | Activates within 5 min of admin confirm | **PENDING REG-80** | Same. |
-| **R-B03** | Auto-expire | **PENDING REG-80** | Same. |
-| **R-B04** | Boosted ranking | **PENDING REG-80** | Same. |
-| **R-B05** | Boost ROI | **PENDING REG-80** | Same. |
+| **R-B01** | One active boost per listing | **RETAINED** | v1 text stands. REG-80 closed 2026-09-22 (scope owner). Not rewritten, not expanded. |
+| **R-B02** | Activates within 5 min of admin confirm | **RETAINED** | Same — v1 text stands. |
+| **R-B03** | Auto-expire | **RETAINED** | Same — v1 text stands. |
+| **R-B04** | Boosted ranking | **RETAINED** | Same — v1 text stands. |
+| **R-B05** | Boost ROI | **RETAINED** | Same — v1 text stands. |
 
 ### 1.2 Functional requirements (FR-*)
 
@@ -205,8 +205,8 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 
 | Code | v1 (historical, page-framed) | Verdict | Cited reason + amendment text |
 |---|---|---|---|
-| **FR-PUB-1** | Homepage (collections, new arrivals, boosted strip) | **HOLDS WITH AMENDMENT** | Discovery holds (§5 survive 01–05). **Boosted strip = PENDING REG-80** (not rewritten, not deleted). Guest write-actions still redirect to login; guest **cannot add to cart** (N21, R-C01). |
-| **FR-PUB-2** | Search & filter, boosted ranking | **HOLDS WITH AMENDMENT** | 1–2 keyword + governorate/city/price/category hold (§5, §10 G4). **R-B04 ranking = PENDING REG-80.** Service-type filter is **retired** (products only, §3.10). |
+| **FR-PUB-1** | Homepage (collections, new arrivals, boosted strip) | **HOLDS WITH AMENDMENT** | Discovery holds (§5 survive 01–05). **Boosted strip = RETAINED** (v1 text stands; REG-80 closed 2026-09-22). Guest write-actions still redirect to login; guest **cannot add to cart** (N21, R-C01). |
+| **FR-PUB-2** | Search & filter, boosted ranking | **HOLDS WITH AMENDMENT** | 1–2 keyword + governorate/city/price/category hold (§5, §10 G4). **R-B04 ranking = RETAINED** (v1 text stands; REG-80 closed 2026-09-22). Service-type filter is **retired** (products only, §3.10). |
 | **FR-PUB-3** | Category browse; inactive → 404 | **HOLDS UNCHANGED** | Untouched. |
 | **FR-PUB-4** | Listing detail; price_type; restock CTA | **HOLDS WITH AMENDMENT** | **Amendment:** listing always presents a **fixed price**, plus weight, dimensions, specs, prep days; custom items additionally present **Request price**. Guest cannot add to cart or request a price (§2, N21). Four `price_type` presentations **retired** (§7). R-L10 / R-N06 hold. |
 | **FR-PUB-5** | Public storefront; suspended hidden | **HOLDS WITH AMENDMENT** | R-S07 holds. **Amendment:** buyer **never** sees seller address (§3.8). Store “delivery methods” as a purchase-mode picker is **retired** (courier-only, §3.3). |
@@ -221,8 +221,8 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-BUY-6** | Checkout from confirmed inquiry; flat fee; three rails; stock not here | **SUPERSEDED** | Replaced by FR-CHK-1 + FR-PAY-1 + FR-COU-1. AC-BUY-6 **RETIRED**. MVP_SCOPE §7. |
 | **FR-BUY-7** | Confirmation / deposit instructions / proof | **HOLDS WITH AMENDMENT** | **Amendment:** instructions show **BETK’s InstaPay handle only** (VF/Orange buyer rails retired). **One** proof on the **master**. Awaiting-review = proof present and not yet admin-verified. Admin verification is FR-PAY-1 / R-O19. MVP_SCOPE §3.2, N22. |
 | **FR-BUY-8** | Order history | **HOLDS WITH AMENDMENT** | **Amendment:** history is of **master** purchases with **per-seller-order** progress visible as independent sections (§3.1). |
-| **FR-BUY-9** | Order detail / track; cancel while pending; pickup/remote no shipment | **HOLDS WITH AMENDMENT** | **Amendment:** buyer sees the master + per-seller sections, both payment states per seller order, combined delivery total, full timeline. Cancel = R-O03 amended (before proof). Pickup/remote “no shipment” empty-state is **retired** (courier-only, every seller order has a shipment — §3.1, §3.3). Review/dispute eligibility flags: F-REV / F-DSP. |
-| **FR-BUY-10** | Leave review | **HOLDS UNCHANGED** | + FLAG F-REV. |
+| **FR-BUY-9** | Order detail / track; cancel while pending; pickup/remote no shipment | **HOLDS WITH AMENDMENT** | **Amendment:** buyer sees the master + per-seller sections, both payment states per seller order, combined delivery total, full timeline. Cancel = R-O03 amended (before proof). Pickup/remote “no shipment” empty-state is **retired** (courier-only, every seller order has a shipment — §3.1, §3.3). Review/dispute eligibility: OPEN REG-83 / REG-84. |
+| **FR-BUY-10** | Leave review | **HOLDS UNCHANGED** | + OPEN REG-83. |
 | **FR-BUY-11** | Raise dispute (also covered return/refund in v1) | **HOLDS WITH AMENDMENT** | **Amendment:** **returns are a dedicated flow** (FR-RET-1, OD-12), not a dispute-reason alias. Dispute path remains for post-delivery disagreements (§3.11 reject → dispute). |
 | **FR-BUY-12** | Dispute detail | **HOLDS UNCHANGED** | Untouched. |
 | **FR-BUY-13** | Notifications | **HOLDS UNCHANGED** | Event set expands via R-N03 amendment / R-N07; the surface holds. |
@@ -230,23 +230,23 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-SEL-2** | Application status | **HOLDS UNCHANGED** | Untouched. |
 | **FR-SEL-3** | Seller dashboard | **HOLDS WITH AMENDMENT** | **Amendment:** there is **no acceptance queue**. Released orders arrive already committed (§3.5, OD-8 item 4). |
 | **FR-SEL-4** | Store profile; slug once | **HOLDS UNCHANGED** | Untouched. |
-| **FR-SEL-5** | Delivery settings (`delivery_options` modes) | **HOLDS WITH AMENDMENT** | **Amendment:** this capability is **pickup address**, not mode selection. Pickup / remote / self-delivery configuration is **retired** (§3.3, §7). Schema fate of the old mode field is B3 (FLAG F-MODE). |
-| **FR-SEL-6** | Store return policy | **HOLDS UNCHANGED** | Preserve-where-untouched (§5). **FLAG F-POL:** relationship to the platform Return & Refund Policy (OD-13) is unpinned — not invented. |
+| **FR-SEL-5** | Delivery settings (`delivery_options` modes) | **HOLDS WITH AMENDMENT** | **Amendment:** this capability is **pickup address**, not mode selection. Pickup / remote / self-delivery configuration is **retired** (§3.3, §7). Schema fate of the old mode field is B3 (F-MODE, in-task — not a REG). |
+| **FR-SEL-6** | Store return policy | **HOLDS UNCHANGED** | Preserve-where-untouched (§5). **OPEN REG-85:** relationship to the platform Return & Refund Policy (OD-13) is unpinned — not invented. |
 | **FR-SEL-7** | Settlement handles | **HOLDS UNCHANGED** | Seller settlement remains InstaPay / VF / Orange (§3.2 Settlement). |
 | **FR-SEL-8** | Listings management | **HOLDS UNCHANGED** | Untouched. |
 | **FR-SEL-9** | Create/edit listing; service hides stock | **HOLDS WITH AMENDMENT** | **Amendment:** products only; **fixed price**; shipping attributes mandatory; specs allowed; prep days (cap 3 except custom); category in approved set; eligibility band. Service listing create/publish is **refused** (§3.10). |
 | **FR-SEL-10** | Stock & inventory; 0 → sold_out | **HOLDS WITH AMENDMENT** | R-L06/R-L07/OD-1 hold. **Amendment:** decrement now happens at checkout (R-L05 amended); out-of-stock escalation zeroes tracked stock (R-L13); custom/MTO untracked (R-L15). |
-| **FR-SEL-11** | Boost listing | **PENDING REG-80** | Not rewritten, not deleted. |
-| **FR-SEL-12** | Boost management | **PENDING REG-80** | Not rewritten, not deleted. |
+| **FR-SEL-11** | Boost listing | **RETAINED** | v1 text stands. REG-80 closed 2026-09-22 (scope owner). Not rewritten, not expanded. |
+| **FR-SEL-12** | Boost management | **RETAINED** | v1 text stands. REG-80 closed 2026-09-22 (scope owner). Not rewritten, not expanded. |
 | **FR-SEL-13** | Seller inbox; confirm → checkout | **HOLDS WITH AMENDMENT** | **Amendment:** seller **quotes** within the band (R-Q*). Confirm-inquiry-to-enable-checkout is **retired** (§7). |
 | **FR-SEL-14** | Orders management; **seller accepts** pending→confirmed | **HOLDS WITH AMENDMENT** | **Amendment:** **seller acceptance is retired** (AC-SEL-14 RETIRED). Orders arrive committed after admin deposit verification. Seller cannot cancel (R-E01). Seller sees ref + items + deadline only (R-V02). Escalation is the only exit (FR-ESC-1). |
 | **FR-SEL-15** | Seller order detail; status changes; shipments | **HOLDS WITH AMENDMENT** | **Amendment:** seller may move **preparing → ready**. Seller **never** sees buyer name, phone, address, or city (N28). Seller labels the box with the **order reference only** (R-K07). Courier collection is courier behaviour (R-K05), not a seller “I am the courier” read of the label (that v1 clause is superseded). |
-| **FR-SEL-16** | Reviews management | **HOLDS UNCHANGED** | + FLAG F-REV. |
-| **FR-SEL-17** | Earnings | **HOLDS WITH AMENDMENT** | **Amendment:** displayed balance is **derived** (R-O26). Eligibility waits for the return-hold window after delivery (R-O29). FLAG F-HOLD on whether return-hold is a REG-62 launch key. |
+| **FR-SEL-16** | Reviews management | **HOLDS UNCHANGED** | + OPEN REG-83. |
+| **FR-SEL-17** | Earnings | **HOLDS WITH AMENDMENT** | **Amendment:** displayed balance is **derived** (R-O26). Eligibility waits for the return-hold window after delivery (R-O29). OPEN REG-86 on whether return-hold is a REG-62 launch key. Do not invent it back into REG-62. |
 | **FR-SEL-18** | Transactions | **HOLDS WITH AMENDMENT** | **Amendment:** unit is the **seller order** (§3.1). |
 | **FR-SEL-19** | Request payout | **HOLDS UNCHANGED** | R-O09/R-O10 hold. |
 | **FR-SEL-20** | Level progress | **HOLDS UNCHANGED** | Untouched. |
-| **FR-SEL-21** | Seller analytics (includes boosts) | **HOLDS WITH AMENDMENT** | Non-boost analytics hold. **Boost analytics clause = PENDING REG-80.** |
+| **FR-SEL-21** | Seller analytics (includes boosts) | **HOLDS WITH AMENDMENT** | Non-boost analytics hold. **Boost analytics clause = RETAINED** (v1 text stands; REG-80 closed 2026-09-22). |
 | **FR-SEL-22** | Seller dispute detail | **HOLDS UNCHANGED** | Untouched. |
 | **FR-ADM-1** | Admin dashboard / SLA panel | **HOLDS UNCHANGED** | Untouched; SLA panel gains escalation/SLA-breach signals via FR-ADM-20 without retiring this code. |
 | **FR-ADM-2** | Seller approval queue | **HOLDS WITH AMENDMENT** | **Amendment:** queue also reviews **food-verification** artefacts when the food branch applies (R-S10, §5). |
@@ -262,9 +262,9 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-ADM-12** | Editorial collections | **HOLDS UNCHANGED** | Untouched. |
 | **FR-ADM-13** | Notifications broadcast | **HOLDS UNCHANGED** | OD-3 holds (no campaign entity). |
 | **FR-ADM-14** | WhatsApp templates merged into Settings | **HOLDS UNCHANGED** | OD-5 holds. |
-| **FR-ADM-15** | Admin settings (incl. boost packages) | **HOLDS WITH AMENDMENT** | **Amendment:** configurable set is R-M07; **not** configurable is R-M08. **`boost_packages` clause = PENDING REG-80.** Flat delivery-fee setting is **retired** as the buyer fee source (replaced by the rate matrix, §3.3). |
+| **FR-ADM-15** | Admin settings (incl. boost packages) | **HOLDS WITH AMENDMENT** | **Amendment:** configurable set is R-M07; **not** configurable is R-M08. **`boost_packages` clause = RETAINED** (v1 text stands; REG-80 closed 2026-09-22). Flat delivery-fee setting is **retired** as the buyer fee source (replaced by the rate matrix, §3.3). |
 | **FR-ADM-16** | Moderation log | **HOLDS UNCHANGED** | Untouched. |
-| **FR-ADM-17** | Boost approval | **PENDING REG-80** | Not rewritten, not deleted. |
+| **FR-ADM-17** | Boost approval | **RETAINED** | v1 text stands. REG-80 closed 2026-09-22 (scope owner). Not rewritten, not expanded. |
 
 ### 1.3 Acceptance criteria (AC-*)
 
@@ -315,7 +315,7 @@ Master **aggregate** (derived, never written as a close action): awaiting paymen
 | **R-C04** | Quantity of a **tracked-stock** line is bounded by live available stock. Custom / made-to-order (untracked) lines are not stock-bounded (R-L15). |
 | **R-C05** | A line becomes **blocked** when the item sells out or a custom quote expires. Checkout is refused until blocked lines are cleared or re-quoted. |
 | **R-C06** | Unit price is **snapshotted** at add time (or at quote-accept time for custom lines). A later listing or quote edit does not silently change the line. |
-| **R-C07** | When the payment window expires with no proof, cancelled lines are **restored to the cart** (in addition to stock restore, R-L11). **FLAG F-CART:** cart-restore is explicit in journeys §5.2; MVP_SCOPE §3.5 names stock restore and notify, not cart restore. This rule cites §3.1 (cart lifecycle) + §3.5 (expiry cancel) and records the journeys pin. |
+| **R-C07** | When the payment window expires with no proof, tracked stock is restored (R-L11). Whether cancelled lines are restored to the cart is **OPEN (REG-82)**. Journeys §5.2 says cart restored; MVP_SCOPE §3.5 names stock restore and notify, not cart restore. This rule does not pick. |
 
 **FR-CART-1** — Cart lifecycle as R-C01–R-C07. B4 maps the surface; B2 does not name a route.
 
@@ -489,7 +489,7 @@ Custody **holds**: buyer pays BETK; admin verifies; no gateway; no automated cap
 |---|---|
 | **R-O25** | A seller order is **closed** when **both** payment obligations are confirmed **and** it is delivered. The master is **closed** when **every** child has reached a terminal state. There is **no close action**. There is **no invented “closed” / “settled” status**. |
 | **R-O26** | Seller balance is **derived** at read time from stored order/payment facts. No persisted wallet / ledger. |
-| **R-O29** | Manual payout (R-O09 / R-O10) becomes eligible only after the **return-hold window** following delivery. **FLAG F-HOLD:** window duration is admin-configurable (MVP_SCOPE §5 → baseline §9) but is **not** named in the narrowed REG-62 gate (MVP_SCOPE §9). Do not invent it back into REG-62. |
+| **R-O29** | Manual payout (R-O09 / R-O10) becomes eligible only after the **return-hold window** following delivery. **OPEN REG-86:** window duration is admin-configurable (MVP_SCOPE §5 → baseline §9) but is **not** named in the narrowed REG-62 gate (MVP_SCOPE §9). Do not invent it back into REG-62. |
 
 **FR-CLO-1** — Derived closure + derived balance as R-O25–R-O26, R-O29.
 
@@ -558,11 +558,11 @@ Event catalogue in baseline §7 is in-scope as BETK→user notifications. B4 map
 
 **FR-ADM-21** — Admin can audit seller performance. **Stock accuracy leads** (escalation rate, out-of-stock escalations, recency of stock touch). Fulfilment, quote responsiveness, quality, compliance (including agreement version), and activity signals follow. SLA breach feeds the record; it does **not** auto-issue a strike (R-F04, R-E04).
 
-### 3.19 Boosts — PENDING REG-80
+### 3.19 Boosts — RETAINED (REG-80 closed)
 
-**Cite:** MVP_SCOPE §10 FLAG REG-80.
+**Cite:** MVP_SCOPE §10 G6. REG-80 closed 2026-09-22 by the scope owner.
 
-v1 **R-B01–R-B05**, **R-L08**, **FR-SEL-11**, **FR-SEL-12**, **FR-ADM-17**, and the boost clauses of **FR-PUB-1**, **FR-PUB-2**, **FR-SEL-21**, **FR-ADM-15** remain in this file as **PENDING REG-80**. They are **not** rewritten and **not** deleted. B4 must not silently drop or silently add boost pages. **No new boost R/FR/AC is minted.**
+v1 **R-B01–R-B05**, **R-L08**, **FR-SEL-11**, **FR-SEL-12**, **FR-ADM-17**, and the boost clauses of **FR-PUB-1**, **FR-PUB-2**, **FR-SEL-21**, **FR-ADM-15** are **RETAINED**. The v1 text stands. They are not rewritten and not expanded. **No new boost R/FR/AC is minted.** B4 maps these retained capabilities onto pages and must not add boost requirements. Any boost schema question is B3’s and is flagged at that time (REG-78-class cite-or-flag), not written here as a requirement.
 
 ---
 
@@ -605,7 +605,7 @@ Each AC is **observable behaviour**. None restates its FR in different words. No
 | **AC-CART-4** | Given a custom quote that expires, the corresponding cart line is **blocked**. Checkout while it remains is **refused** and identifies that line. Clearing or a fresh in-band quote unblocks. |
 | **AC-CART-5** | Given a tracked-stock line whose listing reaches zero availability, the line becomes **blocked** and checkout is refused until it is cleared. |
 | **AC-CART-6** | Changing qty (within stock) or removing a line **changes** the running subtotal (and the displayed delivery/total once those are computed). |
-| **AC-CART-7** | Given checkout then payment-window expiry with no proof: tracked stock is restored **and** the lines are again in the buyer’s cart. |
+| **AC-CART-7** | Given checkout then payment-window expiry with no proof: tracked stock is restored. Cart-restore is **not asserted** — OPEN under REG-82 (journeys §5.2 vs MVP_SCOPE §3.5). |
 
 ### 6.2 Checkout — AC-CHK-1–6  (FR-CHK-1)
 
@@ -817,17 +817,17 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 |---|---|---|---|
 | **REG-79** | Verified-phone gate at add-to-cart vs checkout | Authority does not pin it. Written **OPEN** as R-A07 / FR-AUTH-4 / AC-AUTH-4. | Product pin (not B3/B4) |
 | **REG-78** | Courier authenticated principal | Requirements are collect / deliver / COD / remit / read label only. | **B3** |
-| **REG-80** | Boosts in-or-out | v1 boost codes **PENDING** in place. No new boost requirements. | Product pin before **B4** |
-| **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). Storage fate is not this layer. | **B3** / Stage C |
-| **F-N22** | Child deposit snapshot of the proof reference | Recorded as DIRECTION in R-O18. Not frozen. | **B3** |
-| **F-REF** | Child seller-order identifier format | Master owns the buyer-facing number (R-O02 amended). Child shape unpinned. Journeys example is not a pin. | **B3** |
-| **F-CART** | Cart restore on payment-window expiry | Journeys §5.2 explicit; MVP_SCOPE §3.5 names stock restore. R-C07 cites both and flags the prose gap. | Docs hygiene / B1 follow-up |
-| **F-REV** | Review unit under a multi-seller master | R-O07 / R-R02 HOLDS UNCHANGED. Master-vs-seller-order **not** picked. | Product / **B4** |
-| **F-DSP** | Whether a master-level dispute is wanted | R-O06 amended to seller order because that unit owns refund. A master-level dispute is **not** invented. | Product |
-| **F-POL** | Store-level return policy vs platform Return Policy | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
-| **F-HOLD** | `return_hold_hours` vs narrowed REG-62 | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). | **B3** |
-| **F-PROMPT** | `BETK_MASTER_EXECUTION_PROMPT.md` still says 59 pages / one FR per page | Out of B2’s rewrite set. Stale. | Later docs sweep |
-| **REG-73** | Buyer cancel vs already-confirmed deposit | **Product-resolved** by R-O03 amendment (cancel only before proof). Register **not closed** here (code still v1). | Later orders rebuild |
+| **REG-80** | Boosts in for v2 MVP | **CLOSED** 2026-09-22 (scope owner). v1 boost text **RETAINED**. No new boost requirements. Schema questions are B3, REG-78-class, not new FRs. | Closed — B4 maps retained v1 boost capabilities |
+| **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). Storage fate is not this layer. Left as an in-task note: B3 resolves it while rewriting the ERD. Not minted. | **B3** / Stage C |
+| **F-N22** | Child deposit snapshot of the proof reference | Recorded as DIRECTION in R-O18. Not frozen. Not in the B2-FIX mint set. | **B3** |
+| **REG-81** | Child seller-order identifier format (was F-REF) | Master owns the buyer-facing number (R-O02 amended). Child shape unpinned. Journeys example is not a pin. | Product pin — B3 must not invent |
+| **REG-82** | Cart restore on payment-window expiry (was F-CART) | Journeys §5.2 says cart restored; MVP_SCOPE §3.5 names stock restore, not cart restore. R-C07 / AC-CART-7 do not pick. | Product pin — blocks B3 stock lifecycle |
+| **REG-83** | Review unit under a multi-seller master (was F-REV) | R-O07 / R-R02 HOLDS UNCHANGED. Master-vs-seller-order not picked. | Product pin — blocks B4 page inventory |
+| **REG-84** | Whether a master-level dispute is wanted (was F-DSP) | R-O06 amended to seller order. A master-level dispute is not invented. | Product |
+| **REG-85** | Store-level return policy vs platform Return Policy (was F-POL) | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
+| **REG-86** | `return_hold_hours` vs narrowed REG-62 (was F-HOLD) | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). Do not invent it back into REG-62. | Product / launch gate |
+| **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. Do not treat that prompt as the v2 inventory. | Later docs sweep |
+| **REG-73** | Buyer cancel vs already-confirmed deposit | **CLOSED.** R-O03 quotes journeys §5.2, which covers the deposit-confirmed case. | Closed — orders rebuild implements R-O03 |
 
 N24 remains unused in the signed set (MVP_SCOPE §8). Not invented.
 
@@ -842,11 +842,11 @@ The 2026-06-13 / OD-7 / OD-8 page-framed PRD follows. Operative v2 text is §0�
 
 Step 2 of the BETK Dev OS. Functional requirements are derived **one block per wireframed page** in `BETK_UI_SPEC.md`; each maps to an acceptance criterion. Business rules are quoted by ID from the C1 Business Rules catalog (R-Axx … R-Bxx). Reads with `BETK_MVP_SCOPE.md` (frozen) and `BETK_ERD.md` (data contract).
 
-**§1 Executive summary (v1).** BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy — bilingual Arabic/English with light/dark theming (OD-7), Arabic-first by default. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts **and a platform commission on custodial orders (OD-8 — buyer pays BETK, which settles to the seller net of commission)**. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 59 pages of the UI Spec and the 43-table schema. **SUPERSEDED:** the 59-page / 43-table freeze; boosts PENDING REG-80; split-payment rails and order shape as rewritten in §3.
+**§1 Executive summary (v1).** BETK is an Arabic-first RTL marketplace for Egypt's informal creative economy — bilingual Arabic/English with light/dark theming (OD-7), Arabic-first by default. Sellers get free verified storefronts; buyers get neighborhood discovery, local split-payment, and structured buyer protection. Monetization is via listing boosts **and a platform commission on custodial orders (OD-8 — buyer pays BETK, which settles to the seller net of commission)**. The product is a responsive Next.js 15 web app on Supabase (Postgres + Auth + Storage), deployed on Vercel. This PRD defines what to build for MVP — bounded exactly by the 59 pages of the UI Spec and the 43-table schema. **SUPERSEDED:** the 59-page / 43-table freeze; split-payment rails and order shape as rewritten in §3. **Boosts RETAINED** (REG-80 closed 2026-09-22; v1 text stands).
 
 **§2 Problem statement (v1).** 50.7M Egyptian social users sell informally over WhatsApp/Instagram with no trust layer, no structured payments, no discovery, and no buyer protection. No single platform serves products *and* services in one Arabic-first marketplace (bilingual AR/EN + light/dark, OD-7). Buyers cannot verify sellers, track orders, or recover from bad transactions; sellers cannot build durable storefronts or reputation. **SUPERSEDED in part:** services postponed (OD-19); the problem sentence is otherwise historical colour, not a requirements freeze.
 
-**§3 Solution (v1).** A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services; bilingual AR/EN + light/dark, OD-7), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) that is **custodial — the buyer pays BETK, which settles to the seller net of a platform commission (OD-8/ADR-016)**, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization. **SUPERSEDED:** inquiry-to-order; Bosta/self-deliver/pickup/remote; services as live listings; three buyer rails; boosts PENDING REG-80. **HELD:** custodial split, reviews, levels, disputes, bilingual+theme, search.
+**§3 Solution (v1).** A verified-storefront marketplace: phone-OTP identity, admin-gated seller verification (national ID), Arabic-first listings (products and services; bilingual AR/EN + light/dark, OD-7), 1–2 keyword full-text search with governorate/city filters, structured inquiries that convert to orders, a 50/50 split-payment model (deposit upfront + COD) that is **custodial — the buyer pays BETK, which settles to the seller net of a platform commission (OD-8/ADR-016)**, courier integration (Bosta) plus self-deliver/pickup/remote, reviews and seller levels for trust, admin-mediated disputes with a 48h SLA, and boosts for monetization. **SUPERSEDED:** inquiry-to-order; Bosta/self-deliver/pickup/remote; services as live listings; three buyer rails. **HELD:** custodial split, reviews, levels, disputes, bilingual+theme, search, and boosts (**RETAINED** — REG-80 closed 2026-09-22; v1 text stands).
 
 **§4 Actors (v1).** As defined in `BETK_MVP_SCOPE.md §2`: Guest (public), Buyer (protected), Seller (role: seller, status-gated), Admin/Superadmin (role: admin). Identity is unified in `users`; `buyer_profiles`/`seller_profiles` extend 1:1. Roles are additive over time (R-A04). **SUPERSEDED in part:** guest “cannot inquire” is extended (guest cannot request a price / add to cart). Courier is a fulfilment participant, not a fifth authenticated role (REG-78).
 
@@ -894,8 +894,8 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **FR-SEL-8 Listings Management** — `/seller/listings` · role:seller · `listings`,`listing_images` · soft delete (R-L10).
 - **FR-SEL-9 Create/Edit Listing** — `/seller/listings/new|[id]/edit` · role:seller · `listings`,`listing_images`,`listing_tags`,`categories` · publish needs ≥1 image (R-L02) + ar title (R-L03) + category (R-L04); service hides stock (R-L09).
 - **FR-SEL-10 Stock & Inventory** — `/seller/inventory` · role:seller · `listings`,`restock_alerts` · 0 → sold_out (R-L06); restock → active (R-L07); low-stock DERIVED (OD-1).
-- **FR-SEL-11 Boost Listing** — `/seller/listings/[id]/boost` · role:seller · `boosts`,`boost_packages` · one active boost per listing (R-B01/R-L08); activates within 5 min of admin confirm (R-B02). **PENDING REG-80.**
-- **FR-SEL-12 Boost Management** — `/seller/boosts` · role:seller · `boosts`,`boost_packages` · ROI (R-B05); auto-expire (R-B03). **PENDING REG-80.**
+- **FR-SEL-11 Boost Listing** — `/seller/listings/[id]/boost` · role:seller · `boosts`,`boost_packages` · one active boost per listing (R-B01/R-L08); activates within 5 min of admin confirm (R-B02). **RETAINED (REG-80 closed 2026-09-22; v1 text stands).**
+- **FR-SEL-12 Boost Management** — `/seller/boosts` · role:seller · `boosts`,`boost_packages` · ROI (R-B05); auto-expire (R-B03). **RETAINED (REG-80 closed 2026-09-22; v1 text stands).**
 - **FR-SEL-13 Seller Inbox** — `/seller/inbox`,`/seller/inbox/[id]` · role:seller · `inquiries`,`inquiry_messages` · confirm→enables checkout; reply updates `avg_response_hours`; notify ≤5s (R-N04).
 - **FR-SEL-14 Orders Management** — `/seller/orders` · role:seller · `orders`,`payments`,`order_status_history` · **seller accepts** pending→confirmed (AC-SEL-14, fires the stock trigger), gated on the **admin-confirmed deposit** (R-O05 amended: admin verifies the deposit, not the seller); R-O04 COD auto-confirm retired.
 - **FR-SEL-15 Order Detail** — `/seller/orders/[id]` · role:seller · `orders`,`payments`,`order_status_history`,`shipments`,`shipment_tracking_events`,`order_messages` · status changes notify (R-N03).
@@ -925,7 +925,7 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **FR-ADM-14 WhatsApp Templates** — **merged into Admin → Settings → Notifications** (no standalone route; OD-5) · role:admin · `whatsapp_templates` · template CRUD + activate/deactivate within the Settings page.
 - **FR-ADM-15 Admin Settings** — `/admin/settings` · role:admin(super for sensitive) · `admin_settings`,`boost_packages` · SLA + auto-flag keywords; add CHECK on numeric keys (C3 §8.2 RISK 2).
 - **FR-ADM-16 Moderation Log** — `/admin/moderation/log` · role:admin · `moderation_logs` · immutable, read-only (R-M02).
-- **FR-ADM-17 Boost Approval** — `/admin/boosts` · role:admin · `boosts`,`boost_packages`,`moderation_logs` · confirm payment activates (R-B02, MW3). **PENDING REG-80.**
+- **FR-ADM-17 Boost Approval** — `/admin/boosts` · role:admin · `boosts`,`boost_packages`,`moderation_logs` · confirm payment activates (R-B02, MW3). **RETAINED (REG-80 closed 2026-09-22; v1 text stands).**
 
 **v1 §6 Non-functional requirements** — held as §4 of this file except the 59/43 bounding sentence.
 
@@ -952,7 +952,8 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **2026-09-03** — V2-STATE-RECORD. v1 freeze (43 · 59 · AC-BUY-6) recorded SUPERSEDED.
 - **2026-09-19 — B1.** `BETK_MVP_SCOPE.md` rewritten; OD-9…OD-19 minted; counts unfrozen.
 - **2026-09-19 — B1-FIX.** REG-78, REG-79, REG-80 minted.
-- **2026-09-19 — B2.** This file rewritten. v1 codes dispositioned. New R/FR/AC minted at mint time (§0). REG-79 written **OPEN**. REG-78 behaviour-not-principal. REG-80 boost codes **PENDING** in place. Counts still **UNFROZEN**. Next: **B3** (ERD) cites §3 domain-by-domain; **B4** (UI Spec) maps capabilities to pages without treating this file as a page inventory.
+- **2026-09-19 — B2.** This file rewritten. v1 codes dispositioned. New R/FR/AC minted at mint time (§0). REG-79 written **OPEN**. REG-78 behaviour-not-principal. REG-80 boost codes left **PENDING** in place (closed by B2-FIX). Counts still **UNFROZEN**. Next: **B3** (ERD) cites §3 domain-by-domain; **B4** (UI Spec) maps capabilities to pages without treating this file as a page inventory.
+- **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP; listed boost codes flipped **PENDING → RETAINED** (v1 text stands; no new boost requirement). R-O03 cites `BETK_V2_ROLE_JOURNEYS.md` §5.2; that citation closes REG-73. F-flags normalised: took REG-81..REG-87 at mint (next free was REG-81); F-MODE left as a B3 in-task note. Counts still **UNFROZEN**.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______

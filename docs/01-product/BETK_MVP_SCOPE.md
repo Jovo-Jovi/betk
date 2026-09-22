@@ -414,7 +414,7 @@ Preserved from v1 (v2 does not replace this table). G3's “supported local meth
 | G7 Quality control | Seller approval SLA ≤ 24h ≥ 95%; flagged-content review ≤ 24h ≥ 95%. |
 | Platform | Homepage/storefront p95 < 2.5s on Egyptian mobile networks; Core Web Vitals "good". |
 
-**FLAG — REG-80:** G6 (boosts) is preserved-from-v1. `BETK_V2_SCOPE_BASELINE.md` does not mention boosts. Phases 01–05 survive (baseline §11) and `boosts` / `boost_packages` exist live today (MCP `list_tables` 2026-09-19). **In-or-out is undecided** and distorts B4's page count. B2/B4 must not silently drop or silently invent boost pages.
+**REG-80 — CLOSED (2026-09-22, scope owner):** G6 (boosts) is **IN for v2 MVP as retained v1 scope**. `BETK_V2_SCOPE_BASELINE.md` does not mention boosts; that silence is not an exclusion. The v1 boost text stands. B4 maps those retained capabilities and must not drop them or invent additional boost requirements. Any boost schema question is B3’s (REG-78-class flag), not a new requirement. Phases 01–05 survive (baseline §11) and `boosts` / `boost_packages` exist live today (MCP `list_tables` 2026-09-19).
 
 ## 11. Sign-off / supersession history
 
@@ -424,6 +424,7 @@ Preserved from v1 (v2 does not replace this table). G3's “supported local meth
 - **2026-09-03** — V2-STATE-RECORD. v1 freeze (43 tables · 59 pages · OD-1…OD-8 · AC-BUY-6) recorded SUPERSEDED. Scope temporarily UNFROZEN pending rewritten ERD (tables) and UI_SPEC (pages). N21–N23, N25–N28 signed. Authority = the two v2 docs.
 - **2026-09-19 — B1.** This file rewritten. OD-1…OD-8 dispositions recorded. **OD-9…OD-19 minted.** Counts remain **UNFROZEN** pending B3 (tables) and B4 (pages). Next: B2 (PRD rewrite) cites §1–§11; B2 does not mint ODs.
 - **2026-09-19 — B1-FIX.** OD-9…OD-19 authority citations confirmed in §4.2. Communication-posture + PRECEDENTS self-delivery-as-courier clause marked **SUPERSEDED in place** (seller sees no buyer identity or location). Minted **REG-78** (courier RLS principal), **REG-79** (OD-4 gate location), **REG-80** (boosts in-or-out).
+- **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP as retained v1 scope. The §10 flag no longer says in-or-out is undecided. No boost requirement was added.
 
 After this rewrite, additions still require a written change request and re-baselining of the PRD and phases. B2 writes FRs/ACs against this scope; B3 freezes tables; B4 freezes pages.
 
