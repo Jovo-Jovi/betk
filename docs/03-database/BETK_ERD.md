@@ -8,6 +8,8 @@
 > **Money** is `NUMERIC(10,2)` on transactional EGP amounts (live-measured on `listings.price`, `order_items.unit_price` / `subtotal`, `orders.delivery_fee` / `subtotal` / `total_amount` / `commission_amount`, `payments.amount`, `payouts.amount`, `stores.min_order_egp`, `boost_packages.price_egp`, `boosts.amount_paid`). `commission_rate` stays `NUMERIC(5,2)`. Analytics aggregates stay at their live typmods (`gmv_egp` 14,2; `revenue_egp` / `boost_revenue_egp` 12,2). Never float. Never invent a `closed` / `settled` `order_status` member (OD-18).
 >
 > **Numbers taken at mint (re-read 2026-09-22 before taking):** occupied ODs ended at OD-19 (next free **OD-20**). Occupied REGs ended at REG-87 (next free **REG-88**). **Took OD-20** (this freeze) and **REG-88, REG-89** (gaps in §12). Did **not** take an ADR number. Next free after this mint: **OD-21**, **REG-90**. Next free ADR for B5: **ADR-020** (`ADR.md` ends at ADR-019).
+>
+> **B3-FIX (2026-09-22)** amended §3.1, §3.2, §3.6, §4, §6.2, §7, §8, §9, §11, §12, and §13 in place. Register re-read before any mint: header REG-01..REG-89, next free **REG-90**. **No REG taken. No OD taken. No ADR written.** Next free stays **REG-90**, **OD-21**, **ADR-020**.
 
 ---
 
@@ -54,7 +56,7 @@ Every live table has exactly one verdict. New tables cite at least one PRD code.
 | `users` | **KEPT** | OD-4 holds. Phone, role, status, `deleted_at` / `anonymized_at` stay. No new column. |
 | `otp_tokens` | **KEPT** | OD-4 attempt limiter. ADR-010. |
 | `sessions` | **KEPT** | OD-5: sessions UI out; the table stays. |
-| `buyer_profiles` | **KEPT** | Live `bp_self` is self or admin (measured). v2 does not add a public name/city read (N28 / R-V02). |
+| `buyer_profiles` | **KEPT** | Live `bp_self` is self or admin (measured). The v1 row-39 public name/governorate SELECT branch is **struck** (REG-44 WON'T-FIX, §H). v2 does not add it (N28 / R-V02 / REG-83). |
 | `addresses` | **KEPT** | Buyer address book. Seller has no policy (live `addr_self`). R-V03 is the seller-pickup side, not this table. |
 | `seller_profiles` | **KEPT** | Onboarding identity. Food artefacts go on `seller_documents` (R-S10), not a new profile column. |
 | `seller_documents` | **KEPT-AMENDED** | R-S10: food packaging / label / expiry photos and the admin-only social URL are additional `doc_type` members. No new table (baseline §10). |
@@ -130,19 +132,18 @@ Not new, on purpose: escalation is columns on the seller order (OD-14, baseline 
 
 ### 3.1 REG-78 — courier is not an RLS principal
 
-**Resolution (consistent with AC-COU-6).** AC-COU-6 forbids a test that requires a courier user role. `user_role` is not extended. There is no `auth.uid()` courier.
+**Resolution (consistent with AC-COU-6).** AC-COU-6 forbids a test that requires a courier user role. `user_role` is not extended. There is no `auth.uid()` courier. The courier never selects `addresses`, `master_orders`, `buyer_profiles`, or `users`.
 
-Courier-visible addresses are produced as an **artifact**, not a query the courier runs:
+Admin already reads buyer name, phone, and address under `is_admin()` (§8, §9). A `SECURITY DEFINER` function is redundant for that read: `service_role` bypasses RLS without a definer, and ADR-012 rejected definer RPCs. **There is no `courier_label_payload` function in the target.**
 
-- Admin (already `is_admin()`) invokes a server action.
-- That action calls `betk.courier_label_payload(seller_order_id)` with the **service role**.
-- The function is `SECURITY DEFINER`, `search_path` pinned to `betk`, `EXECUTE` revoked from `PUBLIC`, `anon`, and `authenticated`.
-- It reads the master snapshot (§6.2) and `store_pickup_addresses` and returns the label payload (buyer name, phone, address, city, and the seller pickup). The admin action renders or hands that payload to the courier API / print step (R-K09 “API or manual”).
-- Shipment status writes (`dispatched`, `delivered`) are **admin** writes. The seller cannot mark dispatched (AC-COU-4).
+Two branches, both for B5. Neither is a definer. The handoff mechanism (API or manual, R-K09) stays tied to the courier gate. This section does not pick the gate.
 
-The courier never selects `addresses`, `master_orders`, `buyer_profiles`, or `users`.
+1. **Admin-initiated label (the path the target specifies).** An admin server action runs as the admin session. It reads `master_orders` and `store_pickup_addresses` under the admin’s own RLS and renders the label. No definer. No service role.
+2. **Automated courier handoff with no admin session (not chosen).** If the courier gate later picks an automated handoff, a server-side `service_role` read is justified, because there is no admin `auth.uid()` to satisfy RLS. That path still needs no `SECURITY DEFINER` function. AC-COU-6 still holds: the courier has no login.
 
-**ADR candidate for B5 (do not number it here):** “No courier RLS principal; label is an admin-invoked service-role function.” Next free ADR at B5 mint time is ADR-020.
+Shipment status writes (`dispatched`, `delivered`) stay **admin** writes. The seller cannot mark dispatched (AC-COU-4).
+
+**ADR candidate for B5 (do not number it here):** “No courier RLS principal. Admin-initiated label is the admin’s own RLS read. An automated handoff, if later chosen, is a service-role read and still not a definer.” Next free ADR at B5 mint time is ADR-020.
 
 ### 3.2 N22 — validated, not overridden
 
@@ -151,6 +152,8 @@ The courier never selects `addresses`, `master_orders`, `buyer_profiles`, or `us
 **Why this matches the architecture.** Live evidence is `payments.proof_path` on the deposit row (OD-8, ADR-019). v2 has one proof (R-O18) and N deposit rows (R-O17). The canonical write is the master (one row). The copy at verification leaves each confirmed deposit row holding the reference that was verified, which is what a per-seller-order refund or dispute cites (R-O24, REG-84). The buyer does not write N proofs. Leaving child `proof_path` null would fork the column ADR-019 treats as the evidence on the payment row.
 
 **ADR candidate for B5:** this changes ADR-019’s “buyer attaches `proof_path` on the deposit row”. v2 buyer writes the master; a BEFORE/AFTER verification trigger copies onto children. Seller SELECT on `payments` is removed (§8) so the snapshot is not a seller read.
+
+**FR-SEL-17 is not computable on that map alone.** The seller can read `seller_orders.subtotal`, `commission_amount`, `status`, `confirmed_at`, and `delivered_at`, plus own `payouts`, own-store `disputes`, and own-store `returns`. The seller cannot read `payments`, and `return_hold_hours` stays off the REG-69 allow-list (REG-86). Deposit confirmation is `confirmed_at` (admin release). Balance confirmation, the refund total, and the hold deadline are not on any seller-readable table. §6.2 adds `balance_confirmed_at`, `refunded_amount`, and `payout_eligible_at` on `seller_orders`. Those columns carry no `proof_path` and no `transfer_reference`. Under the amended map the derived balance is computable from the seller’s own RLS.
 
 ### 3.3 REG-82 — cart restore path
 
@@ -182,7 +185,7 @@ The column carries no v2 behaviour. It is not dropped, because dropping it is un
 
 `seller_orders.display_ref` `varchar(64)` **NULL**. Partial unique: one non-null value. **No format CHECK.** The journeys example `BETK-2026-000123` is not adopted.
 
-The buyer-facing number moves to `master_orders.betk_ref` (R-O02, format already pinned: `BETK-YYYYMMDD-XXXX`). The seller-visible ref is `display_ref` only. It stays NULL until a product pin fills it. Stage C must not invent the format.
+The buyer-facing number is `master_orders.betk_ref` (R-O02, format already pinned: `BETK-YYYYMMDD-XXXX`). `seller_orders.betk_ref` is **kept** (§4): existing values stay, new rows write NULL, and it is not the v2 buyer-facing number. `display_ref` is the child ref. It stays NULL until a product pin fills it. Stage C must not invent the format. A seller who can read the legacy `betk_ref` is reading an order number, not a buyer name or a location.
 
 ### 3.7 REG-80 — boosts
 
@@ -229,17 +232,72 @@ History-bearing orders (7 rows):
 |---|---|---|
 | Rename `orders` → `seller_orders` in place | Yes | Rename keeps the relation. History FK follows. Do **not** drop and recreate. |
 | Keep history rules and NO ACTION FK | Yes | Spec keeps both. CASCADE or SET NULL on `order_id` would be a different (forbidden) choice. |
-| One synthetic `master_orders` row per existing order; copy `buyer_id`, `delivery_address_id`, `betk_ref` | Yes | Adds a parent. Does not delete the child. 1:1 because v1 orders are single-seller. |
+| One synthetic `master_orders` row per existing order; copy `buyer_id`, `delivery_address_id`, `betk_ref` onto the master | Yes | Adds a parent. Does not delete the child. 1:1 because v1 orders are single-seller. The child **keeps** its copies (B3-FIX). |
 | Add `master_order_id` NULL, backfill, then NOT NULL | Yes | The 7 rows get a parent before the constraint tightens. |
-| Then drop `buyer_id`, `delivery_address_id`, `betk_ref` from the seller order | Yes | Those columns are not what the history FK references. Copy first. |
+| Drop `buyer_id`, `delivery_address_id`, `betk_ref` from the seller order | **Not in the target** | B3-FIX §4.1. Bare uuids are not buyer identity. `betk_ref` is an order number. Nullability of `betk_ref` relaxes so new rows can be NULL. |
 | Leave `delivery_method` and `status` as stored (`pending` / `confirmed` / `cancelled`) | Yes | No status rewrite through `enforce_order_transition`. |
 | `display_ref` NULL on the 7 | Yes | REG-81. No format required to migrate. |
 | Add enum label `ready` | Yes | `ADD VALUE` does not rewrite rows. Do not rename or remove `pending` (the 7 and their history use it). |
-| Rework `enforce_order_transition` **before** dropping `buyer_id` | Yes, sequencing | The live function reads `OLD.buyer_id`. Dropping the column first would break the trigger. Not a table recreate. |
+| Rework `enforce_order_transition` before any drop of `buyer_id` | Latent | The column is **kept**. The live function reads `OLD.buyer_id` (§4.1). A later drop, if one is ever reopened, reworks this function first. This spec does not drop the column. |
 | Detach `decrement_stock_on_confirm` from the confirm transition | Yes | Trigger drop. Rows stay. |
 | Drop `create_order_from_inquiry` and `set_inquiry_converted_order` | Yes | Functions/trigger. `inquiries.converted_to_order_id` FK stays (NO ACTION, nullable). |
 
 **No orders-family choice in this spec requires dropping or recreating `orders` or `order_status_history`.** N27 is not blocked.
+
+### 4.1 Drop blast radius (B3-FIX, live, 2026-09-22)
+
+B3 named three column drops on `orders`: `buyer_id`, `delivery_address_id`, `betk_ref`. No other target column is dropped. Each was re-checked with `pg_depend` (column `attnum`), `pg_policies` / `pg_policy`, `pg_proc` (`prokind = 'f'`, `pg_get_functiondef`), `pg_trigger`, `pg_indexes`, `pg_rules`, and views (`pg_class.relkind` `v`/`m`). Views: none. Rules: none. Other schemas: none.
+
+**`orders.buyer_id`**
+
+`pg_depend`:
+
+- constraint `orders_buyer_id_fkey` on `betk.orders` (`deptype` `a`)
+- index `betk.idx_orders_buyer` (`deptype` `a`)
+- policy `order_items_access` on `betk.order_items`
+- policy `order_items_insert` on `betk.order_items`
+- policy `order_messages_access` on `betk.order_messages`
+- policy `order_messages_insert` on `betk.order_messages`
+- policy `order_status_history_access` on `betk.order_status_history`
+- policy `order_status_history_insert` on `betk.order_status_history`
+- policy `orders_access` on `betk.orders`
+- policy `orders_insert` on `betk.orders`
+- policy `orders_update` on `betk.orders` (USING and WITH CHECK, two `pg_depend` rows)
+- policy `payments_access` on `betk.payments`
+- policy `payments_insert` on `betk.payments`
+- policy `payments_update` on `betk.payments` (USING and WITH CHECK, two `pg_depend` rows)
+- policy `shipment_tracking_events_access` on `betk.shipment_tracking_events`
+- policy `shipments_access` on `betk.shipments`
+
+`pg_proc` / `pg_trigger` (function bodies; plpgsql does not record a column `pg_depend`):
+
+- `betk.enforce_order_transition` reads `OLD.buyer_id`. Trigger `trg_enforce_order_transition` on `betk.orders`.
+- `betk.enforce_payment_update` references the order’s `buyer_id`. Trigger `trg_enforce_payment_update` on `betk.payments`.
+- `betk.create_order_from_inquiry` names `buyer_id`. No trigger. Already marked DROP as a function (§7), which does not require dropping the column.
+
+**`orders.delivery_address_id`**
+
+`pg_depend`:
+
+- constraint `orders_delivery_address_id_fkey` on `betk.orders` (`deptype` `a`)
+
+`pg_proc`:
+
+- `betk.create_order_from_inquiry` names `delivery_address_id`. No policy, index, trigger, view, or rule names it.
+
+**`orders.betk_ref`**
+
+`pg_depend`:
+
+- constraint `uq_orders_betk_ref` on `betk.orders` (`deptype` `a`), backed by unique index `uq_orders_betk_ref`
+
+`pg_proc`:
+
+- `betk.create_order_from_inquiry` names `betk_ref`. No policy, trigger, view, or rule names it.
+
+Policies that mention `buyer_id` on `addresses`, `inquiries`, `disputes`, `reviews`, `store_follows`, or `wishlists` reference those tables’ own columns. They are not dependents of `orders.buyer_id`.
+
+**Why each drop is or is not required.** §9 treats a bare uuid as not a name, phone, address, or city. Joining `buyer_id` or `delivery_address_id` to `users`, `buyer_profiles`, or `addresses` is denied for the seller. Dropping either uuid is not required for N28. **Both columns stay.** `betk_ref` is an order number, not buyer identity. R-O02 is met by `master_orders.betk_ref`. A `NOT NULL` unique value on every child cannot be the one shared master number, so the child column becomes nullable and new checkouts write NULL. Dropping it is not required. **The column stays.** Stage C copies the three values onto the synthetic master and does not drop them from the child. The list above is the sequencing input if a later task reopens a drop: rework `enforce_order_transition` and `enforce_payment_update`, and replace `create_order_from_inquiry`, before `buyer_id` goes away.
 
 **Separate, not N27:** a validated CHECK that every `listings.status = 'active'` row has weight and dimensions will fail until existing active listings are backfilled. Stage C adds that CHECK `NOT VALID` or backfills first (§6.3).
 
@@ -434,6 +492,9 @@ ON DELETE is stated on every FK. “NO ACTION” means no `ON DELETE` clause (Po
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | `uuid` | NO | PK, `gen_random_uuid()` |
+| `buyer_id` | `uuid` | NO | **KEPT (B3-FIX).** FK → `users(id)` ON DELETE NO ACTION. Bare uuid. Seller SELECT includes it. Name and phone do not resolve (§9). |
+| `delivery_address_id` | `uuid` | YES | **KEPT.** FK → `addresses(id)` ON DELETE NO ACTION. Bare uuid. Address text does not resolve (§9). |
+| `betk_ref` | `varchar(25)` | YES | **KEPT, nullability relaxed** (live column is `NOT NULL`). Existing values stay. New rows write NULL. Not the v2 buyer-facing number. Unique index `uq_orders_betk_ref` stays (multiple NULLs allowed). |
 | `master_order_id` | `uuid` | NO | **NEW.** FK → `master_orders(id)` ON DELETE NO ACTION. Nullable only during backfill. |
 | `store_id` | `uuid` | NO | FK → `stores(id)` NO ACTION. Kept. |
 | `display_ref` | `varchar(64)` | YES | **NEW.** REG-81. Partial unique where not null. No format CHECK. |
@@ -453,14 +514,28 @@ ON DELETE is stated on every FK. “NO ACTION” means no `ON DELETE` clause (Po
 | `cancellation_reason` | `text` | YES | Kept. |
 | `notes` | `text` | YES | Kept. |
 | `created_at` | `timestamptz` | NO | `now()` |
-| `confirmed_at` | `timestamptz` | YES | Stamped at **admin release**, not seller acceptance. |
+| `confirmed_at` | `timestamptz` | YES | Stamped at **admin release**, not seller acceptance. This is the deposit-confirmed fact the seller reads. No second deposit timestamp. |
 | `delivered_at` | `timestamptz` | YES | Kept. |
+| `balance_confirmed_at` | `timestamptz` | YES | **NEW.** Stamped when that child balance `payments` row is confirmed. No proof column. |
+| `refunded_amount` | `numeric(10,2)` | NO | **NEW.** Default `0`. CHECK `>= 0`. Rollup of that child’s `payments.refunded_amount`. No proof column. |
+| `payout_eligible_at` | `timestamptz` | YES | **NEW.** Stamped on `delivered` as `delivered_at` plus the then-current `return_hold_hours`, inside the DEFINER transition. The seller reads the timestamp. The settings key stays admin-only (REG-86). |
 | `commission_rate` | `numeric(5,2)` | YES | CHECK 0–100. Snapshot at insert (R-O27). |
 | `commission_amount` | `numeric(10,2)` | YES | CHECK `>= 0`. Subtotal only, never delivery. |
 
 CHECK `(escalated_at IS NULL) OR (escalation_reason IS NOT NULL)`.
 
-**Removed in the target (after copy onto the synthetic master):** `buyer_id`, `delivery_address_id`, `betk_ref`. A seller SELECT of this row then has no buyer name, phone, address, city, or address id.
+**Kept (B3-FIX):** `buyer_id`, `delivery_address_id`, `betk_ref`. B3 had removed them after the master copy. The drop is not required (§4.1). The master still receives its own copies. Seller SELECT of this row includes the two uuids and, on legacy rows, `betk_ref`. It includes no buyer name, phone, address text, governorate, or city, and no `proof_path` or `transfer_reference`.
+
+**Seller balance (FR-SEL-17 / OD-18 / R-O26 / AC-CLO-3).** Not computable from the B3 map: seller SELECT on `payments` is none, and `return_hold_hours` is not seller-readable. With the three columns above it is computable under the seller’s own RLS:
+
+- deposit confirmed = `confirmed_at IS NOT NULL`
+- balance confirmed = `balance_confirmed_at IS NOT NULL`
+- hold elapsed = `payout_eligible_at IS NOT NULL AND now() >= payout_eligible_at`
+- no blocking dispute or return = seller SELECT on `disputes` and `returns` for `store_id = my_store_id()`
+- already paid out = seller SELECT on own `payouts`
+- amount = `subtotal - commission_amount - refunded_amount`
+
+The seller has no UPDATE grant on `balance_confirmed_at`, `refunded_amount`, or `payout_eligible_at`. The payment trigger and the delivery transition stamp them. Three-layer (§8).
 
 **Not on this table:** master status, proof, recipient snapshot.
 
@@ -512,7 +587,7 @@ Same custom/inquiry CHECK as `cart_items`. Existing money CHECKs stay. Live FK `
 | `refunded_amount` | `numeric(10,2)` | NO | default `0`. CHECK `0 <= refunded_amount <= amount`. R-U04. |
 | `proof_snapshot_at` | `timestamptz` | YES | Set when the deposit row copies the master proof (N22). |
 
-`proof_path` and `transfer_reference` stay. For **new** deposit rows the buyer does not write them; the verification trigger does. Balance rows leave them null. `UNIQUE (order_id, payment_type)` stays. FK `order_id` NO ACTION stays. Deposit `method` for new rows is `instapay`. Balance `method` is `cod`. Half-up rounding of 50% is **REG-89** — do not pick it here.
+`proof_path` and `transfer_reference` stay on `payments`. For **new** deposit rows the buyer does not write them; the verification trigger does. Balance rows leave them null. `UNIQUE (order_id, payment_type)` stays. FK `order_id` NO ACTION stays. Deposit `method` for new rows is `instapay`. Balance `method` is `cod`. When a balance row is confirmed, the same trigger stamps `seller_orders.balance_confirmed_at` and does not copy `proof_path` or `transfer_reference` onto the seller order. When `payments.refunded_amount` changes, the trigger rolls the sum onto `seller_orders.refunded_amount`. Rounding of the 50% deposit is **REG-89** (§12) — the candidate is recorded there and is not accepted.
 
 **`disputes`** — add `return_id uuid NULL` FK → `returns(id)` ON DELETE NO ACTION. `UNIQUE (order_id)` stays. No `master_order_id`.
 
@@ -573,14 +648,13 @@ Live inventory: `pg_proc` + `pg_trigger` this session. Security posture is `pros
 | `set_dispute_sla` / `trg_dispute_sla` | **KEPT** | 48h SLA | BEFORE INSERT `disputes` | INVOKER |
 | `recalculate_rating_aggregate` / `trg_recalculate_rating` | **KEPT** | R-R07 | AFTER INSERT OR UPDATE `reviews` | INVOKER. Live trigger does not include DELETE; do not widen it here. |
 | `set_order_commission_snapshot` / `trg_set_order_commission_snapshot` | **REWORK** | Still stamps commission on the seller order at insert, from subtotal only (R-O27), never delivery | BEFORE INSERT seller order | DEFINER, `search_path` pinned, EXECUTE revoked from PUBLIC |
-| `enforce_payment_update` / `trg_enforce_payment_update` | **REWORK** | Admin confirms status. Buyer does **not** write child `proof_path`. Verification copies master proof onto deposit rows and sets `proof_snapshot_at`. Refund amount is admin-only. | BEFORE UPDATE `payments` | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer (§8). |
+| `enforce_payment_update` / `trg_enforce_payment_update` | **REWORK** | Admin confirms status. Buyer does **not** write child `proof_path`. Verification copies master proof onto deposit rows and sets `proof_snapshot_at`. On balance confirm, stamp `seller_orders.balance_confirmed_at` only. On refund, roll `refunded_amount` onto the seller order. Neither copy includes `proof_path` or `transfer_reference`. | BEFORE UPDATE `payments` | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer (§8). |
 | `enforce_order_transition` / `trg_enforce_order_transition` | **REWORK** | See below | BEFORE UPDATE seller order | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer. |
 | `decrement_stock_on_confirm` / `trg_decrement_stock_on_confirm` | **REWORK** | See below | Detach from `AFTER UPDATE OF status WHEN confirmed` | DEFINER stock mutation called from checkout, not from confirm |
 | `set_inquiry_converted_order` / `trg_set_inquiry_converted_order` | **DROP** | Wrote `converted_to_order_id` from an inquiry-order. v2 checkout does not (R-O11). Column stays. | — | Was DEFINER |
 | `create_order_from_inquiry` | **DROP** | Inquiry checkout (ADR-018). Replaced by `checkout_from_cart`. | — | Was INVOKER |
 | `submit_seller_application` / `resubmit_seller_application` | **REWORK** | Stop treating `delivery_options` and the two category varchars as the authority. Write `store_categories` and `store_pickup_addresses`. Signature change is Stage C. | RPC | Stay INVOKER (ADR-012) |
-| `checkout_from_cart` | **NEW** | One transaction: master + N seller orders + items + 2N payments + N shipments, stock decrement, cart consume. All or nothing (R-O12). Phone gate bites here (R-A07 checkout). No delivery-method argument. | RPC | INVOKER, search_path pinned, EXECUTE revoked from PUBLIC, granted to `authenticated` |
-| `courier_label_payload(seller_order_id)` | **NEW** | REG-78 label | RPC | DEFINER, search_path pinned, EXECUTE not granted to `authenticated` or `anon` |
+| `checkout_from_cart` | **NEW** | One transaction: master + N seller orders + items + 2N payments + N shipments, stock decrement, cart consume. All or nothing (R-O12). Phone gate bites here (R-A07 checkout). No delivery-method argument. Child `betk_ref` is written NULL. Master `betk_ref` is the buyer-facing number. | RPC | INVOKER, search_path pinned, EXECUTE revoked from PUBLIC, granted to `authenticated` |
 | `restore_stock_on_cancel` | **NEW** | R-L11 restore on cancel from a pre-delivery state. R-L13 out-of-stock escalation sets `stock_qty = 0` instead. R-L12 does **not** restore on `returned`. R-L15 skips NULL stock. Also the REG-82 cart restore. | AFTER UPDATE of status into `cancelled` | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC |
 | `enforce_master_proof_update` | **NEW** | Buyer may set `proof_path` + `transfer_reference` once, before `payment_deadline`, while children are still `pending` and proof is null. Stamps `proof_uploaded_at`. | BEFORE UPDATE `master_orders` | DEFINER, search_path pinned. Three-layer. |
 | `enforce_store_category_cap` | **NEW** | Count of `store_categories` ≤ `seller_category_limit` | BEFORE INSERT `store_categories` | DEFINER so it can read an admin-only settings key. search_path pinned. |
@@ -603,13 +677,13 @@ Target transitions (product names; stored label in parentheses):
 | `confirmed` | `preparing` | Seller |
 | `preparing` | `ready` | Seller |
 | `ready` | `dispatched` | Admin (courier collected). Not the seller (AC-COU-4). |
-| `dispatched` | `delivered` | Admin |
+| `dispatched` | `delivered` | Admin. The same transition stamps `payout_eligible_at` (§6.2). |
 | `confirmed` or `preparing` | `cancelled` | Admin via escalation only. Not the buyer (R-O22). Not the seller (R-E01). |
 | `delivered` | `returned` | Return accepted (R-U03). |
 
 Any other change of `status` raises. `cancelled_by` stays ungranted and trigger-stamped. Seller is never stamped. `is_admin()` stays in the **policy**, not as a bypass inside the trigger’s actor checks (ADR-019: a later admin-forced transition is the admin branch above, which is now specified).
 
-Rework this function before dropping `buyer_id` (§4).
+The live function reads `OLD.buyer_id`. The column stays (§4.1), so the rework keeps a buyer-cancel check against that column or against the master. Do not drop `buyer_id` in front of this function.
 
 ### 7.2 `decrement_stock_on_confirm` REWORK
 
@@ -619,7 +693,7 @@ Target: remove the confirm trigger. The DEFINER function runs from `checkout_fro
 
 ## 8. RLS policy map
 
-Every v2 table × SELECT / INSERT / UPDATE / DELETE. Empty cell means **no policy** (default deny for that command). `is_admin()` may be OR-ed into SELECT/INSERT/UPDATE where the cell says admin. Service role bypasses RLS for jobs and for `courier_label_payload`.
+Every v2 table × SELECT / INSERT / UPDATE / DELETE. Empty cell means **no policy** (default deny for that command). `is_admin()` may be OR-ed into SELECT/INSERT/UPDATE where the cell says admin. Service role bypasses RLS for jobs. The admin label path does not use the service role (§3.1).
 
 **Three-layer** (ADR-019 / PRECEDENTS): column GRANT + row policy + OLD-aware BEFORE trigger. Marked on write paths where actors differ or legality depends on `OLD → NEW`.
 
@@ -649,16 +723,16 @@ Seller predicate `store` means `store_id = my_store_id()` or the parent row’s 
 | `inquiries` | buyer or store or admin | buyer | store or admin (quote columns) | none | no |
 | `inquiry_messages` | thread parties | thread parties | sender content (no MVP surface) + receiver `is_read` only (REG-42 grant) | none | receiver `is_read` is column GRANT + policy (two of the three layers; no OLD transition) |
 | `master_orders` | buyer self or admin. **Seller none.** | buyer, plus restrictive phone gate | buyer proof columns only, or admin | none | **YES** buyer proof update |
-| `seller_orders` | buyer via parent master `buyer_id`, or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release | none | **YES** |
+| `seller_orders` | buyer (`buyer_id = auth.uid()`), or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release. Seller has no UPDATE on `balance_confirmed_at`, `refunded_amount`, `payout_eligible_at`. | none | **YES** |
 | `order_items` | buyer via seller order, or store, or admin | checkout | none | none | no |
 | `order_status_history` | buyer via seller order, or store, or admin | trigger/actor | none (rule) | none (rule) | no |
 | `order_messages` | buyer via seller order, or store, or admin | those parties | sender `is_read` pattern as inquiry, if used | none | no |
-| `payments` | buyer via parent master, or admin. **Seller none** (proof_path is on the row). | checkout | admin confirm / refund | none | **YES** |
+| `payments` | buyer via `seller_orders.buyer_id`, or admin. **Seller none** (`proof_path` is on the row). Balance facts the seller needs are on `seller_orders` (§6.2), not here. | checkout | admin confirm / refund | none | **YES** |
 | `payouts` | own store or admin | own store, phone gate | admin | none | no |
 | `shipments` | buyer via seller order, or admin. **Seller none.** | checkout | admin | none | no |
 | `shipment_tracking_events` | buyer via shipment, or admin. **Seller none.** | admin or service | none | none | no |
 | `courier_rates` | any authenticated (the matrix is not identity) | admin | admin | admin | no |
-| `reviews` | visible public, or author, or admin. Store may read the review row (reply) but **cannot** join `buyer_id` to name/phone/city (§9). | buyer of that delivered seller order | buyer before deadline, store reply, admin | none | no |
+| `reviews` | visible public, or author, or admin. Store may read the review row (reply) but **cannot** join `buyer_id` to name, phone, governorate, or city (§9). **B4:** a review renders no buyer name and no buyer location. | buyer of that delivered seller order | buyer before deadline, store reply, admin | none | no |
 | `review_photos` | follows review | author | none | author before deadline | no |
 | `rating_aggregates` | public | trigger | trigger | none | no |
 | `returns` | buyer self, store, admin | buyer | seller accept/reject, admin refund | none | **YES** |
@@ -685,25 +759,42 @@ Phone gate (restrictive INSERT): `master_orders`, `seller_orders`, `seller_profi
 
 ## 9. N28 proof — seller read of buyer identity or location
 
-Target policies in §8. A seller read of the **value** of buyer name, phone, address, or city is a fail. UUID columns are listed so they are not a silent join.
+Re-measured in B3-FIX from `information_schema.columns` (`table_schema = 'betk'`, column name matching name, phone, address, governorate, city, street, or building). This table is that result, classified. It is not the B3 list.
 
-| Holds buyer name, phone, address, or city | Seller SELECT | Verdict |
+A seller read of buyer name, phone, address text, governorate, or city is a fail. A bare uuid is not those values.
+
+| Live column | What it holds | Seller path under §8 | Verdict |
+|---|---|---|---|
+| `addresses.governorate` | buyer location | `addr_self`: `buyer_id = auth.uid()` or admin | **NO** |
+| `addresses.city` | buyer location | same | **NO** |
+| `addresses.street_address` | buyer address | same | **NO** |
+| `addresses.building_notes` | buyer address | same | **NO** |
+| `buyer_profiles.full_name` | buyer name | `bp_self`: self or admin. Public name/governorate branch struck (REG-44) | **NO** |
+| `buyer_profiles.governorate` | buyer location | same | **NO** |
+| `buyer_profiles.city` | buyer location | same | **NO** |
+| `users.phone_number` | account phone | `users_self`: self or admin | **NO** |
+| `otp_tokens.phone_number` | phone | no client SELECT | **NO** |
+| `orders.delivery_address_id` | uuid pointer, kept | seller SELECT of `seller_orders` includes the uuid. `addresses` does not. Text does not resolve | **NO** |
+| `boost_packages.name` | package title | not a buyer | n/a |
+| `categories.name_ar`, `categories.name_en` | category title | not a buyer | n/a |
+| `collections.name_ar`, `collections.name_en` | collection title | not a buyer | n/a |
+| `stores.name_ar`, `stores.name_en` | store name | not a buyer name | n/a |
+| `stores.governorate`, `stores.city` | store location, public | seller can read it. It is not the buyer’s governorate or city | n/a |
+| `whatsapp_templates.name` | template title | admin. Not a buyer | n/a |
+
+Target columns that are not in `information_schema` yet, judged under §8:
+
+| Target column | Seller path | Verdict |
 |---|---|---|
-| `users.phone_number` | `users_self`: `id = auth.uid()` or admin. Seller is not that buyer. | **NO** |
-| `buyer_profiles.full_name` | `bp_self`: self or admin. Live policy, kept. | **NO** |
-| `buyer_profiles.governorate` | same | **NO** |
-| `buyer_profiles.city` | same | **NO** |
-| `addresses.governorate`, `city`, `street_address`, `building_notes`, `label` | `addr_self`: `buyer_id = auth.uid()` or admin | **NO** |
-| `master_orders.recipient_name`, `recipient_phone`, `snapshot_governorate`, `snapshot_city`, `snapshot_street_address`, `snapshot_building_notes`, `delivery_address_id` | no seller policy | **NO** |
-| `master_orders.proof_path`, `transfer_reference` (screenshot can show a name) | no seller policy | **NO** |
-| `payments.proof_path`, `transfer_reference` | seller removed from SELECT | **NO** |
-| `seller_orders` | no such column in the target | **NO** |
-| `store_pickup_addresses` | this is **seller** location, not buyer. Buyer SELECT is none (AC-VIS-2). | n/a (not buyer data) |
-| `inquiries.buyer_id`, `reviews.buyer_id`, `disputes.buyer_id`, `order_messages.sender_id` | uuid may be visible on the seller’s own thread/review/dispute. It is not name, phone, address, or city. Join to `users` / `buyer_profiles` / `addresses` / `master_orders` is denied by the rows above. Do not denormalize those attributes onto these tables. | **NO** for name, phone, address, city |
+| `master_orders.recipient_name`, `recipient_phone`, `snapshot_governorate`, `snapshot_city`, `snapshot_street_address`, `snapshot_building_notes` | no seller policy | **NO** |
+| `master_orders.proof_path`, `transfer_reference` | no seller policy | **NO** |
+| `payments.proof_path`, `transfer_reference` | seller SELECT removed | **NO** |
+| `seller_orders.buyer_id` | uuid on a seller-readable row. Join to name or phone is denied by the live rows above | **NO** |
+| `seller_orders.balance_confirmed_at`, `refunded_amount`, `payout_eligible_at` | seller-readable settlement facts. They are not name, phone, address, or proof | n/a |
 
-**Result: no seller read path to buyer name, phone, address, or city.** Label delivery is the DEFINER function the seller cannot execute (§3.1).
+**No YES.** The map did not need an N28 correction. `seller_orders.buyer_id` and `delivery_address_id` stay visible as uuids (§4.1). Label delivery is the admin’s own RLS read (§3.1), which the seller cannot satisfy.
 
-Live `orders_access` still lets a seller read `orders.buyer_id` and `orders.delivery_address_id` **today**. Address text still does not resolve (`addr_self`). The target is the pass. Stage C must drop those columns (after the master copy) in the same migration that sellers start reading seller orders. Shipping the rename without the drop would leave the live FK on a seller-visible row.
+**B4 input:** reviews render no buyer name and no buyer location. `reviews.order_id` is the seller order (REG-83). A public name or governorate on `buyer_profiles` would name the buyer of that order. The row-39 branch stays struck.
 
 ## 10. Traceability
 
@@ -821,7 +912,7 @@ Codes that are behaviour-only (no new stored fact) are marked derived. A code wi
 
 Next free ADR is **ADR-020**. Not taken.
 
-1. **Courier visibility without an RLS principal** (REG-78, §3.1). Required. AC-COU-6.
+1. **Courier visibility without an RLS principal** (REG-78, §3.1). Required. AC-COU-6. Admin-initiated label = the admin’s own RLS read. No definer. No service role. Automated handoff, if later chosen, = service-role read, still no definer. Handoff stays tied to the courier gate.
 2. **Proof write path** (N22, §3.2). Buyer writes `master_orders`; verification copies onto deposit `payments`. Amends the ADR-019 buyer-writes-the-deposit-row sentence.
 
 F-MODE, REG-81, REG-82, REG-83, and REG-84 are recorded in this ERD. They do not need an ADR unless B5 disagrees.
@@ -833,7 +924,7 @@ Minted this session (next free was REG-88; no REG-88 row existed):
 | ID | Flag |
 |---|---|
 | **REG-88** | R-G02 says a version gate blocks order completion until the buyer has accepted the “current required versions”, and R-G05 names four documents. Which of the four are inside that gate is not pinned. `agreement_acceptances` stores all four. Stage C must not hard-code the set. |
-| **REG-89** | Deposit is 50% of (subtotal + delivery) stored as `NUMERIC(10,2)` (R-O16). When the half is not representable in two decimal places, the rounding mode is not pinned. Stage C must not pick one. |
+| **REG-89** | **OPEN.** One transfer covers the whole master (R-O18). The invariants, not yet accepted: the sum of the child deposit rows equals that single transfer amount, and each child deposit plus that child’s balance equals that child’s total. **Engineering candidate for B5, not a product pin:** round the master deposit once onto `NUMERIC(10,2)`, allocate that rounded amount across children by largest remainder with a deterministic tiebreak, and set each child balance to child total minus child deposit. Stage C does not implement this until B5 accepts it. |
 
 Not minted (the spec already refuses the invention):
 
@@ -847,15 +938,17 @@ Not minted (the spec already refuses the invention):
 
 ## 13. Stage C inputs (not done here)
 
-- In-place rename `orders` → `seller_orders`. Synthetic master per existing order. Copy then drop identity columns. Rework `enforce_order_transition` first.
+- In-place rename `orders` → `seller_orders`. Synthetic master per existing order. **Copy** `buyer_id`, `delivery_address_id`, and `betk_ref` onto the master. **Do not drop them** from the child (§4.1). Relax `seller_orders.betk_ref` to nullable. New rows write NULL there.
+- `enforce_order_transition` still reads `OLD.buyer_id`. Rework it for the v2 transitions (§7.1). Because the column stays, that rework is not sequenced in front of a drop. If a later task reopens the drop, the function rework and the §4.1 dependency list come first.
+- Listing publish CHECK (weight and dimensions on active listings) is `NOT VALID` or the rows are backfilled first (§6.3).
 - Do not delete the 7 history-bearing orders. Do not change history rules or the NO ACTION FK.
 - Add `order_status.ready` only.
 - REG-69 array becomes exactly `betk_instapay_handle`.
 - New tables in §6.1. Policies in §8, including the eight live tables that have RLS and zero policies.
 - `checkout_from_cart` replaces `create_order_from_inquiry`.
 - Stock decrement moves to checkout. Confirm trigger comes off.
-- Listing publish CHECK is `NOT VALID` or backfilled first.
 - No SQL in this document. No page inventory.
+- **B4:** reviews render no buyer name and no buyer location (§9).
 
 ---
 
@@ -901,7 +994,7 @@ Principles (C3 §5): RLS enabled on **every** table; default-deny; admins bypass
 | users | self or admin | (Supabase Auth) | self or admin | — | `users_self` |
 | otp_tokens | service/admin | service | service | cron cleanup | not client-readable |
 | sessions | self | Auth | Auth | self/expiry | self-scope |
-| buyer_profiles | self or admin (public name/gov for discovery) | self | self | — | `bp_self` |
+| buyer_profiles | self or admin — public name/gov branch **STRUCK** (B3-FIX 2026-09-22, REG-44 WON'T-FIX; N28 + REG-83). The parenthetical is not a target. | self | self | — | `bp_self` |
 | addresses | self or admin | self | self | self | `addr_self` |
 | seller_profiles | self, public if active, admin | self | self or admin | — | `sp_select`,`sp_update` |
 | seller_documents | own seller or admin | own | own/admin | — | `sdoc_own` (private bucket) |
