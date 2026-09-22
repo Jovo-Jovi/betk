@@ -1,4 +1,5 @@
 # PHASE_03_CATALOG.md — Catalog & Discovery (public)
+> **B7 (2026-09-23):** Every “Phase 08”–“Phase 14” in this file is a **v1 heading (§H)**, not a v2 phase. Map: 08 delivery → v2 Phase 14 courier (shipment RLS is still v2 Phase 08); 09 reviews → v2 Phase 16; 10 disputes → v2 Phase 16; 11 boosts → v2 Phase 20; 12 notifications → v2 Phase 17; 13 earnings → v2 Phase 19; 14 admin → v2 Phase 18. A forward reference to the retired number 07 is that checkout phase; v2 checkout is Phase 11.
 
 > Step 15 task pack (BETK Dev OS). FR-PUB-1..5: Homepage, Search, Category, Listing Detail, Storefront.
 > Generated 2026-06-30 by the Phase-02 review chat after Phase 02 sign-off.
@@ -442,7 +443,7 @@ with a PASS/FAIL line, fix ONLY if trivial-and-safe (state it), else FLAG.
      11/12/13/14/15/18/23 unchanged.
    - Pin the ERD-audit 13-table list as a named SESSION_CONTEXT table mapping
      each specced-but-absent-policy table → owning phase (order set + shipments
-     → Phase 07; disputes set → disputes phase; inquiry/order messages →
+     → Phase 07 (retired; v2 checkout is Phase 11); disputes set → disputes phase; inquiry/order messages →
      messaging; restock_alerts → notifications; seller_strikes/flagged_content/
      whatsapp_templates → admin; sessions → intentionally unused, ADR-010) so
      future phase entry checklists inherit their rows.
@@ -468,11 +469,11 @@ with a PASS/FAIL line, fix ONLY if trivial-and-safe (state it), else FLAG.
 ---
 
 ## Open dependencies into later phases (set up here / carried)
-- `requireVerifiedPhone()` (Phase 02 T07) → consumed by Phase 04 become-seller, Phase 07 checkout, Phase 13 payout.
+- `requireVerifiedPhone()` (Phase 02 T07) → consumed by Phase 04 become-seller, Phase 07 (retired; v2 checkout is Phase 11) checkout, Phase 13 (v1 heading, §H) payout.
 - **Phase 04** owes the permissive ownership INSERT policy on `seller_profiles` (RESTRICTIVE phone-gate only today → default-denied).
-- **Phase 07** owes the same on `orders`.
+- **Phase 07 (retired; v2 checkout is Phase 11)** owes the same on `orders`.
 - Standing pre-launch carries (NOT Phase 03 work): live Google OAuth consent E2E (#13, pre-launch Playwright); handset SMS delivery via TorvoSMS (THE blocking pre-launch item for phone-OTP).
-- `decrement_stock_on_confirm` trigger (R-L05/06) still owed to `BETK_DATABASE_SCHEMA.sql` — relevant at Phase 07 order confirmation, not here.
+- `decrement_stock_on_confirm` trigger (R-L05/06) was still owed to `BETK_DATABASE_SCHEMA.sql` in this as-built note — v1 mechanic, superseded: ADR-025 detaches it in v2 Phase 08; stock decrements at checkout (OD-15), not on seller confirm.
 
 ## Phase 03 acceptance (from BETK_PHASES.md)
 > FR-PUB acceptance criteria; search returns active+not-deleted; boosted ranking; suspended store hidden. Tests: integration (search/filter, RLS public read); E2E browse→listing→storefront. Docs: CACHING_STRATEGY, journal.

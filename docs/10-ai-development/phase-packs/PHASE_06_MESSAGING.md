@@ -1,11 +1,12 @@
 # PHASE 06 — Messaging & Inquiries
+> **B7 (2026-09-23):** Every “Phase 08”–“Phase 14” in this file is a **v1 heading (§H)**, not a v2 phase. Map: 08 delivery → v2 Phase 14 courier (shipment RLS is still v2 Phase 08); 09 reviews → v2 Phase 16; 10 disputes → v2 Phase 16; 11 boosts → v2 Phase 20; 12 notifications → v2 Phase 17; 13 earnings → v2 Phase 19; 14 admin → v2 Phase 18. A forward reference to the retired number 07 is that checkout phase; v2 checkout is Phase 11.
 
 > Scope authority: `BETK_PHASES.md` Phase 06 = **FR-BUY-5 + FR-SEL-13 ONLY** — inquiries + inquiry_messages
-> threads, confirm→checkout ENABLEMENT (the contract Phase 07 consumes; checkout itself is Phase 07),
-> `avg_response_hours` update, notify ≤5s (R-N04, delivery = Phase-12 dependency).
+> threads, confirm→checkout ENABLEMENT (the contract Phase 07 (retired; v2 checkout is Phase 11) consumes; checkout itself is Phase 07 (retired; v2 checkout is Phase 11)),
+> `avg_response_hours` update, notify ≤5s (R-N04, delivery = Phase-12 (v1 heading, §H) dependency).
 > Acceptance (BETK_PHASES): confirmed inquiry enables checkout · response-time metric updates · unread state correct.
 > Pages: `/inbox`, `/inbox/[id]` (buyer, protected) · `/seller/inbox`, `/seller/inbox/[id]` (seller shell).
-> NOTHING ELSE: no order_messages (Phase 07), no notifications-table delivery (Phase 12), no realtime
+> NOTHING ELSE: no order_messages (Phase 07 (retired; v2 checkout is Phase 11)), no notifications-table delivery (Phase 12 (v1 heading, §H)), no realtime
 > subscriptions unless `BETK_UI_SPEC.md` explicitly pins them (cite-or-flag; default = refresh/poll-free
 > server-rendered state + `router.refresh()` after mutations, the T03-Phase-05 pattern).
 
@@ -35,7 +36,7 @@
   `inquiry_messages` = "thread parties / thread parties / sender / — via inquiry") but ABSENT live — 5th instance
   of the #14 / REG-29 / REG-31 / REG-34 class. Do NOT mint REG-41 elsewhere.
 - Further mints (e.g. an `avg_response_hours` deferral, an unread-mechanism gap) start at **REG-42+**.
-- Closes/updates owed at T05: REG-41 closed ERD-verbatim; Phase-06 entry checklist all-✅; Phase-07 entry
+- Closes/updates owed at T05: REG-41 closed ERD-verbatim; Phase-06 entry checklist all-✅; Phase-07 (retired; v2 checkout is Phase 11) entry
   checklist written (REG-09 orders INSERT + order-children policies + checkout consumes the T02 confirm contract
   + `requireVerifiedPhone` at checkout + `converted_to_order_id` write ownership).
 
@@ -89,7 +90,7 @@ STEP 1 — READ-ONLY STATE (MCP execute_sql; paste evidence):
       cite — flag, don't improvise).
     - last_message_at: confirm the column + whether ANY trigger maintains it (expect none → app-layer write
       in T02, stated).
-    - converted_to_order_id: confirm the column + FK; Phase 06 NEVER writes it (Phase-07 checkout owns the
+    - converted_to_order_id: confirm the column + FK; Phase 06 NEVER writes it (Phase-07 (retired; v2 checkout is Phase 11) checkout owns the
       write) — record as part of the contract.
     - avg_response_hours (seller_profiles): re-confirm no trigger/function maintains it (T06-Phase-05
       already verified; re-cite).
@@ -104,7 +105,7 @@ STEP 2 — MIGRATION (mint REG-41, ERD §3 row-verbatim, additive only):
   parent inquiry's store via my_store_id() OR is_admin(); INSERT additionally pins sender to the caller);
   sender UPDATE (own rows only — the read-state/unread column per STEP 1(b), if that's where it lives);
   NO DELETE (ERD).
-- No other table touched. order_messages stays Phase 07. notifications stays Phase 12.
+- No other table touched. order_messages stays Phase 07 (retired; v2 checkout is Phase 11). notifications stays Phase 12 (v1 heading, §H).
 Apply via MCP → local file to MCP version → ledger 26→27 1:1 → schema-source backfill → advisor sweep =
 exact baseline, 0 new.
 
@@ -116,8 +117,8 @@ seller UPDATE on inquiry status allowed, buyer UPDATE on status denied (ERD: UPD
 
 VERIFY: full CI (typecheck · lint 0 new · 4 guards · unit · build) + integration N/N + ledger + advisor.
 CLOSE: REG-41 minted + closed ERD-verbatim in SESSION_CONTEXT; the pinned CONTRACT block (confirm member,
-unread mechanism, last_message_at ownership, converted_to_order_id = Phase-07-write) recorded verbatim in
-SESSION_CONTEXT for T02–T05 + Phase 07 to cite. Commit + push. HOLD — do not start T02.
+unread mechanism, last_message_at ownership, converted_to_order_id = Phase-07 (retired; v2 checkout is Phase 11)-write) recorded verbatim in
+SESSION_CONTEXT for T02–T05 + Phase 07 (retired; v2 checkout is Phase 11) to cite. Commit + push. HOLD — do not start T02.
 ```
 **Done when:** REG-41 closed both-direction-proven; ledger 27/27; advisor baseline; contract block recorded
 with citations (or STOPs raised); `restock_alerts`/`order_messages`/`notifications` untouched.
@@ -153,11 +154,11 @@ client, no service-role, requireActiveUser NOT requireVerifiedPhone):
   action is NOT built — the flag stands).
 - confirmInquiry(inquiryId) — SELLER ONLY: own-store pin + RLS; transitions status to the T01-cited
   confirmed member; idempotent (already-confirmed → typed already_confirmed); does NOT touch
-  converted_to_order_id (Phase 07). THIS IS THE CHECKOUT-ENABLEMENT WRITE — header comment says so and
-  points Phase 07 at it.
+  converted_to_order_id (Phase 07 (retired; v2 checkout is Phase 11)). THIS IS THE CHECKOUT-ENABLEMENT WRITE — header comment says so and
+  points Phase 07 (retired; v2 checkout is Phase 11) at it.
 - Additional status transitions (decline/close) ONLY if the enum + UI_SPEC pin them — cite-or-omit.
 R-N04: at message-send + confirm, capture the PostHog event + a code comment citing R-N04 with delivery
-deferred to Phase 12 (notifications infra). NO notifications-table writes, NO WhatsApp/email sends.
+deferred to Phase 12 (v1 heading, §H) (notifications infra). NO notifications-table writes, NO WhatsApp/email sends.
 
 QUERIES: getOwnInquiries (buyer, last_message_at DESC, unread state per contract), getInquiryThread
 (participant-scoped, messages ASC, 404-null for outsiders), getStoreInquiries (seller, status filter),
@@ -169,7 +170,7 @@ metric updates if DECISION 2 = A. Full CI green. Docs: ADR/design note + SESSION
 Commit + push. HOLD — do not start T03.
 ```
 **Done when:** both decisions recorded with reasoning; confirm transition proven both directions;
-no service-role; no phone gate; R-N04 event-only with Phase-12 pointer; CI + integration green.
+no service-role; no phone gate; R-N04 event-only with Phase-12 (v1 heading, §H) pointer; CI + integration green.
 
 ## T03 — Buyer inbox (Sonnet)
 ```
@@ -185,8 +186,8 @@ Branch feature/phase-06-messaging. Sonnet. Compose-only.
   composer client component calling sendInquiryMessage (file-path import) + router.refresh() on success;
   mark-read on view if the mechanism exists.
 - CONFIRMED-STATE CTA: when status = the confirmed member, render the "proceed to checkout" banner as
-  GUIDANCE-ONLY (no link — /checkout is Phase 07; dead-link rule; /seller-landing precedent). Code
-  comment: Phase 07 wires routes.checkout here.
+  GUIDANCE-ONLY (no link — /checkout is Phase 07 (retired; v2 checkout is Phase 11); dead-link rule; /seller-landing precedent). Code
+  comment: Phase 07 (retired; v2 checkout is Phase 11) wires routes.checkout here.
 - LISTING-DETAIL WIRING: ListingActionButtons' Inquiry CTA (login-redirect entry point since Phase-03 T05)
   now routes an AUTHED buyer into the real flow (inline composer or /inbox redirect after createInquiry —
   follow UI_SPEC's pinned shape, cite it); guests keep the /auth/login?returnUrl= redirect. A seller
@@ -211,7 +212,7 @@ Branch feature/phase-06-messaging. Sonnet. Compose-only, seller shell.
   listing + buyer display name + preview + last_message_at + unread + status.
 - /seller/inbox/[id]: MessageThread + reply composer (sendInquiryMessage, file-path import); CONFIRM
   action via ConfirmDialog → confirmInquiry → router.refresh(); confirmed state renders a "buyer can now
-  checkout" note (guidance, no link — Phase 07). Additional transitions only if T02 built them.
+  checkout" note (guidance, no link — Phase 07 (retired; v2 checkout is Phase 11)). Additional transitions only if T02 built them.
 - avg_response_hours: display per DECISION 2 (live value if A; static/NULL + REG-42 note if B).
 - Nav: add inbox to SellerChrome (route exists after this task — the T03-Phase-05/T05 deferral pattern,
   no dead links). i18n seller.inbox.* both locales, reuse listing/status keys where they fit.
@@ -231,7 +232,7 @@ Read SESSION_CONTEXT.md, then execute Phase 06 T05 — exit gate. Opus. ZERO fea
    contract written + proven (confirmInquiry transitions the cited member; converted_to_order_id
    untouched/NULL) · buyer-cannot-confirm · outsider isolation on inquiries AND messages · unread
    correct (or the flag stands, restated) · avg_response_hours per DECISION 2 (updates proven if A) ·
-   R-N04 event-only + Phase-12 pointer · no phone gate on messaging (grep + code cite) · no service-role
+   R-N04 event-only + Phase-12 (v1 heading, §H) pointer · no phone gate on messaging (grep + code cite) · no service-role
    (guard) · no order_messages/notifications writes (grep) · binding rules held (no loading.tsx on
    notFound() segments; file-path imports; compose-only diff proof).
 2. E2E (staging throwaway, minted + cleaned, residue re-queried = 0): buyer opens inquiry from a real
@@ -250,7 +251,7 @@ Read SESSION_CONTEXT.md, then execute Phase 06 T05 — exit gate. Opus. ZERO fea
    "Phase 06: Messaging & Inquiries (T01–T04 + REG-41)" — ONE+ migration present → the R5 RLS-smoke job
    MUST fire; state the expectation in the body. HOLD — human merges.
 ```
-**Done when:** all ledger lines PASS; E2E lifecycle proven zero-residue; Phase-07 checklist written;
+**Done when:** all ledger lines PASS; E2E lifecycle proven zero-residue; Phase-07 (retired; v2 checkout is Phase 11) checklist written;
 PR open + held.
 
 ## Results tracker
@@ -262,4 +263,4 @@ PR open + held.
 | T02-FIX REG-42 | Opus | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 37/37 (readReceipt 10 + rls 13 + writeLayer 14) · ledger 28/28 · advisor post-T01 baseline (13), 0 new | **REG-42 CLOSED** — DECISION 3 REVISED (3a superseded) under AUTHORIZED ERD §3 row-52 amendment; mig `20260722124510` (column GRANT `UPDATE(is_read)` + `inq_msg_read_receipt` policy); `markInquiryRead` + `unreadCount` wired into 3 queries; ADR-015; body-edit denied by grant (42501) |
 | T03 buyer inbox | Sonnet | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 14/14 (writeLayer, ADR-014 merge re-proof) + 10/10 (readReceipt) · i18n 709/709 · build 42 routes · runtime smoke 14/14 (forged @supabase/ssr cookie) | ADR-014 merge applied at query layer (`getInquiryThread` — `buyer_first_message` was NOT already merged, now `messages[0]` synthetic); `/inbox`+`/inbox/[id]` composed AS-IS; `InquiryComposer` wired to `ListingActionButtons` via new `useViewerListingAccess` hook; REG-45 minted (WhatsApp deep-link RLS-unreachable, omitted); **REG-46 minted+CLOSED same task** (`(buyer)/loading.tsx` swallowed `notFound()`'s 404 status — BL-01-FIX class bug at the group level — fixed by deletion) |
 | T04 seller inbox | Sonnet | ✅ DONE | feature/phase-06-messaging | CI green · unit+integ 293/294 (1 skipped, unchanged) · i18n 692/692 · build 44 routes · runtime smoke 9/9 (2 minted sellers + 1 buyer, real `@supabase/ssr` cookies, cross-surface CONFIRM/DECLINE + bidirectional unread proofs) | `/seller/inbox`+`/seller/inbox/[id]` composed against T02/T02-FIX AS-IS; new lean `getStoreInquiriesStatusCounts`+`getOwnAvgResponseHours` queries; REG-44 neutral buyer label + REG-45 no-WhatsApp both applied+proven; seller-only ownership `notFound()` beyond RLS (buyer-on-seller-route found to be middleware-blocked BEFORE the page, not a bug); CONFIRM+DECLINE both wired via `InquiryStatusActions`; T03 carry micro-fix (declined/expired composer now disabled, not toast-on-submit); STEP 0 `loading.tsx` sweep = zero found, nothing to remove |
-| T05 exit gate | Opus | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 173+1 skipped (24 files) · ledger 28/28 · advisor 13-baseline 0-new · build 44 routes · E2E 10/10 zero-residue | Exit gate (flagged corrections applied: ledger 28/28, advisor baseline 13, unread BUILT). DoD ledger all-PASS; throwaway lifecycle E2E (minted+cleaned, MCP residue-sweep 0, DELETED); DB live-state verified (policies ERD-verbatim incl. row-52, grants `is_read`-only). REG-41/42 CLOSED · REG-43 CLOSED-BY-DECISION + standing `last_message_at` warning · REG-44/45 ONE POSTURE (REG-45 stays open) · REG-46 CLOSED · REG-47 minted RECORD-ONLY · REG-12/13 UNCHANGED. Phase-06 checklist all-✅ + Phase-07 checklist written; UI_SPEC matrix (2 rows/4 routes) + ADR-014/015 confirmed; journal hydration-payload note. ZERO feature-code. Consolidated PR held for human; TWO migrations → R5 RLS-smoke MUST fire |
+| T05 exit gate | Opus | ✅ DONE | feature/phase-06-messaging | CI green · unit 120/120 · integ 173+1 skipped (24 files) · ledger 28/28 · advisor 13-baseline 0-new · build 44 routes · E2E 10/10 zero-residue | Exit gate (flagged corrections applied: ledger 28/28, advisor baseline 13, unread BUILT). DoD ledger all-PASS; throwaway lifecycle E2E (minted+cleaned, MCP residue-sweep 0, DELETED); DB live-state verified (policies ERD-verbatim incl. row-52, grants `is_read`-only). REG-41/42 CLOSED · REG-43 CLOSED-BY-DECISION + standing `last_message_at` warning · REG-44/45 ONE POSTURE (REG-45 stays open) · REG-46 CLOSED · REG-47 minted RECORD-ONLY · REG-12/13 UNCHANGED. Phase-06 checklist all-✅ + Phase-07 (retired; v2 checkout is Phase 11) checklist written; UI_SPEC matrix (2 rows/4 routes) + ADR-014/015 confirmed; journal hydration-payload note. ZERO feature-code. Consolidated PR held for human; TWO migrations → R5 RLS-smoke MUST fire |

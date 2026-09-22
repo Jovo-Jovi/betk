@@ -108,7 +108,7 @@ Status: **Accepted** (Phase 05 / T02, 2026-07-21, Opus 4.8). **B5 verdict: HOLDS
 
 **REG-15 (bilingual title) — schema half CLOSED here.** The create/edit Zod schema was authored in T02 (`src/validations/listings.ts`), so per REG-15 the title is **required in BOTH `titleAr` and `titleEn`** at the form/validation layer (`min(1)` each). `betk.listings.title_en` stays **NULLABLE in the DB — no schema change**; the bilingual requirement lives only at the Zod layer, and the T04 create/edit form mirrors this schema (single source of truth). Note the publish gate (R-L03) still keys on `title_ar` only; `title_en` is a form requirement, not a publish gate.
 
-**R-L07 restock + R-L10 soft delete (app-layer, cited).** There is **no DB trigger** for restock — `updateStock` performs the R-L07 `sold_out → active` flip in the action when stock goes `>0` (returns `restocked: true`). R-L10 soft delete sets **both** `status='removed'` AND `deleted_at=now()`: `deleted_at IS NULL` keeps it out of public reads (a public 404), while `status='removed'` keeps it visible in the seller's "removed" tab and editable via owner reads; inventory excludes it. No seller-side restore (admin-only, Phase 14).
+**R-L07 restock + R-L10 soft delete (app-layer, cited).** There is **no DB trigger** for restock — `updateStock` performs the R-L07 `sold_out → active` flip in the action when stock goes `>0` (returns `restocked: true`). R-L10 soft delete sets **both** `status='removed'` AND `deleted_at=now()`: `deleted_at IS NULL` keeps it out of public reads (a public 404), while `status='removed'` keeps it visible in the seller's "removed" tab and editable via owner reads; inventory excludes it. No seller-side restore (admin-only, Phase 14 (v1 heading, §H; v2 admin is Phase 18)).
 
 **Consequences.** Zero migrations, zero rpcs in T02 — a pure application-layer write layer over the T01 RLS foundation. Ownership is enforced twice (RLS `listings_seller`/children + a server-verified own-store pin, `resolveCallerStoreId`); no service-role. Every action Zod-validates before any DB call and returns a discriminated union (never throws to the client). Proven on staging: create→draft (+ search_vector trigger), service stock-strip (R-L09), image own-prefix/forbidden/limit + row-remove, publish happy + per-requirement block (incl. R-S09), soft-delete visibility split (R-L10), restock flip (R-L07), and cross-seller denial — 10/10, zero residue.
 
@@ -164,7 +164,7 @@ no wallet or ledger table.
 **Consequences.**
 - BETK takes legal custody of buyer funds (see OD-8 §11).
 - Manual verification moves from seller to admin; `/admin/payments` becomes an operational surface.
-- BETK becomes merchant of record with the courier (Phase 08).
+- BETK becomes merchant of record with the courier (Phase 08 (v1 heading, §H; v2 courier handoff is Phase 14)).
 - Three additive columns; no new table; table count 43 and page count 59 both hold.
 - R-O04 (COD auto-confirm) is retired; R-O05's confirming actor becomes admin.
 - Payment gateways, automated capture, and automated payouts remain out of scope — unchanged
@@ -306,11 +306,11 @@ one migration and one authorization posture.
      buyer-of-parent (**the seller gets NO `payments` UPDATE**). `orders_update` = buyer own OR store OR
      `is_admin()` — **SUB-DECISION A:** admin is KEPT in the *policy* (ERD §3 row 54 "store/admin"
      verbatim) but DROPPED from the trigger's actor checks; the trigger, not the policy, scopes the
-     Phase-07 transitions. Phase 14 amends the trigger for admin-forced cancellation.
+     Phase-07 transitions. Phase 14 (v1 heading, §H; v2 admin-forced cancellation is Phase 18; ADR-025 reworks the trigger in Phase 08) amends the trigger for admin-forced cancellation.
    - **Layer 3 — `OLD`-aware `BEFORE UPDATE` DEFINER trigger** (search_path pinned, EXECUTE revoked
      PUBLIC/anon/authenticated; never PostgREST-exposed → no advisor 0028/0029). `enforce_payment_update`:
      admin-only columns require `is_admin()`; **F2** the ONLY legal status change is `pending→confirmed`
-     (anything else — incl. admin reverting to pending or setting refunded/failed, which are Phase 10/14 —
+     (anything else — incl. admin reverting to pending or setting refunded/failed, which are Phase 10/14 (v1 headings, §H; v2 disputes are Phase 16, v2 refunds are Phase 15, v2 admin is Phase 18) —
      RAISEs `BETK_ILLEGAL_PAYMENT_TRANSITION`); proof-attach only on the caller's own pending deposit row.
      `enforce_order_transition`: **F1** cancel-metadata (`cancelled_by`/`cancellation_reason`) may change
      ONLY on a genuine `pending→cancelled` transition (`BETK_CANCEL_METADATA_FORBIDDEN` otherwise, guarded

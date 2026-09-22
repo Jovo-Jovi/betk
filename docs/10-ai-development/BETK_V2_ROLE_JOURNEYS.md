@@ -55,7 +55,7 @@ public link.
 Listing detail now always shows a **fixed price**, plus weight, dimensions, specs and prep days.
 Custom items additionally show a *Request price* action.
 
-**Open — N21:** guest cart held client-side and merged at login, or login required to add.
+**ANSWERED — N21** (baseline §13): no guest cart. An account is required before the first add-to-cart. **SUPERSEDED in place:** the open branch was “guest cart held client-side and merged at login, or login required to add.”
 
 ---
 

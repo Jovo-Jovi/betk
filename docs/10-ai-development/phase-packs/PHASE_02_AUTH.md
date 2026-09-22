@@ -1,4 +1,5 @@
 # PHASE 02 — AUTHENTICATION & PROFILES · Task Pack
+> **B7 (2026-09-23):** Every “Phase 08”–“Phase 14” in this file is a **v1 heading (§H)**, not a v2 phase. Map: 08 delivery → v2 Phase 14 courier (shipment RLS is still v2 Phase 08); 09 reviews → v2 Phase 16; 10 disputes → v2 Phase 16; 11 boosts → v2 Phase 20; 12 notifications → v2 Phase 17; 13 earnings → v2 Phase 19; 14 admin → v2 Phase 18. A forward reference to the retired number 07 is that checkout phase; v2 checkout is Phase 11.
 > Execution pack for `BETK_PHASES.md` Phase 02. Drives Opus/Sonnet in Cursor. Every prompt assumes `.cursor/rules/*.mdc` + `BETK_MASTER_EXECUTION_PROMPT.md` + `SESSION_CONTEXT.md` are already loaded. Build in task order — later tasks depend on earlier. This is the first phase that ships real user-facing flows; the Foundation skeleton (Phase 01) is complete and signed off.
 
 > **Convention (carried from Phase 01):** each task has a **canonical prompt** (the spec of record). When execution surfaces a concrete repo-state fact that the canonical prompt doesn't cover, an **▸ EXPANDED FOR EXECUTION** block holds the prompt actually run; an **▸ AS-BUILT** line records what shipped + carry-forwards. Run the canonical prompt verbatim unless a concrete fact requires expansion. One task per Cursor window: "Read SESSION_CONTEXT.md, then execute T0n."
@@ -27,7 +28,7 @@ This is a real fork with downstream consequences (T02–T04 all change shape bas
 - **[T02/login] Open-redirect guard:** validate the middleware `returnUrl` is a local path (starts with `/`, not `//` or a full URL) before redirecting. Comment already at the redirect site in `src/middleware.ts`. The login page consumes `returnUrl`, so the guard lands here.
 - **[T05/profile + T06/deactivate] Sentry `setUser`:** `SentryProvider.tsx` is a passthrough reserved for `Sentry.setUser({ id })` — wire it once a session exists (no PII beyond user id; ARCHITECTURE §6).
 - **[server-side analytics] PostHog import rule:** server-side capture (`captureServerEvent`/`identifyUser`) imports from `@/services/posthog.server`, NEVER `@/services/posthog` (client-safe config only). Any auth-funnel event in a Server Action follows this.
-- **[NOT due here — parked]** Permissive INSERT on `seller_profiles` is **Phase 04**; on `orders` is **Phase 07**. Phase 02 only builds the *app-layer* phone gate (the `users.phone_number IS NOT NULL` check in Server Actions) and the phone-capture flow — it does NOT add those permissive policies.
+- **[NOT due here — parked]** Permissive INSERT on `seller_profiles` is **Phase 04**; on `orders` is **Phase 07 (retired; v2 checkout is Phase 11)**. Phase 02 only builds the *app-layer* phone gate (the `users.phone_number IS NOT NULL` check in Server Actions) and the phone-capture flow — it does NOT add those permissive policies.
 
 ## Definition of done (Phase 02 exit checklist)
 - [ ] `/auth/login` accepts a phone number → triggers OTP (per chosen model); also offers "Continue with Google".
@@ -159,13 +160,13 @@ pnpm typecheck + lint clean.
 ```
 Read SESSION_CONTEXT.md, then execute Phase 02 / T07 — the app-layer verified-phone gate + the phone-capture flow for Google-only users. (The RLS WITH CHECK half is already live from Phase 01; this is the Server-Action half + the UX that lets a phone-NULL user obtain a phone.)
 
-1. Shared guard: a server-only helper requireVerifiedPhone() (src/features/auth) that loads the current user and throws/redirects if users.phone_number IS NULL. This is the canonical check the transaction entry points (checkout [Phase 07], become-seller [Phase 04], payout request [Phase 13]) will call. Build it now, with a clear exported contract, so those phases consume it rather than re-implementing.
+1. Shared guard: a server-only helper requireVerifiedPhone() (src/features/auth) that loads the current user and throws/redirects if users.phone_number IS NULL. This is the canonical check the transaction entry points (checkout [Phase 07 (retired; v2 checkout is Phase 11)], become-seller [Phase 04], payout request [Phase 13 (v1 heading, §H)]) will call. Build it now, with a clear exported contract, so those phases consume it rather than re-implementing.
 
 2. Phone-capture flow: a reusable flow that lets an authenticated phone-NULL (Google) user add + verify a phone via OTP (reuse the T01 model + T02 verify primitives — do NOT fork a second OTP path). On success, set users.phone_number (UNIQUE — handle the collision case where the phone already belongs to another account: reject cleanly, do not merge accounts). auth_provider stays 'google' (it records origin, not current capability).
 
 3. Wire requireVerifiedPhone() into the /account "add phone" entry point from T05 as the first live consumer + proof. Do NOT wire checkout/become-seller/payout here (those are their own phases) — but leave the helper exported and documented so they can.
 
-IMPORTANT — do NOT add the permissive ownership INSERT policies to orders/seller_profiles here. Those are Phase 07 / Phase 04 respectively (see entry debts). T07 is the app-layer gate + phone capture only. If you find yourself needing those policies to test, that confirms the parked dependency — note it, don't add it.
+IMPORTANT — do NOT add the permissive ownership INSERT policies to orders/seller_profiles here. Those are Phase 07 (retired; v2 checkout is Phase 11) / Phase 04 respectively (see entry debts). T07 is the app-layer gate + phone capture only. If you find yourself needing those policies to test, that confirms the parked dependency — note it, don't add it.
 
 Zod on all actions; phone uniqueness collision tested; tag Sentry 'auth-phone-gate'. pnpm typecheck + lint clean. Integration test: phone-NULL user blocked by requireVerifiedPhone(); after capture+verify, passes; duplicate-phone capture rejected.
 ```
@@ -207,6 +208,6 @@ Produce a PASS/FAIL report per line. Block sign-off only on hard failures (raw O
 - **One task per Cursor window;** close-out rhythm: update SESSION_CONTEXT + DEVELOPMENT_JOURNAL → commit → new window.
 
 ## Open dependencies into later phases (set up here, consumed later)
-- `requireVerifiedPhone()` (T07) → consumed by checkout (Phase 07), become-seller (Phase 04), payout (Phase 13).
-- Permissive ownership INSERT policies on `seller_profiles` (Phase 04) and `orders` (Phase 07) — **still parked**, Phase 02 does not touch them.
+- `requireVerifiedPhone()` (T07) → consumed by checkout (Phase 07 (retired; v2 checkout is Phase 11)), become-seller (Phase 04), payout (Phase 13 (v1 heading, §H)).
+- Permissive ownership INSERT policies on `seller_profiles` (Phase 04) and `orders` (Phase 07 (retired; v2 checkout is Phase 11)) — **still parked**, Phase 02 does not touch them.
 - `buyer_profiles` INSERT policy — if T04 finds it default-denied, that's the same pattern; surface for the owning gate.
