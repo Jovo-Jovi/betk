@@ -5,7 +5,7 @@
 >
 > **Layer:** this document writes **observable behaviour**. It does **not** design tables, columns, enums, policies, or RLS (B3). It does **not** enumerate or count pages (B4). Domain words (cart line, master order, seller order, shipment, deposit obligation, COD-balance obligation) are product concepts from MVP_SCOPE §3; storage and routes are out of this layer.
 >
-> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) is **resolved in `BETK_ERD.md` §3.1** (no courier login); courier requirements in this file stay **what the courier must do**. REG-80 (boosts) is **CLOSED** (2026-09-22, scope owner) — boosts are in for v2 MVP as retained v1 scope; those codes are **RETAINED** (v1 text stands), neither rewritten nor expanded.
+> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) **principle is closed** (no courier login, ADR-024); the handoff mechanism stays **open under the courier gate**. Courier requirements in this file stay **what the courier must do**. REG-80 (boosts) is **CLOSED** (2026-09-22, scope owner) — boosts are in for v2 MVP as retained v1 scope; those codes are **RETAINED** (v1 text stands), neither rewritten nor expanded.
 
 ---
 
@@ -291,7 +291,7 @@ Cite MVP_SCOPE §2. Identity remains unified; roles remain additive (R-A04).
 | **Buyer** | Account-gated cart, quote request, checkout, master-order tracking, return request, review, dispute. Account required before first add-to-cart (N21). | protected |
 | **Seller** | One store; pickup address; ≤3 categories; agreement e-signature; food branch when applicable. Sees **order ref + items + prep deadline only**. **Cannot cancel.** | role: seller |
 | **Admin / Superadmin** | Seller/food approval, **one** deposit verification across a master, courier handoff, escalations, returns/disputes, payouts, performance audit, configuration, moderation. Sees addresses. | role: admin |
-| **Courier** | Fulfilment **participant**. Collects from seller pickup, delivers to buyer, collects COD per shipment, remits COD to BETK. Reads the BETK-generated label. **Not** a pinned authenticated app role. How RLS names this principal is **REG-78 (B3)**. | *unpinned — REG-78* |
+| **Courier** | Fulfilment **participant**. Collects from seller pickup, delivers to buyer, collects COD per shipment, remits COD to BETK. Reads the BETK-generated label. **Not** an authenticated app role (ADR-024). The handoff mechanism is not picked. | *principle closed; mechanism open — REG-78* |
 
 ---
 
@@ -816,7 +816,7 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 | ID | Item | Why it is not invented | Owner |
 |---|---|---|---|
 | **REG-79** | Verified-phone gate trigger | **OPEN.** The gate **surface** is `/auth/phone` and `/auth/verify`. The **trigger point** (add-to-cart vs checkout) is not decided. R-A07 / FR-AUTH-4 / AC-AUTH-4. | Product pin |
-| **REG-78** | Courier authenticated principal | Requirements are collect / deliver / COD / remit / read label only. **B3 resolved:** no courier RLS principal; label is an admin-invoked service-role function (`BETK_ERD.md` §3.1). AC-COU-6 holds. | Closed in the ERD — ADR candidate for B5 |
+| **REG-78** | Courier authenticated principal | **Principle CLOSED** (ADR-024): no courier login, no RLS principal, no definer. **Mechanism OPEN** under the courier gate: admin-initiated handoff is the admin’s own RLS read; automated handoff, if the gate picks it, is a service-role read. Neither branch was picked. AC-COU-6 holds. | Principle closed — mechanism open |
 | **REG-80** | Boosts in for v2 MVP | **CLOSED** 2026-09-22 (scope owner). v1 boost text **RETAINED**. No new boost requirements. Schema questions are B3, REG-78-class, not new FRs. | Closed — B4 maps retained v1 boost capabilities |
 | **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). **B3 resolved:** enum and `delivery_method` kept; `pickup` / `remote` dead; existing order values not rewritten (`BETK_ERD.md` §3.5). | Closed in the ERD |
 | **F-N22** | Child deposit snapshot of the proof reference | **B3 validated** the direction. Canonical proof on the master; each child deposit row snapshots the reference at verification (`BETK_ERD.md` §3.2). | Closed in the ERD — ADR candidate (amends ADR-019’s buyer-writes-deposit-proof sentence) |
@@ -827,8 +827,8 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 | **REG-85** | Store-level return policy vs platform Return Policy (was F-POL) | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
 | **REG-86** | `return_hold_hours` vs narrowed REG-62 (was F-HOLD) | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). Do not invent it back into REG-62. | Product / launch gate |
 | **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. **B4** froze pages under OD-21. **B4-FIX2** corrected that count in place to **79**. The prompt was not edited. Do not treat that prompt as the v2 inventory. | Later docs sweep |
-| **REG-90** | Seller order money visibility | **CLOSED** 2026-09-22 (scope owner). **B4-FIX:** `refunded_subtotal`, `revenue_egp`, and the payout cap are fee-free by definition in `BETK_ERD.md` §3.10 and §6.4. Seller SELECT of `delivery_fee` and `total_amount` stays NO. B5 owns the grant. | Closed — B5 owns the grant |
-| **REG-91** | Buyer-safe combined delivery total | **OPEN.** **B4-FIX candidate, not accepted:** zone-level origin is already public on `stores`. INVOKER checkout (ADR-018) cannot read `store_pickup_addresses`, so the rate origin is `stores.governorate`. Pickup street never participates. Pickup-governorate mismatch stays open. Not a new table. | B5 |
+| **REG-90** | Seller order money visibility | **CLOSED** 2026-09-22 (scope owner). **B4-FIX:** `refunded_subtotal`, `revenue_egp`, and the payout cap are fee-free by definition in `BETK_ERD.md` §3.10 and §6.4. **B5 ADR-020:** no `authenticated` SELECT of `delivery_fee` or `total_amount`. Guard is REG-92. | Closed — grant is ADR-020 |
+| **REG-91** | Buyer-safe combined delivery total | **CLOSED** 2026-09-22 (ADR-023). Origin is public `stores.governorate`. INVOKER checkout cannot read `store_pickup_addresses`. Pickup street never participates. Pickup governorate equals the store governorate (trigger). Not a new table and not a new column. | Closed — ADR-023 |
 | **REG-73** | Buyer cancel vs already-confirmed deposit | **CLOSED.** R-O03 quotes journeys §5.2, which covers the deposit-confirmed case. | Closed — orders rebuild implements R-O03 |
 
 N24 remains unused in the signed set (MVP_SCOPE §8). Not invented.
@@ -960,6 +960,7 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **2026-09-22 — B4.** Page count **FROZEN at 77 (OD-21)**. **REG-90 CLOSED** (seller sees subtotal, commission, and net only; never delivery fee, never order total). Propagated to R-V02, R-O28, AC-VIS-1, AC-CLO-3, FR-SEL-14, FR-SEL-15, FR-SEL-17, FR-SEL-18. **REG-91 OPEN** (buyer-safe delivery total). This file still does not enumerate routes. Routes are `BETK_UI_SPEC.md`.
 - **2026-09-22 — B4-FIX.** REG-90’s seller-readable refund, revenue, and payout cap are fee-free in the database (`BETK_ERD.md` §3.10, §6.4). AC-CLO-3 and FR-SEL-17 cite `refunded_subtotal`. REG-91 stays open with the INVOKER origin candidate. No new REG. OD-21 not amended.
 - **2026-09-22 — B4-FIX2.** OD-21 corrected in place to **79**. Gate surface for REG-79 is `/auth/phone` and `/auth/verify`. Trigger point stays OPEN. No new REG.
+- **2026-09-22 — B5.** ADR-020..ADR-025. REG-89 and REG-91 closed. REG-90 grant is ADR-020. REG-78 principle stays closed; the handoff mechanism stays open under the courier gate. REG-92 minted (column-grant build guard). No new table. No new page. OD-21 stays 79. OD-20 stays 51.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______

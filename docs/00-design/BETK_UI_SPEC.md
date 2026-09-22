@@ -366,9 +366,9 @@ Every page below names empty, error, and whether it can reach `notFound()`. **Gu
 
 Default empty copy is one plain-Arabic line plus one CTA, with an English catalog string (historical §6, still the standard). Admin queues use a positive empty (“queue is clear”).
 
-### 4.j Server-computed buyer delivery (REG-91, OPEN)
+### 4.j Server-computed buyer delivery (REG-91, closed by ADR-023)
 
-#66 and #15 show **one** delivery figure and **one** total (R-C03, R-K03, AC-CHK-6). They do **not** show the per-seller split or commission (R-O28). They do **not** read `store_pickup_addresses` (buyer SELECT is none). **B4-FIX, REG-91 still OPEN.** Store `city` and `governorate` are already public, so a zone-level fee reveals nothing new. The checkout RPC is INVOKER (ADR-018) and cannot read the pickup row, so the rate origin is the public `stores.governorate`. The street never participates. A pickup governorate that differs from the store’s listed governorate is an open edge for B5. Do not invent the function here and do not add a table.
+#66 and #15 show **one** delivery figure and **one** total (R-C03, R-K03, AC-CHK-6). They do **not** show the per-seller split or commission (R-O28). They do **not** read `store_pickup_addresses` (buyer SELECT is none). **B5, ADR-023.** Store `city` and `governorate` are already public, so a zone-level fee reveals nothing new. The checkout RPC is INVOKER and cannot read the pickup row, so the rate origin is the public `stores.governorate`. The street never participates. Pickup `governorate` is constrained equal to `stores.governorate` (trigger, no new column). Do not invent a second origin column and do not add a table.
 
 ---
 
@@ -553,7 +553,7 @@ Kit names below are components that already exist under `components/shared` or `
 - **Data:** reads `cart_items` and the same joins as #66. Reads own `addresses`. Reads `agreement_acceptances` for the current versions. Writes, all or nothing: `master_orders` (`buyer_id`, `betk_ref`, `delivery_address_id`, recipient snapshot columns, `combined_delivery_total`, `payment_deadline`), N `seller_orders`, N `order_items`, N `shipments`, 2 `payments` per seller order. Stock decrement is part of that write (R-L05). **Does not read** a confirmed `inquiries.status`.
 - **States:** blocked line refuses checkout (AC-CHK-3); version gate blocks completion until acceptance (AC-CHK-4) — the **set** of documents is **OPEN REG-88**, so the panel lists the four R-G05 documents as available and does not hard-code which subset blocks; phone missing → #6 (held); no address → inline add via `AddressForm`; place-order failure leaves no partial master. **notFound(): no.**
 - **Composes:** `AddressForm`, `Button`, `ConfirmDialog`. **Gaps:** checkout seller sections, agreement panel (§8).
-- **Binding:** one master, N seller **sections** (items only), **one** combined delivery total, one order total, deposit = 50% of (subtotal + combined delivery). No delivery-mode picker. No commission line. Rounding of the single transfer across children is **REG-89 OPEN** — the page shows the master 50% and does not encode an allocation. Buyer does not see seller pickup street (AC-VIS-2).
+- **Binding:** one master, N seller **sections** (items only), **one** combined delivery total, one order total, deposit = 50% of (subtotal + combined delivery). No delivery-mode picker. No commission line. Rounding across children is **ADR-022** (REG-89 closed): the page shows the master 50% (`round(master_total / 2, 2)`) and does not encode the child allocation. Buyer does not see seller pickup street (AC-VIS-2).
 
 #### P16 Payment instructions — `/checkout/confirmation/[masterId]`
 - **v1 #16 AMENDED.** FR-BUY-7, FR-PAY-1, R-O15, R-O18, R-O21, R-O22, AC-PAY-1, AC-PAY-3, AC-PAY-6, N22.
@@ -660,7 +660,7 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 #### P27 Pickup address — `/seller/store/delivery`
 - **v1 #27 AMENDED.** FR-SEL-5, R-K05, R-V03.
 - **Role:** seller.
-- **Data:** `store_pickup_addresses` (`governorate`, `city`, `street_address`, `building_notes`). Do not write `stores.delivery_options`. Do not offer mode toggles.
+- **Data:** `store_pickup_addresses` (`governorate`, `city`, `street_address`, `building_notes`). `governorate` must equal `stores.governorate` (ADR-023). A seller who ships from another governorate updates the store’s public governorate. Do not write `stores.delivery_options`. Do not offer mode toggles.
 - **States:** save error. **notFound(): no.**
 - **Composes:** `AddressForm` only if its fields match this table; otherwise `Input` + `Select`. A mismatch is not a restyle — map fields at the composition boundary.
 - **Binding:** this address is never shown to buyers.
@@ -868,7 +868,7 @@ Admin may see buyer identity and both fees (R-V01, journeys §5.5). That permiss
 #### P55 Admin orders — `/admin/orders`
 - **v1 #55 AMENDED.** FR-ADM-8, R-V01, AC-VIS-3. Detail is a **drawer**, one route.
 - **Role:** admin.
-- **Data:** `master_orders` including recipient snapshot and `combined_delivery_total`; child `seller_orders` including `delivery_fee` and `total_amount` (admin may see both); `order_items`; `payments`; `order_status_history`; `shipments`; `store_pickup_addresses`.
+- **Data:** `master_orders` including recipient snapshot and `combined_delivery_total`; child `seller_orders.subtotal`; `payments.amount` for that child’s deposit and balance (ADR-020: do not `SELECT` `delivery_fee` or `total_amount` — `42501`). Display child total = deposit + balance, and fee = that sum − `subtotal`. Also `order_items`; `order_status_history`; `shipments`; `store_pickup_addresses`.
 - **States:** filter empty. **notFound(): no** (unknown id inside the drawer is an inline error).
 - **Composes:** `StatusBadge`, `OrderTimeline`. **Gap:** data table (§8).
 - **Binding:** this is where per-seller fees are visible. Do not reuse this drawer on a seller route.
@@ -1272,8 +1272,8 @@ REG-52 (onboarding category picker UX) is also open CD-DELTA-5 and is **not** a 
 
 | ID | Flag | Why it is not filled |
 |---|---|---|
-| **REG-90** | **CLOSED** pin. Seller reads subtotal, commission, `refunded_subtotal`, and net. Never `delivery_fee`, never `total_amount`. | **B4-FIX:** those seller-readable amounts are fee-free by definition (ERD §3.10, §6.4). The column grant is still **open for B5**: admin is also `authenticated`, so this cannot be a plain `REVOKE`. |
-| **REG-91** | **OPEN.** B5 candidate recorded, not accepted. Public `stores.governorate` is the INVOKER rate origin. Pickup street never participates. Pickup-governorate mismatch is the open edge. | Not a new table. Not a page. |
+| **REG-90** | **CLOSED** pin. Seller reads subtotal, commission, `refunded_subtotal`, and net. Never `delivery_fee`, never `total_amount`. | **ADR-020:** no `authenticated` SELECT of those two columns. Admin P55 derives them from `payments`. Guard is REG-92. |
+| **REG-91** | **CLOSED** (ADR-023). Public `stores.governorate` is the INVOKER rate origin. Pickup street never participates. Pickup governorate equals the store governorate (trigger). | Not a new table. Not a page. Not a new column. |
 | **Built routes** | **Admitted (B4-FIX2).** P78 and P79. 26/26 `page.tsx` files on `origin/main` map to one P-number (§1.2). | OD-21 corrected in place to 79. No new REG (next free stayed REG-92). |
 | **REG-79** | **OPEN.** Gate surface is P78 and P07. Trigger vs add-to-cart is not encoded. | |
 | **REG-85** | **OPEN.** P05 and P28 show store policy. Relationship to P69 is not decided. | |
