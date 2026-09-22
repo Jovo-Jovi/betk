@@ -5,17 +5,17 @@
 >
 > **Layer:** this document writes **observable behaviour**. It does **not** design tables, columns, enums, policies, or RLS (B3). It does **not** enumerate or count pages (B4). Domain words (cart line, master order, seller order, shipment, deposit obligation, COD-balance obligation) are product concepts from MVP_SCOPE §3; storage and routes are out of this layer.
 >
-> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) is B3’s; courier requirements are **what the courier must do**, never how the principal is authenticated. REG-80 (boosts) is **CLOSED** (2026-09-22, scope owner) — boosts are in for v2 MVP as retained v1 scope; those codes are **RETAINED** (v1 text stands), neither rewritten nor expanded.
+> **Status:** v2 rewrite (B2). N-decisions N21, N22, N23, N25, N26, N27, N28 are **signed inputs** — do not re-open. REG-79 (OD-4 verified-phone gate location under N21) is **OPEN** — this file does not pick add-to-cart vs checkout. REG-78 (courier principal) is **resolved in `BETK_ERD.md` §3.1** (no courier login); courier requirements in this file stay **what the courier must do**. REG-80 (boosts) is **CLOSED** (2026-09-22, scope owner) — boosts are in for v2 MVP as retained v1 scope; those codes are **RETAINED** (v1 text stands), neither rewritten nor expanded.
 
 ---
 
-> ## COUNTS ARE UNFROZEN pending B3 (tables) and B4 (pages)
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE STILL UNFROZEN pending B4.
 >
 > The v1 freeze of **43 tables** and **59 pages**, and the v1 PRD framing “one FR per wireframed page”, are **SUPERSEDED**. They are not the v2 inventory.
 >
-> Live introspection **today** still measures **43** physical tables (`betk` 41 + `betk_analytics` 2). That figure is **TRUE TODAY**. OD-6 is superseded because the **count is unfrozen pending B3**, not because 43 was wrong.
+> Live introspection still measures **43** physical tables (`betk` 41 + `betk_analytics` 2). That figure is **TRUE TODAY** (B3, 2026-09-22, `pg_tables`). It is not the v2 target.
 >
-> The figures **~50 tables** and **~73 pages** (`BETK_V2_SCOPE_BASELINE.md` §1, §10) are **ESTIMATES** only. They MUST NOT be cited as frozen. B3 freezes tables. B4 freezes pages. **This document does not freeze either, and does not count pages.**
+> **B3 froze the target table count at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. The ~50 / ~73 figures in `BETK_V2_SCOPE_BASELINE.md` §1 and §10 stay **estimates**. **Pages are not frozen. This document does not count pages.**
 
 ---
 
@@ -121,7 +121,7 @@ No pre-existing **R-C / R-Q / R-E / R-F / R-U / R-G / R-K / R-V** families. No p
 
 **Not taken:** R-B06, FR-PUB-6, FR-BUY-14, FR-SEL-23, any new boost AC. Boost families are **RETAINED** (REG-80 closed); no new boost ID was minted.
 
-**R-R08 / R-D07** not taken: unit-of-review and unit-of-dispute under a multi-seller master are **OPEN** (REG-83, REG-84), not invented.
+**R-R08 / R-D07** not taken as new IDs. **REG-83 closed (2026-09-22):** one buyer review per **seller order**. **REG-84 closed (2026-09-22):** no master-level dispute. R-O07 and R-O06 carry those pins.
 
 ---
 
@@ -163,13 +163,13 @@ Exactly one verdict per v1 code: **HOLDS UNCHANGED** / **HOLDS WITH AMENDMENT** 
 | **R-O03** | Buyer cancel only while pending | **HOLDS WITH AMENDMENT** | **Amendment:** buyer may cancel the **master** **only before uploading payment proof**. After proof upload, buyer cancel is refused. After deposit confirmation, the buyer’s exit is return / refund / dispute, never cancellation. **Citation (resolves REG-73):** `BETK_V2_ROLE_JOURNEYS.md` §5.2 — “Buyer may cancel only before uploading proof. After the deposit is confirmed the exit is return/refund/dispute, never cancellation.” Cancel-window row: `BETK_V2_SCOPE_BASELINE.md` §2.6 — Buyer / Yes / “Only before uploading payment proof.” MVP_SCOPE §3.5 repeats that pin. |
 | **R-O04** | COD auto-confirm | **RETIRED** | Already retired by v1 OD-8. v2 **holds that retirement**. MVP_SCOPE §7. |
 | **R-O05** | Admin verifies the deposit (v1: one order, one deposit row) | **HOLDS WITH AMENDMENT** | **Amendment:** **one** admin action confirms **every** deposit obligation under that master **and RELEASES** every child seller order (status meaning: admin-approved and with the seller — not seller-accepted). MVP_SCOPE §3.2, §4.1 OD-8 items 3–4. |
-| **R-O06** | One active dispute per order | **HOLDS WITH AMENDMENT** | **Amendment:** one active dispute per **seller order** (the unit that owns cancellation and refund — §3.1). Whether a master-level dispute is wanted is **OPEN REG-84** — not invented here. |
-| **R-O07** | One review per order | **HOLDS UNCHANGED** | §3 does not pin the review unit under a multi-seller master. **OPEN REG-83** — do not invent master-vs-seller-order. |
+| **R-O06** | One active dispute per order | **HOLDS WITH AMENDMENT** | **Amendment:** one active dispute per **seller order** (the unit that owns cancellation and refund — §3.1). **REG-84 closed (2026-09-22, scope owner):** there is **no** master-level dispute. |
+| **R-O07** | One review per order | **HOLDS WITH AMENDMENT** | **Amendment (REG-83 closed 2026-09-22, scope owner):** one buyer review attaches to **each seller order**. There is no master-level review. |
 | **R-O08** | Return only after delivered | **HOLDS WITH AMENDMENT** | **Amendment:** return is requested against a **delivered seller order**; evidence is **dedicated returns evidence** (N25), not dispute evidence. Stock is **not** restored on return (R-L12). MVP_SCOPE §3.11, §3.6. |
 | **R-O09** | Payout min EGP 100 | **HOLDS UNCHANGED** | Untouched. |
 | **R-O10** | Payouts processed manually | **HOLDS UNCHANGED** | Baseline §1 unchanged: no automated payouts. |
-| **R-R01** | Review only if delivered + buyer match | **HOLDS UNCHANGED** | + OPEN REG-83 (unit). |
-| **R-R02** | One review per order | **HOLDS UNCHANGED** | + OPEN REG-83. |
+| **R-R01** | Review only if delivered + buyer match | **HOLDS WITH AMENDMENT** | Delivered + buyer match holds. The order in that test is the **seller order** (REG-83 closed 2026-09-22). |
+| **R-R02** | One review per order | **HOLDS WITH AMENDMENT** | **Amendment (REG-83 closed 2026-09-22):** one review per **seller order**, same pin as R-O07. |
 | **R-R03** | Edit ≤48h | **HOLDS UNCHANGED** | Untouched. |
 | **R-R04** | One immutable seller reply | **HOLDS UNCHANGED** | Untouched. |
 | **R-R05** | Review goes live ~5 min | **HOLDS UNCHANGED** | Untouched. |
@@ -221,8 +221,8 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-BUY-6** | Checkout from confirmed inquiry; flat fee; three rails; stock not here | **SUPERSEDED** | Replaced by FR-CHK-1 + FR-PAY-1 + FR-COU-1. AC-BUY-6 **RETIRED**. MVP_SCOPE §7. |
 | **FR-BUY-7** | Confirmation / deposit instructions / proof | **HOLDS WITH AMENDMENT** | **Amendment:** instructions show **BETK’s InstaPay handle only** (VF/Orange buyer rails retired). **One** proof on the **master**. Awaiting-review = proof present and not yet admin-verified. Admin verification is FR-PAY-1 / R-O19. MVP_SCOPE §3.2, N22. |
 | **FR-BUY-8** | Order history | **HOLDS WITH AMENDMENT** | **Amendment:** history is of **master** purchases with **per-seller-order** progress visible as independent sections (§3.1). |
-| **FR-BUY-9** | Order detail / track; cancel while pending; pickup/remote no shipment | **HOLDS WITH AMENDMENT** | **Amendment:** buyer sees the master + per-seller sections, both payment states per seller order, combined delivery total, full timeline. Cancel = R-O03 amended (before proof). Pickup/remote “no shipment” empty-state is **retired** (courier-only, every seller order has a shipment — §3.1, §3.3). Review/dispute eligibility: OPEN REG-83 / REG-84. |
-| **FR-BUY-10** | Leave review | **HOLDS UNCHANGED** | + OPEN REG-83. |
+| **FR-BUY-9** | Order detail / track; cancel while pending; pickup/remote no shipment | **HOLDS WITH AMENDMENT** | **Amendment:** buyer sees the master + per-seller sections, both payment states per seller order, combined delivery total, full timeline. Cancel = R-O03 amended (before proof). Pickup/remote “no shipment” empty-state is **retired** (courier-only, every seller order has a shipment — §3.1, §3.3). Review is per seller order (REG-83 closed). Dispute is per seller order only (REG-84 closed). |
+| **FR-BUY-10** | Leave review | **HOLDS WITH AMENDMENT** | One review per **seller order** (REG-83 closed 2026-09-22). |
 | **FR-BUY-11** | Raise dispute (also covered return/refund in v1) | **HOLDS WITH AMENDMENT** | **Amendment:** **returns are a dedicated flow** (FR-RET-1, OD-12), not a dispute-reason alias. Dispute path remains for post-delivery disagreements (§3.11 reject → dispute). |
 | **FR-BUY-12** | Dispute detail | **HOLDS UNCHANGED** | Untouched. |
 | **FR-BUY-13** | Notifications | **HOLDS UNCHANGED** | Event set expands via R-N03 amendment / R-N07; the surface holds. |
@@ -241,7 +241,7 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-SEL-13** | Seller inbox; confirm → checkout | **HOLDS WITH AMENDMENT** | **Amendment:** seller **quotes** within the band (R-Q*). Confirm-inquiry-to-enable-checkout is **retired** (§7). |
 | **FR-SEL-14** | Orders management; **seller accepts** pending→confirmed | **HOLDS WITH AMENDMENT** | **Amendment:** **seller acceptance is retired** (AC-SEL-14 RETIRED). Orders arrive committed after admin deposit verification. Seller cannot cancel (R-E01). Seller sees ref + items + deadline only (R-V02). Escalation is the only exit (FR-ESC-1). |
 | **FR-SEL-15** | Seller order detail; status changes; shipments | **HOLDS WITH AMENDMENT** | **Amendment:** seller may move **preparing → ready**. Seller **never** sees buyer name, phone, address, or city (N28). Seller labels the box with the **order reference only** (R-K07). Courier collection is courier behaviour (R-K05), not a seller “I am the courier” read of the label (that v1 clause is superseded). |
-| **FR-SEL-16** | Reviews management | **HOLDS UNCHANGED** | + OPEN REG-83. |
+| **FR-SEL-16** | Reviews management | **HOLDS WITH AMENDMENT** | Seller reviews are per **seller order** (REG-83 closed 2026-09-22). The response still must not include buyer name, phone, address, or city (R-V02). |
 | **FR-SEL-17** | Earnings | **HOLDS WITH AMENDMENT** | **Amendment:** displayed balance is **derived** (R-O26). Eligibility waits for the return-hold window after delivery (R-O29). OPEN REG-86 on whether return-hold is a REG-62 launch key. Do not invent it back into REG-62. |
 | **FR-SEL-18** | Transactions | **HOLDS WITH AMENDMENT** | **Amendment:** unit is the **seller order** (§3.1). |
 | **FR-SEL-19** | Request payout | **HOLDS UNCHANGED** | R-O09/R-O10 hold. |
@@ -315,7 +315,7 @@ Master **aggregate** (derived, never written as a close action): awaiting paymen
 | **R-C04** | Quantity of a **tracked-stock** line is bounded by live available stock. Custom / made-to-order (untracked) lines are not stock-bounded (R-L15). |
 | **R-C05** | A line becomes **blocked** when the item sells out or a custom quote expires. Checkout is refused until blocked lines are cleared or re-quoted. |
 | **R-C06** | Unit price is **snapshotted** at add time (or at quote-accept time for custom lines). A later listing or quote edit does not silently change the line. |
-| **R-C07** | When the payment window expires with no proof, tracked stock is restored (R-L11). Whether cancelled lines are restored to the cart is **OPEN (REG-82)**. Journeys §5.2 says cart restored; MVP_SCOPE §3.5 names stock restore and notify, not cart restore. This rule does not pick. |
+| **R-C07** | When the payment window expires with no proof, tracked stock is restored (R-L11) and the cart is restored. **Amended 2026-09-22 (REG-82 closed, scope owner):** fixed-price lines restore as-is (snapshotted quantity and unit price). Custom-quote lines restore only if that quote is still inside its 24h validity; otherwise the line is dropped and the buyer is prompted to request a new quote. |
 
 **FR-CART-1** — Cart lifecycle as R-C01–R-C07. B4 maps the surface; B2 does not name a route.
 
@@ -349,7 +349,7 @@ Custody **holds**: buyer pays BETK; admin verifies; no gateway; no automated cap
 | **R-O18** | **One** payment proof is captured for the master (N22). **DIRECTION (not frozen here):** each child deposit obligation may snapshot a proof reference at verification time. **B3 validates** and may override only with a stated, cited reason. |
 | **R-O19** | **One** admin action confirms **every** deposit obligation under that master **and RELEASES** every child seller order to the seller already committed. Seller is not asked to accept. |
 | **R-O20** | The **courier** collects the COD balance **per shipment** at that shipment’s delivery and **remits** it to BETK. Admin confirms that seller order’s balance obligation **after** remit. (Courier **authentication** is REG-78 / B3 — not specified here.) |
-| **R-O21** | A payment window starts at checkout (duration admin-configurable; launch recommendation 30 minutes — baseline §9, cited via MVP_SCOPE §5). If no proof arrives before it ends, the system cancels, restores stock, restores cart (R-C07), and notifies. |
+| **R-O21** | A payment window starts at checkout (duration admin-configurable; launch recommendation 30 minutes — baseline §9, cited via MVP_SCOPE §5). If no proof arrives before it ends, the system cancels, restores stock, restores the cart per amended R-C07 (REG-82: fixed-price lines as-is; custom-quote lines only while the quote is still valid), and notifies. |
 | **R-O22** | After proof upload the buyer cannot cancel. After deposit confirmation the buyer’s exit is return / refund / dispute, never cancellation. |
 | **R-O23** | Admin may cancel on proof rejected, escalation resolution, or exceptional circumstances. Proof rejection cancels, restores stock, refunds if the transfer was taken, and notifies. |
 | **R-O24** | Every cancellation where a deposit was already confirmed **triggers a refund**. The refund path is **launch-blocking**, not fast-follow (cite §3.5; journeys §5.6 handoff 5). |
@@ -605,7 +605,7 @@ Each AC is **observable behaviour**. None restates its FR in different words. No
 | **AC-CART-4** | Given a custom quote that expires, the corresponding cart line is **blocked**. Checkout while it remains is **refused** and identifies that line. Clearing or a fresh in-band quote unblocks. |
 | **AC-CART-5** | Given a tracked-stock line whose listing reaches zero availability, the line becomes **blocked** and checkout is refused until it is cleared. |
 | **AC-CART-6** | Changing qty (within stock) or removing a line **changes** the running subtotal (and the displayed delivery/total once those are computed). |
-| **AC-CART-7** | Given checkout then payment-window expiry with no proof: tracked stock is restored. Cart-restore is **not asserted** — OPEN under REG-82 (journeys §5.2 vs MVP_SCOPE §3.5). |
+| **AC-CART-7** | Given checkout then payment-window expiry with no proof: tracked stock is restored and the cart is restored per R-C07 (**REG-82 closed 2026-09-22**). A fixed-price line reappears with its snapshotted price and quantity. A custom-quote line reappears only while that quote is still inside its 24h validity; otherwise it is absent and the buyer is prompted to request a new quote. |
 
 ### 6.2 Checkout — AC-CHK-1–6  (FR-CHK-1)
 
@@ -816,14 +816,14 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 | ID | Item | Why it is not invented | Owner |
 |---|---|---|---|
 | **REG-79** | Verified-phone gate at add-to-cart vs checkout | Authority does not pin it. Written **OPEN** as R-A07 / FR-AUTH-4 / AC-AUTH-4. | Product pin (not B3/B4) |
-| **REG-78** | Courier authenticated principal | Requirements are collect / deliver / COD / remit / read label only. | **B3** |
+| **REG-78** | Courier authenticated principal | Requirements are collect / deliver / COD / remit / read label only. **B3 resolved:** no courier RLS principal; label is an admin-invoked service-role function (`BETK_ERD.md` §3.1). AC-COU-6 holds. | Closed in the ERD — ADR candidate for B5 |
 | **REG-80** | Boosts in for v2 MVP | **CLOSED** 2026-09-22 (scope owner). v1 boost text **RETAINED**. No new boost requirements. Schema questions are B3, REG-78-class, not new FRs. | Closed — B4 maps retained v1 boost capabilities |
-| **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). Storage fate is not this layer. Left as an in-task note: B3 resolves it while rewriting the ERD. Not minted. | **B3** / Stage C |
-| **F-N22** | Child deposit snapshot of the proof reference | Recorded as DIRECTION in R-O18. Not frozen. Not in the B2-FIX mint set. | **B3** |
+| **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). **B3 resolved:** enum and `delivery_method` kept; `pickup` / `remote` dead; existing order values not rewritten (`BETK_ERD.md` §3.5). | Closed in the ERD |
+| **F-N22** | Child deposit snapshot of the proof reference | **B3 validated** the direction. Canonical proof on the master; each child deposit row snapshots the reference at verification (`BETK_ERD.md` §3.2). | Closed in the ERD — ADR candidate (amends ADR-019’s buyer-writes-deposit-proof sentence) |
 | **REG-81** | Child seller-order identifier format (was F-REF) | Master owns the buyer-facing number (R-O02 amended). Child shape unpinned. Journeys example is not a pin. | Product pin — B3 must not invent |
-| **REG-82** | Cart restore on payment-window expiry (was F-CART) | Journeys §5.2 says cart restored; MVP_SCOPE §3.5 names stock restore, not cart restore. R-C07 / AC-CART-7 do not pick. | Product pin — blocks B3 stock lifecycle |
-| **REG-83** | Review unit under a multi-seller master (was F-REV) | R-O07 / R-R02 HOLDS UNCHANGED. Master-vs-seller-order not picked. | Product pin — blocks B4 page inventory |
-| **REG-84** | Whether a master-level dispute is wanted (was F-DSP) | R-O06 amended to seller order. A master-level dispute is not invented. | Product |
+| **REG-82** | Cart restore on payment-window expiry (was F-CART) | **CLOSED** 2026-09-22 (scope owner). Cart restores. Fixed-price lines as-is. Custom-quote lines only while the quote is still valid; otherwise dropped with a request-a-new-quote prompt. R-C07 and AC-CART-7 amended. | Closed — schema path in `BETK_ERD.md` §3.3 |
+| **REG-83** | Review unit under a multi-seller master (was F-REV) | **CLOSED** 2026-09-22 (scope owner). One buyer review per **seller order**. No master review. R-O07 / R-R01 / R-R02 amended. | Closed — B4 maps pages against this unit |
+| **REG-84** | Whether a master-level dispute is wanted (was F-DSP) | **CLOSED** 2026-09-22 (scope owner). **No** master-level dispute. R-O06 holds at the seller order only. | Closed |
 | **REG-85** | Store-level return policy vs platform Return Policy (was F-POL) | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
 | **REG-86** | `return_hold_hours` vs narrowed REG-62 (was F-HOLD) | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). Do not invent it back into REG-62. | Product / launch gate |
 | **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. Do not treat that prompt as the v2 inventory. | Later docs sweep |
@@ -954,6 +954,7 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **2026-09-19 — B1-FIX.** REG-78, REG-79, REG-80 minted.
 - **2026-09-19 — B2.** This file rewritten. v1 codes dispositioned. New R/FR/AC minted at mint time (§0). REG-79 written **OPEN**. REG-78 behaviour-not-principal. REG-80 boost codes left **PENDING** in place (closed by B2-FIX). Counts still **UNFROZEN**. Next: **B3** (ERD) cites §3 domain-by-domain; **B4** (UI Spec) maps capabilities to pages without treating this file as a page inventory.
 - **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP; listed boost codes flipped **PENDING → RETAINED** (v1 text stands; no new boost requirement). R-O03 cites `BETK_V2_ROLE_JOURNEYS.md` §5.2; that citation closes REG-73. F-flags normalised: took REG-81..REG-87 at mint (next free was REG-81); F-MODE left as a B3 in-task note. Counts still **UNFROZEN**.
+- **2026-09-22 — B3.** REG-82, REG-83, REG-84 closed as product pins. R-C07, R-O21, and AC-CART-7 amended for REG-82. R-O06 / R-O07 / R-R01 / R-R02 and the review/dispute FR rows amended where an OPEN line contradicted REG-83 or REG-84. Table count **FROZEN at 51 (OD-20)**. Pages still unfrozen. Schema is `BETK_ERD.md`, not this file.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______
