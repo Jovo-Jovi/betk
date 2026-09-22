@@ -9,11 +9,11 @@
 
 ---
 
-> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 79 (OD-21).
 >
 > Live physical tables **today** remain **43** (`betk` 41 + `betk_analytics` 2) until Stage C. That figure is **TRUE TODAY**. The v2 target table inventory is **51**.
 >
-> The v2 page inventory is **77** route patterns under the counting rule in §0. **OD-21 supersedes** the v1 headline of 59. The baseline ~73 figure was an estimate (§2.4). It is not this freeze.
+> The v2 page inventory is **79** route patterns under the counting rule in §0. **OD-21 supersedes** the v1 headline of 59. Initially counted 77 from spec headings; corrected to 79 by reconciliation against built routes on main (B4-FIX). The baseline ~73 figure was an estimate (§2.4). It is not this freeze.
 >
 > Cite v2 sections §0–§9. Do not cite the historical block as the v2 page inventory.
 
@@ -24,7 +24,7 @@
 | Cite | For |
 |---|---|
 | §0 | The counting rule. Do not recount under a different unit. |
-| §1 | What v1 measured, and why 59 and 77 are different units. |
+| §1 | What v1 measured, and why 59 and 79 are different units. |
 | §2 | Disposition of every v1 route pattern, plus the new patterns. |
 | §3 | The frozen inventory (OD-21). |
 | §4 | Binding UI inputs (N28, REG-90, REG-44, REG-79, REG-82, REG-83, REG-84, REG-85, posture, bilingual). |
@@ -142,7 +142,7 @@ WhatsApp Templates: **not a pattern.** MERGED into `/admin/settings` (OD-5, FR-A
 
 ### 1.2 Built `page.tsx` on `origin/main` (B4-FIX, REG-67 physical method)
 
-Measured 2026-09-22 with `git ls-tree -r --name-only origin/main src/app`, then the paths ending in `page.tsx`. Locale prefix `[locale]` is stripped (OD-7); each file is one pattern. **26** `page.tsx` files. **OD-21 is not amended.** Two files map to no P-number. That is a STOP (§9). The corrected count if both were admitted is **79**. This section does not freeze 79.
+Measured 2026-09-22 with `git ls-tree -r --name-only origin/main src/app`, then the paths ending in `page.tsx`. Locale prefix `[locale]` is stripped (OD-7); each file is one pattern. **26** `page.tsx` files. **B4-FIX2:** **26/26** map to exactly one P-number. `/auth/phone` is P78. `/blocked` is P79. Both were omitted by the v1 spec and are admitted because OD-4 and R-A05 hold.
 
 | Built route (locale stripped) | P-number |
 |---|---|
@@ -170,12 +170,12 @@ Measured 2026-09-22 with `git ls-tree -r --name-only origin/main src/app`, then 
 | `/seller/inventory` | P33 |
 | `/seller/inbox` | P36 |
 | `/seller/inbox/[id]` | P37 |
-| `/auth/phone` | **No P-number.** Renders `PhoneCaptureForm` when the account has no verified phone. Redirects only when the gate already passes, the user is signed out, or the account is blocked. Not a redirect-only alias (§0.5). Not P06 (`/auth/login`) and not P07 (`/auth/verify`). |
-| `/blocked` | **No P-number.** Renders the R-A05 suspended/deactivated terminal. Not `not-found.tsx`. |
+| `/auth/phone` | P78. Not P06 and not P07. |
+| `/blocked` | P79. Not `not-found.tsx`. |
 
 Not pages under §0, listed so they are not counted: `src/app/[locale]/(auth)/auth/callback/route.ts`, `src/app/api/category-listings/route.ts`, `src/app/[locale]/not-found.tsx`, `src/app/global-not-found.tsx`.
 
-The other P-numbers (cart, checkout, orders, admin, legal, and the rest) have no `page.tsx` on `origin/main`. They stay in the 77 as the target inventory. Absence from `main` is not a deletion.
+The other P-numbers (cart, checkout, orders, admin, legal, and the rest) have no `page.tsx` on `origin/main`. They stay in the 79 as the target inventory. Absence from `main` is not a deletion.
 
 ---
 
@@ -289,30 +289,32 @@ Not added, on purpose:
 - No courier login (AC-COU-6, REG-78).
 - No support page (REG-50). Its old “OD-9” note is void; OD-9 is the cart model.
 - No second deposit-verification route. #58 is that queue.
-- No `/auth/phone` inside OD-21. The built file is a STOP (§1.2). The freeze is not silently extended.
+- `/auth/phone` is P78. `/blocked` is P79. Both are admitted (§5.2).
 
 ### 2.4 Why this is not ~73
 
-`BETK_V2_SCOPE_BASELINE.md` §10 estimated **~73** = the old headline 59 + about 14 names. Under §0 the v1 base is **65**, not 59 (+6). Against the estimate’s 14 names this freeze drops four (`/returns` list, `/seller/returns`, `/seller/returns/[id]`, `/orders/[masterId]/[sellerOrderId]`) and adds two the estimate did not split out (`/admin/returns/[id]`, the buyer return-request pattern). 65 + 12 = **77**. 73 + 6 − 4 + 2 = 77. The estimate is not corrected into 77; it was a different unit plus a different split.
+`BETK_V2_SCOPE_BASELINE.md` §10 estimated **~73** = the old headline 59 + about 14 names. Under §0 the v1 base is **65**, not 59 (+6). Against the estimate’s 14 names this freeze drops four (`/returns` list, `/seller/returns`, `/seller/returns/[id]`, `/orders/[masterId]/[sellerOrderId]`) and adds two the estimate did not split out (`/admin/returns/[id]`, the buyer return-request pattern). 65 + 12 = **77**. 73 + 6 − 4 + 2 = 77. The estimate is not corrected into 77; it was a different unit plus a different split. **B4-FIX2** then admitted two built routes the heading count never had: 77 + 2 = **79**.
 
 ---
 
 ## 3. Freeze (OD-21)
 
-**OD-21.** v2 page count is **77** route patterns under §0. This supersedes the v1 headline of 59. Tables stay **51** under OD-20. Taken at mint 2026-09-22 (next free OD was OD-21).
+**OD-21.** v2 page count is **79** route patterns under §0. This supersedes the v1 headline of 59. Tables stay **51** under OD-20. Taken at mint 2026-09-22 (next free OD was OD-21). Corrected in place. No superseding OD: this number has never landed on `main`.
 
-v1 under §0 is 5 public + 3 auth + 14 buyer + 25 seller + 18 admin = **65**. v2 adds 4 legal pages (public), the cart, the return request, and the return detail (buyer +3), and 5 admin queues. 65 + 4 + 3 + 5 = **77**.
+Initially counted 77 from spec headings; corrected to 79 by reconciliation against built routes on main (B4-FIX).
+
+v1 under §0 is 5 public + 3 auth + 14 buyer + 25 seller + 18 admin = **65**. v2 adds 4 legal pages (public), the cart, the return request, and the return detail (buyer +3), and 5 admin queues, then admits P78 and P79. 65 + 4 + 3 + 5 + 2 = **79**.
 
 | Band | Patterns | Count |
 |---|---|---|
 | Public | 1–5 and 67–70 | 9 |
-| Auth | 6–8 | 3 |
+| Auth | 6–8, 78, 79 | 5 |
 | Buyer | 9–22, 66, 71, 72 | 17 |
 | Seller | 23–47 | 25 |
 | Admin | 48–65, 73–77 | 23 |
-| **Total** | | **77** |
+| **Total** | | **79** |
 
-9+3+17+25+23 = **77**. Buyer is the v1 14 plus cart, return request, and return detail. The four legal pages sit in Public, not in Buyer. Admin is the v1 18 plus returns queue, return detail, escalations, ready-for-pickup, and performance.
+9+5+17+25+23 = **79**. Auth is the v1 three plus `/auth/phone` and `/blocked`. Buyer is the v1 14 plus cart, return request, and return detail. The four legal pages sit in Public, not in Buyer. Admin is the v1 18 plus returns queue, return detail, escalations, ready-for-pickup, and performance.
 
 ---
 
@@ -336,7 +338,7 @@ Reviews render **no buyer name and no buyer location**. Use a neutral keyed labe
 
 ### 4.c REG-79 (phone gate) — OPEN
 
-The gate **surface in this freeze** is #6 and #7. Named holds that stay: checkout (#15), become-seller (#23), payout (#44) — AC-AUTH-4. **Where** verified phone is required relative to add-to-cart is **OPEN**. Do not encode the trigger. The built `/auth/phone` route is a **STOP** in §1.2: under §0 it is its own pattern, and OD-21 does not include it. This section does not add it.
+The gate **surface** is `/auth/phone` (P78) and `/auth/verify` (P07). Named holds that stay: checkout (#15), become-seller (#23), payout (#44) — AC-AUTH-4. **Where** verified phone is required relative to add-to-cart is **OPEN**. Do not encode the trigger. REG-79 does not decide whether the surface is reached from add-to-cart.
 
 ### 4.d REG-82 (cart restore)
 
@@ -449,12 +451,12 @@ Kit names below are components that already exist under `components/shared` or `
 ### 5.2 Auth
 
 #### P06 Phone entry — `/auth/login`
-- **v1 #6 KEPT.** FR-AUTH-1, R-A01, R-A03, OD-4. Gate surface for FR-AUTH-4.
+- **v1 #6 KEPT.** FR-AUTH-1, R-A01, R-A03, OD-4. Sign-in. The verified-phone gate surface is P78 and P07, not this page.
 - **Role:** public.
 - **Data:** `users.phone_number` uniqueness branch; `otp_tokens` create (`token_hash`, `expires_at`, `attempt_count`). Google OAuth find-or-create. No password.
 - **States:** invalid phone; rate limit; suspended (R-A05). **notFound(): no.**
 - **Composes:** `Button`, `Input`. Auth shell is existing layout, not a new kit component.
-- **Binding:** REG-79 does not add a trigger on this page. The page only verifies a phone when some held surface sends the user here.
+- **Binding:** REG-79 does not put the gate trigger on this page.
 
 #### P07 OTP — `/auth/verify`
 - **v1 #7 KEPT.** FR-AUTH-2, AC-AUTH-2.
@@ -471,6 +473,24 @@ Kit names below are components that already exist under `components/shared` or `
 - **States:** validation errors. **notFound(): no.**
 - **Composes:** `Input`, `Select`, `Button`. Link to P67.
 - **Binding:** which of the four documents are in the **checkout** gate is REG-88, not this page. This page always takes buyer terms (R-G01).
+
+#### P78 Verified-phone capture — `/auth/phone`
+- **ADMITTED (B4-FIX2).** OD-4 HOLDS. R-A07, FR-AUTH-4, AC-AUTH-4. Omitted by the v1 spec. Built on `main`. Not discretionary.
+- **Role:** authenticated user whose `users.phone_number` is null. Unsigned users redirect to P06. A user who already has a verified phone redirects to P09. A deactivated account redirects to P79.
+- **Data:** own `users.phone_number`, `users.status`, `users.deleted_at`, `users.auth_provider` (OD-4, OD-2). Creates `otp_tokens` (`token_hash`, `expires_at`, `attempt_count`) with the same OTP contract as P07. `users.phone_number` is written only after that OTP succeeds. No password.
+- **States:** invalid phone; rate limit; OTP expired; lockout (`attempt_count`). Already-verified and signed-out are redirects, not empty states. **notFound(): no.**
+- **i18n / RTL:** one route, two locales. The phone and the OTP digits are LTR islands.
+- **Composes:** `Input`, `Button`. The auth shell is the existing layout. No kit gap.
+- **Binding:** this page is the gate **surface**. REG-79 leaves the **trigger point** OPEN. Do not encode add-to-cart versus checkout here. Named holds stay on P15, P23, and P44.
+
+#### P79 Blocked account — `/blocked`
+- **ADMITTED (B4-FIX2).** R-A05 HOLDS. OD-2 deactivate-only. Omitted by the v1 spec. Built on `main`. Not discretionary.
+- **Role:** public terminal, so the auth gate does not loop. The account it describes has `users.status` not active, or `users.deleted_at` set.
+- **Data:** `users.status`, `users.deleted_at`. `users.anonymized_at` stays unused (OD-2). No reactivation write on this page.
+- **States:** this is the terminal. No catalog empty state and no retry into the app. **notFound(): no.**
+- **i18n / RTL:** one route, two locales. Copy is catalog strings. RTL canonical.
+- **Composes:** `EmptyState`. No kit gap. No support route (REG-50).
+- **Binding:** middleware may land a blocked account here. This page does not decide the phone-gate trigger (REG-79).
 
 ### 5.3 Buyer
 
@@ -1008,7 +1028,7 @@ Buyer-facing pages that must also stay clean of the **per-seller** fee and of co
 | FR-AUTH-1 | P06 |
 | FR-AUTH-2 | P07 |
 | FR-AUTH-3 | P08 |
-| FR-AUTH-4 | P06, P07. Trigger **OPEN REG-79**. Holds also bite on P15, P23, P44. |
+| FR-AUTH-4 | P78, P07. Surface is `/auth/phone` and `/auth/verify`. Trigger **OPEN REG-79**. Named holds also bite on P15, P23, P44. |
 | FR-BUY-1 | P09 |
 | FR-BUY-2 | P10 |
 | FR-BUY-3 | P11 |
@@ -1127,7 +1147,8 @@ No FR with a UI surface is unmapped. FR-BUY-6 is superseded, not missing.
 | AC-COM-1, AC-COM-2 | P39, P41 (snapshot already stored; page does not recompute against delivery) |
 | AC-COM-3 | P15, P66 |
 | AC-CAT-1–6 | P31, P32 |
-| AC-AUTH-4 | P15, P23, P44. Add-to-cart **not asserted** (REG-79). |
+| AC-AUTH-4 | P78, P07, P15, P23, P44. Add-to-cart **not asserted** (REG-79). |
+| R-A05 | P79. Deactivated/blocked terminal. OD-2. |
 | AC-ADM-18 | P58 |
 | AC-ADM-19 | P76 |
 | AC-ADM-20 | P75 |
@@ -1209,6 +1230,8 @@ No FR with a UI surface is unmapped. FR-BUY-6 is superseded, not missing.
 | P75 | FR-ADM-20 |
 | P76 | FR-ADM-19 |
 | P77 | FR-ADM-21 |
+| P78 | FR-AUTH-4 |
+| P79 | R-A05 |
 
 Both directions are filled. Open items in §9 are unpinned facts, not missing pages.
 
@@ -1216,7 +1239,7 @@ Both directions are filled. Open items in §9 are unpinned facts, not missing pa
 
 ## 8. Claude Design handoff — gap list
 
-This is input to Stage D, which is already running. It is not a design.
+This is input to Stage D, which is already running. It is not a design. P78 composes `Input` and `Button`. P79 composes `EmptyState`. Neither adds a row here.
 
 | Gap | Needed by | Why the kit lacks it |
 |---|---|---|
@@ -1251,13 +1274,13 @@ REG-52 (onboarding category picker UX) is also open CD-DELTA-5 and is **not** a 
 |---|---|---|
 | **REG-90** | **CLOSED** pin. Seller reads subtotal, commission, `refunded_subtotal`, and net. Never `delivery_fee`, never `total_amount`. | **B4-FIX:** those seller-readable amounts are fee-free by definition (ERD §3.10, §6.4). The column grant is still **open for B5**: admin is also `authenticated`, so this cannot be a plain `REVOKE`. |
 | **REG-91** | **OPEN.** B5 candidate recorded, not accepted. Public `stores.governorate` is the INVOKER rate origin. Pickup street never participates. Pickup-governorate mismatch is the open edge. | Not a new table. Not a page. |
-| **Built routes outside OD-21** | **STOP.** `/auth/phone` and `/blocked` are `page.tsx` files on `origin/main` and map to no P-number (§1.2). | Corrected count if both are admitted: **79**. OD-21 stays **77**. Not re-frozen here. Register re-read: next free REG-92, none taken. |
-| **REG-79** | **OPEN.** Gate page exists (P06, P07). Trigger vs add-to-cart is not encoded. | |
+| **Built routes** | **Admitted (B4-FIX2).** P78 and P79. 26/26 `page.tsx` files on `origin/main` map to one P-number (§1.2). | OD-21 corrected in place to 79. No new REG (next free stayed REG-92). |
+| **REG-79** | **OPEN.** Gate surface is P78 and P07. Trigger vs add-to-cart is not encoded. | |
 | **REG-85** | **OPEN.** P05 and P28 show store policy. Relationship to P69 is not decided. | |
 | **REG-88** | **OPEN.** P15 has a version-gate panel. Which of the four documents block completion is not hard-coded. | |
 | **REG-81** | **OPEN.** P38/P39 show `display_ref` only when non-null. No format invented. Legacy `betk_ref` on old rows is an order number. | |
 | **REG-89** | **OPEN.** P15 shows the master 50% and does not encode child allocation. | |
-| **REG-50** | Support page **not** in the 77. | |
+| **REG-50** | Support page **not** in the 79. | |
 | **storage.objects** | N28’s betk-schema proof did not cover the `docs` bucket (payment-proof screenshots, seller documents). Seller pages do not read those objects. Admin P58 and P49 do, via signed URL. | Stage C input. Not a new table in `betk`. |
 | **Un-ERD’d table** | **None.** Every page’s data list is an OD-20 table. Low stock has no alert-log table (OD-1). Performance has no table (FR-ADM-21 derived). Legal prose is not a table (R-G07). | |
 
@@ -1269,7 +1292,7 @@ REG-52 (onboarding category picker UX) is also open CD-DELTA-5 and is **not** a 
 
 # Historical v1 UI spec (superseded in place — not deleted)
 
-> **SUPERSEDED (B4, 2026-09-22).** The text below is the v1 spec. Its headline count of 59 is a heading count (60 headings minus the WhatsApp Templates tab). Measured under the v2 counting rule (§0 above) that same source is 65 route patterns. The v2 contract is §0–§9. **OD-21** freezes 77 pages and supersedes the freeze sentence in the acceptance matrix below. Do not cite this block as the v2 page inventory. Nothing in this block was deleted.
+> **SUPERSEDED (B4, 2026-09-22).** The text below is the v1 spec. Its headline count of 59 is a heading count (60 headings minus the WhatsApp Templates tab). Measured under the v2 counting rule (§0 above) that same source is 65 route patterns. The v2 contract is §0–§9. **OD-21** freezes 79 pages and supersedes the freeze sentence in the acceptance matrix below. Do not cite this block as the v2 page inventory. Nothing in this block was deleted.
 # BETK_UI_SPEC.md
 
 > **Source & provenance note.** The uploaded corpus consists of the three BETK Architecture Review conversations: **C1 — Domain Modeling & Entity Discovery**, **C2 — ERD & Database Architecture**, and **C3 — Supabase Production Schema (SQL, RLS, pg_cron)**. No standalone *Dev OS* file and no standalone *Wireframes* file were present in the uploads. The page-by-page UI surface is nevertheless fully specified *inside* these documents as: the 70-row Use Case Coverage Matrix (C2 §6), the Actor User Journeys and Marketplace Workflows WF1–WF10 (C1 §1.3–1.4), and the explicit screen/tab references embedded in the Entity Catalog "Use Case(s)" columns (e.g. *Seller Inbox*, *Wishlist & Saved*, *Followed Sellers tab*, *Seller Dashboard*, *Level Progress*, *Store Header*, *Moderation Log tab*, *Homepage featured strip*). Every page below maps to one or more of those documented surfaces. Data requirements are cross-referenced against the physical tables, columns, enums, and RLS policies defined in C2 §3 / C3 §3–5. No page or feature has been invented; gaps in either direction are flagged inline as **[DATA GAP]** or **[UI GAP]**.

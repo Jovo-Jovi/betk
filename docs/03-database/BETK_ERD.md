@@ -11,17 +11,17 @@
 >
 > **B3-FIX (2026-09-22)** amended §3.1, §3.2, §3.6, §4, §6.2, §7, §8, §9, §11, §12, and §13 in place. Register re-read before any mint: header REG-01..REG-89, next free **REG-90**. **No REG taken. No OD taken. No ADR written.** Next free stays **REG-90**, **OD-21**, **ADR-020**.
 >
-> **B4 (2026-09-22)** re-read before taking: occupied ODs ended at OD-20 (next free **OD-21**); occupied REGs ended at REG-89 (next free **REG-90**). **Took REG-90** (closed seller-money pin, §3.10) and **REG-91** (open buyer delivery projection). **Took OD-21** in `BETK_MVP_SCOPE.md` / `BETK_UI_SPEC.md` (page count 77), not as a schema change. No ADR. Next free after B4: **OD-22**, **REG-92**, **ADR-020**.
+> **B4 (2026-09-22)** re-read before taking: occupied ODs ended at OD-20 (next free **OD-21**); occupied REGs ended at REG-89 (next free **REG-90**). **Took REG-90** (closed seller-money pin, §3.10) and **REG-91** (open buyer delivery projection). **Took OD-21** in `BETK_MVP_SCOPE.md` / `BETK_UI_SPEC.md` (page count, initially 77), not as a schema change. No ADR. Next free after B4: **OD-22**, **REG-92**, **ADR-020**. **B4-FIX2** corrected OD-21 in place to **79**. No new OD. No REG taken (next free stayed REG-92).
 
 ---
 
-> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 79 (OD-21).
 >
 > Live physical tables **today** = **43** (`betk` 41 + `betk_analytics` 2), measured in §1. That figure is **TRUE TODAY**.
 >
 > The v2 **target** inventory is **51** physical tables (`betk` 49 + `betk_analytics` 2). **OD-20 supersedes OD-6.** The baseline ~50 figure was an estimate and is not this freeze.
 >
-> **B4 froze the page count at 77** under **OD-21** (`BETK_UI_SPEC.md` §0–§3). The baseline ~73 figure was an estimate. This file still does not design pages. It records the seller money pin (REG-90) because that pin changes which columns a seller read may return.
+> **B4 froze the page count under OD-21, corrected in place to 79** (B4-FIX2) (`BETK_UI_SPEC.md` §0–§3). The baseline ~73 figure was an estimate. This file still does not design pages. It records the seller money pin (REG-90) because that pin changes which columns a seller read may return.
 
 ---
 
@@ -128,7 +128,7 @@ Not new, on purpose: escalation is columns on the seller order (OD-14, baseline 
 | New | 8 |
 | **v2 target** | **51** (`betk` 49 + `betk_analytics` 2) |
 
-**OD-20.** v2 physical table count is **51**. This supersedes OD-6. This OD does not freeze pages. **OD-21** freezes them at 77 (`BETK_UI_SPEC.md` §0–§3).
+**OD-20.** v2 physical table count is **51**. This supersedes OD-6. This OD does not freeze pages. **OD-21** freezes them at 79 (`BETK_UI_SPEC.md` §0–§3).
 
 ## 3. Binding design inputs
 
@@ -988,7 +988,7 @@ Not minted (the spec already refuses the invention):
 - New tables in §6.1. Policies in §8, including the eight live tables that have RLS and zero policies.
 - `checkout_from_cart` replaces `create_order_from_inquiry`.
 - Stock decrement moves to checkout. Confirm trigger comes off.
-- No SQL in this document. Page inventory is `BETK_UI_SPEC.md` (OD-21 = 77). This file does not design routes.
+- No SQL in this document. Page inventory is `BETK_UI_SPEC.md` (OD-21 = 79). This file does not design routes.
 - **B4:** reviews render no buyer name and no buyer location (§9).
 - **REG-90 grant (open, B5):** seller SELECT must exclude `seller_orders.delivery_fee` and `total_amount`, and must include `refunded_subtotal`. Do not implement the exclusion as `REVOKE` of those columns from `authenticated` alone. Admin is `authenticated`. §3.10.
 - **REG-90 writer (B5):** `enforce_payment_update` writes `refunded_subtotal` as the goods portion. It does not copy `payments.refunded_amount`. Payout INSERT is capped at the derived available net (§6.4). `revenue_egp`’s writer stays unpinned; the definition in §6.4 is the constraint on whatever writer lands.

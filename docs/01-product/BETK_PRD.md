@@ -9,13 +9,13 @@
 
 ---
 
-> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 77 (OD-21).
+> ## TABLES ARE FROZEN at 51 (OD-20). PAGES ARE FROZEN at 79 (OD-21).
 >
 > The v1 freeze of **43 tables** and **59 pages**, and the v1 PRD framing “one FR per wireframed page”, are **SUPERSEDED**. They are not the v2 inventory.
 >
 > Live introspection still measures **43** physical tables (`betk` 41 + `betk_analytics` 2). That figure is **TRUE TODAY** (B3, 2026-09-22, `pg_tables`). It is not the v2 target.
 >
-> **B3 froze the target table count at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. **B4 froze the page count at 77** under **OD-21** (`BETK_UI_SPEC.md` §0). The ~50 / ~73 figures in `BETK_V2_SCOPE_BASELINE.md` §1 and §10 stay **estimates**. This document still does not enumerate routes; B4 does.
+> **B3 froze the target table count at 51** (`betk` 49 + `betk_analytics` 2) under **OD-20**, which supersedes OD-6. **B4 froze the page count under OD-21, corrected in place to 79** (B4-FIX2) (`BETK_UI_SPEC.md` §0). The ~50 / ~73 figures in `BETK_V2_SCOPE_BASELINE.md` §1 and §10 stay **estimates**. This document still does not enumerate routes; B4 does.
 
 ---
 
@@ -528,7 +528,7 @@ Food branch is also an amendment of FR-SEL-1 / FR-ADM-2.
 
 | ID | Requirement |
 |---|---|
-| **R-A07** | **Verified phone is required before transacting** (OD-4 HOLDS). Named surfaces that **HOLD:** **checkout**, **become-seller**, **payout**. **N21** pins **account** before first add-to-cart, **not** verified phone. Whether add-to-cart is a “transaction” that requires verified phone is **OPEN — REG-79**. An implementation that gates verified phone at add-to-cart, and one that leaves that gate at checkout, are **both currently legal** under this PRD. **This file does not choose.** Become-seller and payout are **not** relocated. |
+| **R-A07** | **Verified phone is required before transacting** (OD-4 HOLDS). The gate **surface** is `/auth/phone` and `/auth/verify` (P78, P07). Named holds that **HOLD:** **checkout**, **become-seller**, **payout**. **N21** pins **account** before first add-to-cart, **not** verified phone. Whether add-to-cart is a “transaction” that requires verified phone is **OPEN — REG-79**. An implementation that gates verified phone at add-to-cart, and one that leaves that gate at checkout, are **both currently legal** under this PRD. **This file does not choose the trigger.** Become-seller and payout are **not** relocated. |
 
 **FR-AUTH-4** — Records R-A07 as an OPEN requirement. AC-AUTH-4 is the testable split (named surfaces HOLD; add-to-cart phone-gate is not asserted).
 
@@ -577,7 +577,7 @@ v1 **R-B01–R-B05**, **R-L08**, **FR-SEL-11**, **FR-SEL-12**, **FR-ADM-17**, an
 - **Accessibility:** WCAG AA targets; keyboard + screen-reader; focus ring on `--ring`.
 - **Observability:** Sentry; PostHog on key funnels.
 
-v1 sentence “bounded exactly by the 59 pages … and the 43-table schema” is **SUPERSEDED**. Tables are frozen at 51 (OD-20). Pages are frozen at 77 (OD-21). The v1 59 was a heading count.
+v1 sentence “bounded exactly by the 59 pages … and the 43-table schema” is **SUPERSEDED**. Tables are frozen at 51 (OD-20). Pages are frozen at 79 (OD-21). The v1 59 was a heading count.
 
 ---
 
@@ -815,7 +815,7 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 
 | ID | Item | Why it is not invented | Owner |
 |---|---|---|---|
-| **REG-79** | Verified-phone gate at add-to-cart vs checkout | Authority does not pin it. Written **OPEN** as R-A07 / FR-AUTH-4 / AC-AUTH-4. | Product pin (not B3/B4) |
+| **REG-79** | Verified-phone gate trigger | **OPEN.** The gate **surface** is `/auth/phone` and `/auth/verify`. The **trigger point** (add-to-cart vs checkout) is not decided. R-A07 / FR-AUTH-4 / AC-AUTH-4. | Product pin |
 | **REG-78** | Courier authenticated principal | Requirements are collect / deliver / COD / remit / read label only. **B3 resolved:** no courier RLS principal; label is an admin-invoked service-role function (`BETK_ERD.md` §3.1). AC-COU-6 holds. | Closed in the ERD — ADR candidate for B5 |
 | **REG-80** | Boosts in for v2 MVP | **CLOSED** 2026-09-22 (scope owner). v1 boost text **RETAINED**. No new boost requirements. Schema questions are B3, REG-78-class, not new FRs. | Closed — B4 maps retained v1 boost capabilities |
 | **F-MODE** | `delivery_preference` schema tension | Courier-only is the behaviour (R-K01). **B3 resolved:** enum and `delivery_method` kept; `pickup` / `remote` dead; existing order values not rewritten (`BETK_ERD.md` §3.5). | Closed in the ERD |
@@ -826,7 +826,7 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 | **REG-84** | Whether a master-level dispute is wanted (was F-DSP) | **CLOSED** 2026-09-22 (scope owner). **No** master-level dispute. R-O06 holds at the seller order only. | Closed |
 | **REG-85** | Store-level return policy vs platform Return Policy (was F-POL) | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
 | **REG-86** | `return_hold_hours` vs narrowed REG-62 (was F-HOLD) | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). Do not invent it back into REG-62. | Product / launch gate |
-| **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. **B4** froze pages at 77 (OD-21) and did not edit the prompt. Do not treat that prompt as the v2 inventory. | Later docs sweep |
+| **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. **B4** froze pages under OD-21. **B4-FIX2** corrected that count in place to **79**. The prompt was not edited. Do not treat that prompt as the v2 inventory. | Later docs sweep |
 | **REG-90** | Seller order money visibility | **CLOSED** 2026-09-22 (scope owner). **B4-FIX:** `refunded_subtotal`, `revenue_egp`, and the payout cap are fee-free by definition in `BETK_ERD.md` §3.10 and §6.4. Seller SELECT of `delivery_fee` and `total_amount` stays NO. B5 owns the grant. | Closed — B5 owns the grant |
 | **REG-91** | Buyer-safe combined delivery total | **OPEN.** **B4-FIX candidate, not accepted:** zone-level origin is already public on `stores`. INVOKER checkout (ADR-018) cannot read `store_pickup_addresses`, so the rate origin is `stores.governorate`. Pickup street never participates. Pickup-governorate mismatch stays open. Not a new table. | B5 |
 | **REG-73** | Buyer cancel vs already-confirmed deposit | **CLOSED.** R-O03 quotes journeys §5.2, which covers the deposit-confirmed case. | Closed — orders rebuild implements R-O03 |
@@ -959,6 +959,7 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **2026-09-22 — B3.** REG-82, REG-83, REG-84 closed as product pins. R-C07, R-O21, and AC-CART-7 amended for REG-82. R-O06 / R-O07 / R-R01 / R-R02 and the review/dispute FR rows amended where an OPEN line contradicted REG-83 or REG-84. Table count **FROZEN at 51 (OD-20)**. Pages still unfrozen. Schema is `BETK_ERD.md`, not this file.
 - **2026-09-22 — B4.** Page count **FROZEN at 77 (OD-21)**. **REG-90 CLOSED** (seller sees subtotal, commission, and net only; never delivery fee, never order total). Propagated to R-V02, R-O28, AC-VIS-1, AC-CLO-3, FR-SEL-14, FR-SEL-15, FR-SEL-17, FR-SEL-18. **REG-91 OPEN** (buyer-safe delivery total). This file still does not enumerate routes. Routes are `BETK_UI_SPEC.md`.
 - **2026-09-22 — B4-FIX.** REG-90’s seller-readable refund, revenue, and payout cap are fee-free in the database (`BETK_ERD.md` §3.10, §6.4). AC-CLO-3 and FR-SEL-17 cite `refunded_subtotal`. REG-91 stays open with the INVOKER origin candidate. No new REG. OD-21 not amended.
+- **2026-09-22 — B4-FIX2.** OD-21 corrected in place to **79**. Gate surface for REG-79 is `/auth/phone` and `/auth/verify`. Trigger point stays OPEN. No new REG.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______
