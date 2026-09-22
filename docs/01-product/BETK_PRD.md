@@ -242,8 +242,8 @@ v1 FRs were **one block per page**. That framing is superseded. Each code still 
 | **FR-SEL-14** | Orders management; **seller accepts** pending→confirmed | **HOLDS WITH AMENDMENT** | **Amendment:** **seller acceptance is retired** (AC-SEL-14 RETIRED). Orders arrive committed after admin deposit verification. Seller cannot cancel (R-E01). Seller sees ref + items + deadline, plus **subtotal, commission, and net only** (R-V02, **REG-90**). Never the delivery fee. Never the order total. Escalation is the only exit (FR-ESC-1). |
 | **FR-SEL-15** | Seller order detail; status changes; shipments | **HOLDS WITH AMENDMENT** | **Amendment:** seller may move **preparing → ready**. Seller **never** sees buyer name, phone, address, or city (N28). Seller **never** sees the delivery fee or the order total (**REG-90**); the money on this surface is subtotal, commission, and net. Seller labels the box with the **order reference only** (R-K07). Courier collection is courier behaviour (R-K05), not a seller “I am the courier” read of the label (that v1 clause is superseded). |
 | **FR-SEL-16** | Reviews management | **HOLDS WITH AMENDMENT** | Seller reviews are per **seller order** (REG-83 closed 2026-09-22). The response still must not include buyer name, phone, address, or city (R-V02). |
-| **FR-SEL-17** | Earnings | **HOLDS WITH AMENDMENT** | **Amendment:** displayed balance is **derived** (R-O26) as subtotal minus commission (**REG-90**: no delivery fee, no order total). Eligibility waits for the return-hold window after delivery (R-O29). OPEN REG-86 on whether return-hold is a REG-62 launch key. Do not invent it back into REG-62. |
-| **FR-SEL-18** | Transactions | **HOLDS WITH AMENDMENT** | **Amendment:** unit is the **seller order** (§3.1). Each row shows subtotal, commission, and net (**REG-90**). It does not show the delivery fee, the order total, or a buyer payment leg. |
+| **FR-SEL-17** | Earnings | **HOLDS WITH AMENDMENT** | **Amendment:** displayed balance is **derived** (R-O26) as `subtotal − commission_amount − refunded_subtotal` (**REG-90**, B4-FIX). `refunded_subtotal` is the goods portion, fee-free by definition (`BETK_ERD.md` §3.10). The seller can compute it without reading `payments`. No delivery fee. No order total. Eligibility waits for the return-hold window after delivery (R-O29). OPEN REG-86 on whether return-hold is a REG-62 launch key. Do not invent it back into REG-62. |
+| **FR-SEL-18** | Transactions | **HOLDS WITH AMENDMENT** | **Amendment:** unit is the **seller order** (§3.1). Each row shows subtotal, commission, `refunded_subtotal`, and net (**REG-90**). It does not show the delivery fee, the order total, or a buyer payment leg. |
 | **FR-SEL-19** | Request payout | **HOLDS UNCHANGED** | R-O09/R-O10 hold. |
 | **FR-SEL-20** | Level progress | **HOLDS UNCHANGED** | Untouched. |
 | **FR-SEL-21** | Seller analytics (includes boosts) | **HOLDS WITH AMENDMENT** | Non-boost analytics hold. **Boost analytics clause = RETAINED** (v1 text stands; REG-80 closed 2026-09-22). |
@@ -707,7 +707,7 @@ Each AC is **observable behaviour**. None restates its FR in different words. No
 
 | ID | Criterion |
 |---|---|
-| **AC-VIS-1** | Given a seller viewing their seller order, the response **does not include** buyer name, phone, address, or city, **and does not include** the delivery fee or the order total (**REG-90**). It **does** include order ref, items/qty, prep deadline, subtotal, commission, and net. |
+| **AC-VIS-1** | Given a seller viewing their seller order, the response **does not include** buyer name, phone, address, or city, **and does not include** the delivery fee or the order total (**REG-90**). It **does** include order ref, items/qty, prep deadline, subtotal, commission, `refunded_subtotal`, and net. |
 | **AC-VIS-2** | Given a buyer viewing the master, the response **does not include** any seller pickup or store street address. |
 | **AC-VIS-3** | Given an admin (or the courier participant) viewing the same order, buyer delivery address **is** available, and seller pickup address **is** available. |
 | **AC-VIS-4** | Given seller A on a two-seller master, seller A **cannot** read seller B’s seller order. |
@@ -718,7 +718,7 @@ Each AC is **observable behaviour**. None restates its FR in different words. No
 |---|---|
 | **AC-CLO-1** | A delivered seller order with an unconfirmed COD-balance obligation still **does not** count as closed. Confirming that obligation (after remit) makes that seller order closed **without** an extra “close” act. |
 | **AC-CLO-2** | A master with one child delivered and one child cancelled presents as **partially completed**, not completed and not fully cancelled. |
-| **AC-CLO-3** | Seller earnings equal **sum over eligible seller orders of (subtotal − snapshotted commission)** and change when a refund posts, **without** a wallet credit row being written as the source of truth. **Amended 2026-09-22 (REG-90):** the screen shows subtotal, commission, and that net. It does not show the delivery fee or the order total. A refund figure is shown to the seller only when it is derivable without the delivery fee (open check on the payment rollup — `BETK_ERD.md` §3.10 — not invented here). |
+| **AC-CLO-3** | Seller earnings equal **sum over eligible seller orders of (subtotal − snapshotted commission − `refunded_subtotal`)** and change when a refund posts, **without** a wallet credit row being written as the source of truth. **Amended B4-FIX (REG-90):** `refunded_subtotal` is the goods portion of the refund, fee-free in the database (`BETK_ERD.md` §3.10). The seller reads that column. The seller does not read the delivery fee, the order total, or `payments.refunded_amount`. |
 
 ### 6.13 Commission — AC-COM-1–3  (FR-COM-1)
 
@@ -827,8 +827,8 @@ Every newly minted R / FR in §3 cites a section in the tables above. Compact:
 | **REG-85** | Store-level return policy vs platform Return Policy (was F-POL) | FR-SEL-6 HOLDS. Relationship unpinned. | Product / **B4** |
 | **REG-86** | `return_hold_hours` vs narrowed REG-62 (was F-HOLD) | R-O29 states the behaviour. Launch-gate membership unpinned (MVP_SCOPE §9). Do not invent it back into REG-62. | Product / launch gate |
 | **REG-87** | Master execution prompt still says 59 pages / one FR per page (was F-PROMPT) | Out of B2’s rewrite set. Stale. **B4** froze pages at 77 (OD-21) and did not edit the prompt. Do not treat that prompt as the v2 inventory. | Later docs sweep |
-| **REG-90** | Seller order money visibility | **CLOSED** 2026-09-22 (scope owner). Seller sees subtotal, commission, and net only. Never the delivery fee. Never the order total. Propagated to R-V02, R-O28, AC-VIS-1, AC-CLO-3, FR-SEL-14/15/17/18. Schema read is `BETK_ERD.md` §3.10. | Closed — B5 owns the grant |
-| **REG-91** | Buyer-safe combined delivery total | **OPEN.** Cart and checkout show one delivery total without handing the buyer the pickup origin. Not a new table. Not a page. | B5 |
+| **REG-90** | Seller order money visibility | **CLOSED** 2026-09-22 (scope owner). **B4-FIX:** `refunded_subtotal`, `revenue_egp`, and the payout cap are fee-free by definition in `BETK_ERD.md` §3.10 and §6.4. Seller SELECT of `delivery_fee` and `total_amount` stays NO. B5 owns the grant. | Closed — B5 owns the grant |
+| **REG-91** | Buyer-safe combined delivery total | **OPEN.** **B4-FIX candidate, not accepted:** zone-level origin is already public on `stores`. INVOKER checkout (ADR-018) cannot read `store_pickup_addresses`, so the rate origin is `stores.governorate`. Pickup street never participates. Pickup-governorate mismatch stays open. Not a new table. | B5 |
 | **REG-73** | Buyer cancel vs already-confirmed deposit | **CLOSED.** R-O03 quotes journeys §5.2, which covers the deposit-confirmed case. | Closed — orders rebuild implements R-O03 |
 
 N24 remains unused in the signed set (MVP_SCOPE §8). Not invented.
@@ -958,6 +958,7 @@ Step 2 of the BETK Dev OS. Functional requirements are derived **one block per w
 - **2026-09-22 — B2-FIX.** REG-80 closed by the scope owner: boosts are in for v2 MVP; listed boost codes flipped **PENDING → RETAINED** (v1 text stands; no new boost requirement). R-O03 cites `BETK_V2_ROLE_JOURNEYS.md` §5.2; that citation closes REG-73. F-flags normalised: took REG-81..REG-87 at mint (next free was REG-81); F-MODE left as a B3 in-task note. Counts still **UNFROZEN**.
 - **2026-09-22 — B3.** REG-82, REG-83, REG-84 closed as product pins. R-C07, R-O21, and AC-CART-7 amended for REG-82. R-O06 / R-O07 / R-R01 / R-R02 and the review/dispute FR rows amended where an OPEN line contradicted REG-83 or REG-84. Table count **FROZEN at 51 (OD-20)**. Pages still unfrozen. Schema is `BETK_ERD.md`, not this file.
 - **2026-09-22 — B4.** Page count **FROZEN at 77 (OD-21)**. **REG-90 CLOSED** (seller sees subtotal, commission, and net only; never delivery fee, never order total). Propagated to R-V02, R-O28, AC-VIS-1, AC-CLO-3, FR-SEL-14, FR-SEL-15, FR-SEL-17, FR-SEL-18. **REG-91 OPEN** (buyer-safe delivery total). This file still does not enumerate routes. Routes are `BETK_UI_SPEC.md`.
+- **2026-09-22 — B4-FIX.** REG-90’s seller-readable refund, revenue, and payout cap are fee-free in the database (`BETK_ERD.md` §3.10, §6.4). AC-CLO-3 and FR-SEL-17 cite `refunded_subtotal`. REG-91 stays open with the INVOKER origin candidate. No new REG. OD-21 not amended.
 
 - Product owner: __________  Date: ______
 - Tech lead: __________  Date: ______

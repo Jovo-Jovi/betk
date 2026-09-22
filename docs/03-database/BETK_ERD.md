@@ -155,7 +155,7 @@ Shipment status writes (`dispatched`, `delivered`) stay **admin** writes. The se
 
 **ADR candidate for B5:** this changes ADR-019’s “buyer attaches `proof_path` on the deposit row”. v2 buyer writes the master; a BEFORE/AFTER verification trigger copies onto children. Seller SELECT on `payments` is removed (§8) so the snapshot is not a seller read.
 
-**FR-SEL-17 is not computable on that map alone.** The seller can read `seller_orders.subtotal`, `commission_amount`, `status`, `confirmed_at`, and `delivered_at`, plus own `payouts`, own-store `disputes`, and own-store `returns`. The seller cannot read `payments`, and `return_hold_hours` stays off the REG-69 allow-list (REG-86). Deposit confirmation is `confirmed_at` (admin release). Balance confirmation, the refund total, and the hold deadline are not on any seller-readable table. §6.2 adds `balance_confirmed_at`, `refunded_amount`, and `payout_eligible_at` on `seller_orders`. Those columns carry no `proof_path` and no `transfer_reference`. Under the amended map the derived balance is computable from the seller’s own RLS.
+**FR-SEL-17 is not computable on that map alone.** The seller can read `seller_orders.subtotal`, `commission_amount`, `status`, `confirmed_at`, and `delivered_at`, plus own `payouts`, own-store `disputes`, and own-store `returns`. The seller cannot read `payments`, and `return_hold_hours` stays off the REG-69 allow-list (REG-86). Deposit confirmation is `confirmed_at` (admin release). Balance confirmation, the refund total, and the hold deadline are not on any seller-readable table. §6.2 adds `balance_confirmed_at`, `refunded_subtotal`, and `payout_eligible_at` on `seller_orders`. Those columns carry no `proof_path` and no `transfer_reference`. **B4-FIX:** `refunded_subtotal` is the goods portion of a refund, not a rollup of `payments.refunded_amount` (§3.10). Under that definition the derived balance stays computable from the seller’s own RLS.
 
 ### 3.3 REG-82 — cart restore path
 
@@ -201,22 +201,32 @@ The table accepts `document = buyer_terms` for any user, and `seller_agreement` 
 
 R-V01’s sentence “addresses are never exposed to buyer or seller” is applied as **cross-party** exposure. The buyer still selects and reads their own `addresses` rows (they typed them; checkout cannot work otherwise). R-V03 / AC-VIS-2 is the buyer not reading the seller pickup street. R-V02 is the seller not reading buyer name, phone, address, or city.
 
-### 3.10 REG-90 — seller order money (amended B4, 2026-09-22)
+### 3.10 REG-90 — seller order money (amended B4, 2026-09-22; DB definition amended B4-FIX)
 
-**Closed product pin.** The seller sees `subtotal`, `commission_amount`, and net (= subtotal − commission) only. Never `delivery_fee`. Never `total_amount`. Reason: the fee is origin × destination × weight, so a seller-visible fee lets the seller infer the buyer’s destination zone (N28). Commission is on subtotal only (R-O27), so the net needs neither the fee nor the total.
+**Closed product pin.** The seller sees `subtotal`, `commission_amount`, and net only. Never `delivery_fee`. Never `total_amount`. Reason: the fee is origin × destination × weight, so a seller-visible fee lets the seller infer the buyer’s destination zone (N28). Commission is on subtotal only (R-O27), so the net needs neither the fee nor the total.
 
 Seller SELECT of `seller_orders.delivery_fee` and `seller_orders.total_amount` = **NO**. The columns stay. Buyer and admin still read them. `total_amount`’s CHECK remains `subtotal + delivery_fee`.
 
-**Implementation is open for B5 / Stage C.** Column grants are per Postgres role. Admin is also `authenticated`. A plain `REVOKE` of those two columns from `authenticated` would also hide them from admin. This is not a policy-only change (REG-42: row policy cannot choose columns) and it is not a one-line revoke. B5 writes the grant shape. No new table.
+**Implementation of that column grant is open for B5 / Stage C.** Column grants are per Postgres role. Admin is also `authenticated`. A plain `REVOKE` of those two columns from `authenticated` would also hide them from admin. This is not a policy-only change (REG-42: row policy cannot choose columns) and it is not a one-line revoke. B5 writes the grant shape. No new table.
 
-**Other seller-readable money, checked in B4. Not a new table.**
+**B4-FIX (2026-09-22).** A seller can query any column their RLS and grants permit. Hiding a value on a page is not the boundary (PRECEDENTS: pre-checks are UX-only; the DB is authoritative). Every seller-readable money value below is fee-free **by definition**.
 
-| Value | Derivable without the delivery fee? |
+| Seller-readable value | Definition (fee-free) | Who writes it |
+|---|---|---|
+| `subtotal` | Goods total of the seller order. | Checkout. |
+| `commission_rate`, `commission_amount` | Commission on `subtotal` only (R-O27). Never on `delivery_fee`. | Commission trigger at insert. |
+| `refunded_subtotal` | Seller-net impact of a refund: the **goods/subtotal portion only**. CHECK `0 <= refunded_subtotal <= subtotal`. Renamed from the B4 name `refunded_amount` so it is not read as a copy of `payments.refunded_amount`. | `enforce_payment_update` (DEFINER) when a refund posts. The seller has no UPDATE. The trigger writes the goods portion here and does **not** copy `SUM(payments.refunded_amount)`. |
+| Derived net (FR-SEL-17) | `subtotal − commission_amount − refunded_subtotal`. | Not stored. |
+| `payouts.amount` | Seller-entered request. The INSERT cap is the derived available net in §6.4. | Seller INSERT, capped in the database. |
+| `seller_snapshots.revenue_egp` | Subtotal-based aggregate for that store. If the writer nets refunds, it subtracts `refunded_subtotal` only. Never `delivery_fee`, never `total_amount`. | **Unpinned** (REG-26 class). Definition only. |
+
+| Not seller-readable | Where the fee lives |
 |---|---|
-| `subtotal`, `commission_rate`, `commission_amount` | Yes. Commission is on subtotal only. |
-| `payouts.amount` | Yes, as a seller-entered withdrawal, **if** the eligible balance it is capped against is subtotal − commission and does not subtract a fee-bearing refund. |
-| `seller_orders.refunded_amount` | **No.** Rollup of `payments.refunded_amount`. A refund of the buyer’s payment can include the delivery fee (R-O16). Seller UI does not render it until B5 pins a goods-only figure. |
-| `seller_snapshots.revenue_egp` | **Not proven.** Seller SELECT exists (`seller_snap_own`). No shipped cron writer defines the column. Platform `gmv_egp` is `SUM(total_amount)`, which includes `delivery_fee`. A writer that copies that pattern fails this pin. Seller screens omit `revenue_egp` until the writer is pinned to subtotal − commission. |
+| `seller_orders.delivery_fee`, `seller_orders.total_amount` | Seller SELECT = NO (grant is B5). |
+| `payments.refunded_amount` | Full buyer refund on that payment row. CHECK `0 <= refunded_amount <= amount`. The **fee component of a refund lives only here** (and in any other `payments` column). Seller SELECT on `payments` is none. |
+| `platform_snapshots.gmv_egp` | May include the fee (`SUM(total_amount)` is the live shape). SELECT is admin only (§8). |
+
+**FR-SEL-17 after this definition.** Still computable under seller RLS. The seller reads `subtotal`, `commission_amount`, `refunded_subtotal`, `confirmed_at`, `balance_confirmed_at`, `payout_eligible_at`, own `payouts`, own-store `disputes`, and own-store `returns`. The seller does not read `payments`, `delivery_fee`, `total_amount`, or `return_hold_hours`. The hold is already stamped into `payout_eligible_at`. No new table.
 
 ## 4. N27 feasibility
 
@@ -536,7 +546,7 @@ ON DELETE is stated on every FK. “NO ACTION” means no `ON DELETE` clause (Po
 | `confirmed_at` | `timestamptz` | YES | Stamped at **admin release**, not seller acceptance. This is the deposit-confirmed fact the seller reads. No second deposit timestamp. |
 | `delivered_at` | `timestamptz` | YES | Kept. |
 | `balance_confirmed_at` | `timestamptz` | YES | **NEW.** Stamped when that child balance `payments` row is confirmed. No proof column. |
-| `refunded_amount` | `numeric(10,2)` | NO | **NEW.** Default `0`. CHECK `>= 0`. Rollup of that child’s `payments.refunded_amount`. No proof column. **B4 flag (REG-90 check):** this rollup is **not** proven free of the delivery fee. Deposit is 50% of (subtotal + delivery) (R-O16), so a refund of what the buyer paid can include fee money. Seller pages do not render it until B5 pins a goods-only figure. Do not add a column for that figure here. |
+| `refunded_subtotal` | `numeric(10,2)` | NO | **NEW. Renamed B4-FIX (REG-90) from `refunded_amount`.** Default `0`. CHECK `0 <= refunded_subtotal <= subtotal`. The seller-net impact of a refund: the goods/subtotal portion only, fee-free by construction. **Not** a rollup of `payments.refunded_amount`. The fee component of a refund stays on `payments` (seller SELECT none). Written by `enforce_payment_update`, never by the seller. No proof column. |
 | `payout_eligible_at` | `timestamptz` | YES | **NEW.** Stamped on `delivered` as `delivered_at` plus the then-current `return_hold_hours`, inside the DEFINER transition. The seller reads the timestamp. The settings key stays admin-only (REG-86). |
 | `commission_rate` | `numeric(5,2)` | YES | CHECK 0–100. Snapshot at insert (R-O27). |
 | `commission_amount` | `numeric(10,2)` | YES | CHECK `>= 0`. Subtotal only, never delivery. |
@@ -552,10 +562,11 @@ CHECK `(escalated_at IS NULL) OR (escalation_reason IS NOT NULL)`.
 - hold elapsed = `payout_eligible_at IS NOT NULL AND now() >= payout_eligible_at`
 - no blocking dispute or return = seller SELECT on `disputes` and `returns` for `store_id = my_store_id()`
 - already paid out = seller SELECT on own `payouts`
-- amount = `subtotal - commission_amount - refunded_amount` on the **stored** formula
-- **Seller display (REG-90, B4):** subtotal, commission, and net only. Displayed net = `subtotal - commission_amount`. Do not subtract `refunded_amount` on a seller screen while the rollup may include `delivery_fee`. Do not display `delivery_fee` or `total_amount`.
+- amount = `subtotal - commission_amount - refunded_subtotal`
 
-The seller has no UPDATE grant on `balance_confirmed_at`, `refunded_amount`, or `payout_eligible_at`. The payment trigger and the delivery transition stamp them. Three-layer (§8).
+That amount is the derived net. It does not read `delivery_fee` or `total_amount`. **B4-FIX:** this is the database definition, not a display filter. The seller’s grants include `refunded_subtotal` and exclude `delivery_fee` and `total_amount`.
+
+The seller has no UPDATE grant on `balance_confirmed_at`, `refunded_subtotal`, or `payout_eligible_at`. The payment trigger and the delivery transition stamp them. Three-layer (§8).
 
 **Not on this table:** master status, proof, recipient snapshot.
 
@@ -607,7 +618,7 @@ Same custom/inquiry CHECK as `cart_items`. Existing money CHECKs stay. Live FK `
 | `refunded_amount` | `numeric(10,2)` | NO | default `0`. CHECK `0 <= refunded_amount <= amount`. R-U04. |
 | `proof_snapshot_at` | `timestamptz` | YES | Set when the deposit row copies the master proof (N22). |
 
-`proof_path` and `transfer_reference` stay on `payments`. For **new** deposit rows the buyer does not write them; the verification trigger does. Balance rows leave them null. `UNIQUE (order_id, payment_type)` stays. FK `order_id` NO ACTION stays. Deposit `method` for new rows is `instapay`. Balance `method` is `cod`. When a balance row is confirmed, the same trigger stamps `seller_orders.balance_confirmed_at` and does not copy `proof_path` or `transfer_reference` onto the seller order. When `payments.refunded_amount` changes, the trigger rolls the sum onto `seller_orders.refunded_amount`. Rounding of the 50% deposit is **REG-89** (§12) — the candidate is recorded there and is not accepted.
+`proof_path` and `transfer_reference` stay on `payments`. For **new** deposit rows the buyer does not write them; the verification trigger does. Balance rows leave them null. `UNIQUE (order_id, payment_type)` stays. FK `order_id` NO ACTION stays. Deposit `method` for new rows is `instapay`. Balance `method` is `cod`. When a balance row is confirmed, the same trigger stamps `seller_orders.balance_confirmed_at` and does not copy `proof_path` or `transfer_reference` onto the seller order. When `payments.refunded_amount` changes, the trigger writes `seller_orders.refunded_subtotal` to the **goods portion** of that refund (§3.10). It does not copy the payment sum. Any fee component remains on `payments` only. Rounding of the 50% deposit is **REG-89** (§12) — the candidate is recorded there and is not accepted.
 
 **`disputes`** — add `return_id uuid NULL` FK → `returns(id)` ON DELETE NO ACTION. `UNIQUE (order_id)` stays. No `master_order_id`.
 
@@ -655,6 +666,14 @@ Unlisted tables are unchanged from `information_schema.columns` measured 2026-09
 
 `order_status_history` columns (measured): `id`, `order_id`, `from_status`, `to_status`, `changed_by`, `changed_by_type`, `notes`, `created_at`. Rules in §4 stay.
 
+**Payout request cap (REG-90, B4-FIX).** `payouts.amount` stays the seller-entered `NUMERIC(10,2)` (live CHECK `>= 100`). The request is capped at the seller’s derived available net, fee-free by definition:
+
+`available = Σ (subtotal − commission_amount − refunded_subtotal)` over that store’s seller orders with `balance_confirmed_at IS NOT NULL` and `payout_eligible_at <= now()` and no blocking dispute or return, minus `Σ payouts.amount` already requested or processed for that store.
+
+The cap is a database constraint on INSERT (BEFORE trigger, three-layer). A page check is not the boundary. Every term is seller-readable. The seller still cannot read `payments` or `delivery_fee`. Stage C writes the trigger. No new table.
+
+**`seller_snapshots.revenue_egp` (REG-90, B4-FIX).** Definition only. The column is subtotal-based and fee-free: an aggregate of that store’s `seller_orders.subtotal`. If the writer nets refunds, it subtracts `refunded_subtotal` only. It does not add `delivery_fee` and it is not `SUM(total_amount)`. The writer stays **unpinned** (REG-26 class): no cron is specified here. `platform_snapshots.gmv_egp` may include the fee and stays admin-only (`platform_snapshots` SELECT is admin).
+
 ## 7. Triggers and functions
 
 Live inventory: `pg_proc` + `pg_trigger` this session. Security posture is `prosecdef` plus the measured `search_path` on the two functions read in full.
@@ -668,7 +687,7 @@ Live inventory: `pg_proc` + `pg_trigger` this session. Security posture is `pros
 | `set_dispute_sla` / `trg_dispute_sla` | **KEPT** | 48h SLA | BEFORE INSERT `disputes` | INVOKER |
 | `recalculate_rating_aggregate` / `trg_recalculate_rating` | **KEPT** | R-R07 | AFTER INSERT OR UPDATE `reviews` | INVOKER. Live trigger does not include DELETE; do not widen it here. |
 | `set_order_commission_snapshot` / `trg_set_order_commission_snapshot` | **REWORK** | Still stamps commission on the seller order at insert, from subtotal only (R-O27), never delivery | BEFORE INSERT seller order | DEFINER, `search_path` pinned, EXECUTE revoked from PUBLIC |
-| `enforce_payment_update` / `trg_enforce_payment_update` | **REWORK** | Admin confirms status. Buyer does **not** write child `proof_path`. Verification copies master proof onto deposit rows and sets `proof_snapshot_at`. On balance confirm, stamp `seller_orders.balance_confirmed_at` only. On refund, roll `refunded_amount` onto the seller order. Neither copy includes `proof_path` or `transfer_reference`. | BEFORE UPDATE `payments` | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer (§8). |
+| `enforce_payment_update` / `trg_enforce_payment_update` | **REWORK** | Admin confirms status. Buyer does **not** write child `proof_path`. Verification copies master proof onto deposit rows and sets `proof_snapshot_at`. On balance confirm, stamp `seller_orders.balance_confirmed_at` only. On refund, write the goods portion onto `seller_orders.refunded_subtotal`. Do not copy `payments.refunded_amount`. Neither copy includes `proof_path` or `transfer_reference`. | BEFORE UPDATE `payments` | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer (§8). |
 | `enforce_order_transition` / `trg_enforce_order_transition` | **REWORK** | See below | BEFORE UPDATE seller order | DEFINER, search_path pinned, EXECUTE revoked from PUBLIC. Three-layer. |
 | `decrement_stock_on_confirm` / `trg_decrement_stock_on_confirm` | **REWORK** | See below | Detach from `AFTER UPDATE OF status WHEN confirmed` | DEFINER stock mutation called from checkout, not from confirm |
 | `set_inquiry_converted_order` / `trg_set_inquiry_converted_order` | **DROP** | Wrote `converted_to_order_id` from an inquiry-order. v2 checkout does not (R-O11). Column stays. | — | Was DEFINER |
@@ -743,12 +762,12 @@ Seller predicate `store` means `store_id = my_store_id()` or the parent row’s 
 | `inquiries` | buyer or store or admin | buyer | store or admin (quote columns) | none | no |
 | `inquiry_messages` | thread parties | thread parties | sender content (no MVP surface) + receiver `is_read` only (REG-42 grant) | none | receiver `is_read` is column GRANT + policy (two of the three layers; no OLD transition) |
 | `master_orders` | buyer self or admin. **Seller none.** | buyer, plus restrictive phone gate | buyer proof columns only, or admin | none | **YES** buyer proof update |
-| `seller_orders` | buyer (`buyer_id = auth.uid()`), or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release. Seller has no UPDATE on `balance_confirmed_at`, `refunded_amount`, `payout_eligible_at`. **Seller SELECT excludes `delivery_fee` and `total_amount` (REG-90, §3.10).** The grant is B5: admin is also `authenticated`, so this is not a plain revoke. | none | **YES** |
+| `seller_orders` | buyer (`buyer_id = auth.uid()`), or store, or admin | checkout (buyer), phone gate | buyer cancel metadata, seller `preparing`/`ready`, admin cancel/release. Seller has no UPDATE on `balance_confirmed_at`, `refunded_subtotal`, `payout_eligible_at`. **Seller SELECT excludes `delivery_fee` and `total_amount` (REG-90, §3.10).** The grant is B5: admin is also `authenticated`, so this is not a plain revoke. | none | **YES** |
 | `order_items` | buyer via seller order, or store, or admin | checkout | none | none | no |
 | `order_status_history` | buyer via seller order, or store, or admin | trigger/actor | none (rule) | none (rule) | no |
 | `order_messages` | buyer via seller order, or store, or admin | those parties | sender `is_read` pattern as inquiry, if used | none | no |
 | `payments` | buyer via `seller_orders.buyer_id`, or admin. **Seller none** (`proof_path` is on the row). Balance facts the seller needs are on `seller_orders` (§6.2), not here. | checkout | admin confirm / refund | none | **YES** |
-| `payouts` | own store or admin | own store, phone gate | admin | none | no |
+| `payouts` | own store or admin | own store, phone gate, **capped at the derived available net** (§6.4, REG-90) | admin | none | **YES** on INSERT (the cap) |
 | `shipments` | buyer via seller order, or admin. **Seller none.** | checkout | admin | none | no |
 | `shipment_tracking_events` | buyer via shipment, or admin. **Seller none.** | admin or service | none | none | no |
 | `courier_rates` | any authenticated (the matrix is not identity) | admin | admin | admin | no |
@@ -810,7 +829,7 @@ Target columns that are not in `information_schema` yet, judged under §8:
 | `master_orders.proof_path`, `transfer_reference` | no seller policy | **NO** |
 | `payments.proof_path`, `transfer_reference` | seller SELECT removed | **NO** |
 | `seller_orders.buyer_id` | uuid on a seller-readable row. Join to name or phone is denied by the live rows above | **NO** |
-| `seller_orders.balance_confirmed_at`, `refunded_amount`, `payout_eligible_at` | seller-readable settlement facts. They are not name, phone, address, or proof | n/a |
+| `seller_orders.balance_confirmed_at`, `refunded_subtotal`, `payout_eligible_at` | seller-readable settlement facts. `refunded_subtotal` is the goods portion only (§3.10). They are not name, phone, address, or proof | n/a |
 
 **No YES.** The map did not need an N28 correction. `seller_orders.buyer_id` and `delivery_address_id` stay visible as uuids (§4.1). Label delivery is the admin’s own RLS read (§3.1), which the seller cannot satisfy.
 
@@ -945,8 +964,8 @@ Minted this session (next free was REG-88; no REG-88 row existed):
 |---|---|
 | **REG-88** | R-G02 says a version gate blocks order completion until the buyer has accepted the “current required versions”, and R-G05 names four documents. Which of the four are inside that gate is not pinned. `agreement_acceptances` stores all four. Stage C must not hard-code the set. |
 | **REG-89** | **OPEN.** One transfer covers the whole master (R-O18). The invariants, not yet accepted: the sum of the child deposit rows equals that single transfer amount, and each child deposit plus that child’s balance equals that child’s total. **Engineering candidate for B5, not a product pin:** round the master deposit once onto `NUMERIC(10,2)`, allocate that rounded amount across children by largest remainder with a deterministic tiebreak, and set each child balance to child total minus child deposit. Stage C does not implement this until B5 accepts it. |
-| **REG-90** | **CLOSED** (B4, 2026-09-22, scope owner). Seller sees subtotal, commission, and net only. Seller SELECT of `seller_orders.delivery_fee` and `total_amount` = NO (§3.10). Implementation of the grant is open for B5: not a plain revoke. `refunded_amount` and `seller_snapshots.revenue_egp` are flagged in that same section; neither is a new column. |
-| **REG-91** | **OPEN** (B4). The buyer cart and checkout show one combined delivery total (R-C03, R-K03) and must not read `store_pickup_addresses` (buyer SELECT is none) and must not be handed the origin governorate alongside a readable `courier_rates` matrix. `master_orders.combined_delivery_total` is the stored checkout result. The pre-checkout projection is B5. Not a new table. |
+| **REG-90** | **CLOSED** (B4, 2026-09-22, scope owner). Seller SELECT of `seller_orders.delivery_fee` and `total_amount` = NO. **B4-FIX:** `refunded_subtotal`, `revenue_egp`, and the payout cap are fee-free by definition (§3.10, §6.4). The column grant is still open for B5: not a plain revoke. Not a new column and not a new table. |
+| **REG-91** | **OPEN** (B4). **B4-FIX candidate for B5, not accepted.** Store `city` / `governorate` are already public (`stores_public`), so a zone-level fee reveals nothing the storefront does not already show. The checkout RPC is **SECURITY INVOKER** (ADR-018) and runs under the buyer’s RLS, which cannot read `store_pickup_addresses`. The rate-lookup origin therefore has to be a public store column (`stores.governorate`). The pickup street never participates. **Edge, still open:** a seller’s pickup governorate can differ from `stores.governorate`. This note does not choose which zone wins, and it does not add a column. `master_orders.combined_delivery_total` remains the stored checkout result. |
 
 Not minted (the spec already refuses the invention):
 
@@ -971,8 +990,9 @@ Not minted (the spec already refuses the invention):
 - Stock decrement moves to checkout. Confirm trigger comes off.
 - No SQL in this document. Page inventory is `BETK_UI_SPEC.md` (OD-21 = 77). This file does not design routes.
 - **B4:** reviews render no buyer name and no buyer location (§9).
-- **REG-90 grant (open, B5):** seller SELECT must exclude `seller_orders.delivery_fee` and `total_amount`. Do not implement that as `REVOKE` of those columns from `authenticated` alone. Admin is `authenticated`. §3.10.
-- **REG-91 (open, B5):** a buyer-safe combined delivery total that does not return the pickup origin. Not a new table. Not a seller read of the fee.
+- **REG-90 grant (open, B5):** seller SELECT must exclude `seller_orders.delivery_fee` and `total_amount`, and must include `refunded_subtotal`. Do not implement the exclusion as `REVOKE` of those columns from `authenticated` alone. Admin is `authenticated`. §3.10.
+- **REG-90 writer (B5):** `enforce_payment_update` writes `refunded_subtotal` as the goods portion. It does not copy `payments.refunded_amount`. Payout INSERT is capped at the derived available net (§6.4). `revenue_egp`’s writer stays unpinned; the definition in §6.4 is the constraint on whatever writer lands.
+- **REG-91 (open, B5):** INVOKER checkout reads the rate origin from `stores.governorate`, not from `store_pickup_addresses`. Street never participates. Pickup-governorate mismatch stays open (§12). Not a new table.
 - **`storage.objects` (B4, Stage C):** the N28 proof in §9 covered the `betk` schema only. The `docs` bucket holds payment-proof screenshots and seller documents. Seller read of those objects is **NO**, same verdict as N28. Admin signed-URL read of a proof or a seller document stays. Do not add a `betk` table for this.
 
 ---

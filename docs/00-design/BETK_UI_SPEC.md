@@ -140,6 +140,43 @@ Six headings each contain **two** route patterns. Under §0 those six extra patt
 
 WhatsApp Templates: **not a pattern.** MERGED into `/admin/settings` (OD-5, FR-ADM-14). It stays a tab.
 
+### 1.2 Built `page.tsx` on `origin/main` (B4-FIX, REG-67 physical method)
+
+Measured 2026-09-22 with `git ls-tree -r --name-only origin/main src/app`, then the paths ending in `page.tsx`. Locale prefix `[locale]` is stripped (OD-7); each file is one pattern. **26** `page.tsx` files. **OD-21 is not amended.** Two files map to no P-number. That is a STOP (§9). The corrected count if both were admitted is **79**. This section does not freeze 79.
+
+| Built route (locale stripped) | P-number |
+|---|---|
+| `/` | P01 |
+| `/search` | P02 |
+| `/category/[slug]` | P03 |
+| `/listing/[id]` | P04 |
+| `/store/[slug]` | P05 |
+| `/auth/login` | P06 |
+| `/auth/verify` | P07 |
+| `/auth/register` | P08 |
+| `/account` | P09 |
+| `/inbox` | P13 |
+| `/inbox/[id]` | P14. Param name `[id]` is the same responsibility as `[inquiryId]` (§0.6). |
+| `/seller/onboarding` | P23 |
+| `/seller/status` | P24 |
+| `/seller` | P25 |
+| `/seller/store` | P26 |
+| `/seller/store/delivery` | P27 |
+| `/seller/store/returns` | P28 |
+| `/seller/store/payments` | P29 |
+| `/seller/listings` | P30 |
+| `/seller/listings/new` | P31 |
+| `/seller/listings/[id]/edit` | P32 |
+| `/seller/inventory` | P33 |
+| `/seller/inbox` | P36 |
+| `/seller/inbox/[id]` | P37 |
+| `/auth/phone` | **No P-number.** Renders `PhoneCaptureForm` when the account has no verified phone. Redirects only when the gate already passes, the user is signed out, or the account is blocked. Not a redirect-only alias (§0.5). Not P06 (`/auth/login`) and not P07 (`/auth/verify`). |
+| `/blocked` | **No P-number.** Renders the R-A05 suspended/deactivated terminal. Not `not-found.tsx`. |
+
+Not pages under §0, listed so they are not counted: `src/app/[locale]/(auth)/auth/callback/route.ts`, `src/app/api/category-listings/route.ts`, `src/app/[locale]/not-found.tsx`, `src/app/global-not-found.tsx`.
+
+The other P-numbers (cart, checkout, orders, admin, legal, and the rest) have no `page.tsx` on `origin/main`. They stay in the 77 as the target inventory. Absence from `main` is not a deletion.
+
 ---
 
 ## 2. Page disposition
@@ -192,10 +229,10 @@ Every v1 pattern has exactly one verdict. A new pattern cites at least one PRD c
 | 40 | `/seller/reviews` | **AMENDED** | FR-SEL-16, REG-44, REG-83. No buyer name and no buyer location. |
 | 41 | `/seller/earnings` | **AMENDED** | FR-SEL-17, FR-CLO-1, REG-90. Subtotal, commission, net. No fee, no order total. |
 | 42 | `/seller/transactions` | **AMENDED** | FR-SEL-18, REG-90. Unit is the seller order. Seller cannot read `payments`. |
-| 43 | `/seller/payouts` | **AMENDED** | FR-SEL-19 behaviour holds. The balance it draws on is the REG-90 net (§9 flag on `refunded_amount`). |
+| 43 | `/seller/payouts` | **AMENDED** | FR-SEL-19 behaviour holds. The request cap is the REG-90 derived net (ERD §6.4), which subtracts `refunded_subtotal`. |
 | 44 | `/seller/payouts/new` | **AMENDED** | Same as #43. Phone gate **holds** here (AC-AUTH-4). |
 | 45 | `/seller/level` | **KEPT** | FR-SEL-20. |
-| 46 | `/seller/analytics` | **AMENDED** | FR-SEL-21. Boost clause **RETAINED** (REG-80). `revenue_egp` display is flagged (§9). |
+| 46 | `/seller/analytics` | **AMENDED** | FR-SEL-21. Boost clause **RETAINED** (REG-80). `revenue_egp` is the subtotal-based definition in ERD §6.4. Writer unpinned. |
 | 47 | `/seller/disputes/[id]` | **AMENDED** | FR-SEL-22 behaviour holds. The thread label is the neutral buyer label (R-V02). No master dispute (REG-84). |
 | 48 | `/admin` | **KEPT** | FR-ADM-1. Escalation signals link to #75; they do not add a second dashboard. |
 | 49 | `/admin/sellers/approvals` | **AMENDED** | FR-ADM-2, R-S10. Food artefacts when the food branch applies. |
@@ -252,7 +289,7 @@ Not added, on purpose:
 - No courier login (AC-COU-6, REG-78).
 - No support page (REG-50). Its old “OD-9” note is void; OD-9 is the cart model.
 - No second deposit-verification route. #58 is that queue.
-- No `/auth/phone`. The gate reuses #6 and #7.
+- No `/auth/phone` inside OD-21. The built file is a STOP (§1.2). The freeze is not silently extended.
 
 ### 2.4 Why this is not ~73
 
@@ -285,9 +322,9 @@ v1 under §0 is 5 public + 3 auth + 14 buyer + 25 seller + 18 admin = **65**. v2
 
 Closed product pin **REG-90** (2026-09-22, scope owner): the seller sees **subtotal, commission, and net only**. Never the delivery fee. Never the order total. The fee is origin × destination × weight, so a seller-visible fee lets the seller infer the buyer’s destination zone, which N28 forbids. Commission is on subtotal only (R-O27), so the net does not need the fee or the total.
 
-**Net displayed** = `seller_orders.subtotal − seller_orders.commission_amount`. Do not subtract `refunded_amount` on screen while §9’s flag is open.
+**Net** = `seller_orders.subtotal − seller_orders.commission_amount − seller_orders.refunded_subtotal`. **B4-FIX:** `refunded_subtotal` is the goods portion of a refund, fee-free by definition (ERD §3.10). The page renders it because the seller can query it. The fee component stays on `payments.refunded_amount`, which this role cannot read.
 
-**Seller order allow-list** (columns a seller page may render): `seller_orders.display_ref` (REG-81: render only when non-null; do not invent a format; legacy `betk_ref` may show on historical rows — it is an order number, ERD §3.6), `status`, `prep_deadline`, `confirmed_at`, `delivered_at`, `balance_confirmed_at`, `payout_eligible_at`, `commission_rate`, `commission_amount`, `subtotal`, `escalated_at`, `escalation_reason`, `escalation_note`, `escalation_resolved_at`, `cancellation_reason`, `created_at`. Items from `order_items`: `listing_title_ar`, `listing_title` snapshot columns the ERD already has, `quantity`, `unit_price`, `subtotal`, `is_custom`, `prep_days_snapshot`.
+**Seller order allow-list** (columns a seller page may render): `seller_orders.display_ref` (REG-81: render only when non-null; do not invent a format; legacy `betk_ref` may show on historical rows — it is an order number, ERD §3.6), `status`, `prep_deadline`, `confirmed_at`, `delivered_at`, `balance_confirmed_at`, `payout_eligible_at`, `commission_rate`, `commission_amount`, `subtotal`, `refunded_subtotal`, `escalated_at`, `escalation_reason`, `escalation_note`, `escalation_resolved_at`, `cancellation_reason`, `created_at`. Items from `order_items`: `listing_title_ar`, `listing_title` snapshot columns the ERD already has, `quantity`, `unit_price`, `subtotal`, `is_custom`, `prep_days_snapshot`. `seller_snapshots.revenue_egp` on #25 and #46, under the ERD §6.4 definition (writer unpinned; an empty series is the empty state).
 
 **Seller order deny-list** (do not render, do not join): `delivery_fee`, `total_amount`, `buyer_id`, `delivery_address_id`, `master_orders` (seller SELECT is none, ERD §8), `payments` (seller SELECT is none), `shipments` (seller SELECT is none), `addresses`, `buyer_profiles`, `users.phone_number`. No buyer name, phone, address, city, or governorate (R-V02, AC-VIS-1).
 
@@ -299,7 +336,7 @@ Reviews render **no buyer name and no buyer location**. Use a neutral keyed labe
 
 ### 4.c REG-79 (phone gate) — OPEN
 
-The gate **surface** is #6 and #7. Named holds that stay: checkout (#15), become-seller (#23), payout (#44) — AC-AUTH-4. **Where** verified phone is required relative to add-to-cart is **OPEN**. Do not encode the trigger. Do not add `/auth/phone`.
+The gate **surface in this freeze** is #6 and #7. Named holds that stay: checkout (#15), become-seller (#23), payout (#44) — AC-AUTH-4. **Where** verified phone is required relative to add-to-cart is **OPEN**. Do not encode the trigger. The built `/auth/phone` route is a **STOP** in §1.2: under §0 it is its own pattern, and OD-21 does not include it. This section does not add it.
 
 ### 4.d REG-82 (cart restore)
 
@@ -329,7 +366,7 @@ Default empty copy is one plain-Arabic line plus one CTA, with an English catalo
 
 ### 4.j Server-computed buyer delivery (REG-91, OPEN)
 
-#66 and #15 show **one** delivery figure and **one** total (R-C03, R-K03, AC-CHK-6). They do **not** show the per-seller split or commission (R-O28). They do **not** read `store_pickup_addresses` (buyer SELECT is none). The figure is a server projection. REG-91 is open; do not invent the function here and do not add a table.
+#66 and #15 show **one** delivery figure and **one** total (R-C03, R-K03, AC-CHK-6). They do **not** show the per-seller split or commission (R-O28). They do **not** read `store_pickup_addresses` (buyer SELECT is none). **B4-FIX, REG-91 still OPEN.** Store `city` and `governorate` are already public, so a zone-level fee reveals nothing new. The checkout RPC is INVOKER (ADR-018) and cannot read the pickup row, so the rate origin is the public `stores.governorate`. The street never participates. A pickup governorate that differs from the store’s listed governorate is an open edge for B5. Do not invent the function here and do not add a table.
 
 ---
 
@@ -586,9 +623,9 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 - **Composes:** `StatusBadge`, `ImageUploader`, `Button`, `ErrorRetryCard`.
 
 #### P25 Dashboard — `/seller`
-- **v1 #25 AMENDED.** FR-SEL-3, FR-SLA-1, REG-90, §9 `revenue_egp`.
+- **v1 #25 AMENDED.** FR-SEL-3, FR-SLA-1, REG-90.
 - **Role:** active seller.
-- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`). **`revenue_egp` is not rendered** until §9 closes. `rating_aggregates`; `seller_profiles` (`level`, `level_score`, `avg_response_hours`); recent `seller_orders` on the §4.a allow-list only; low stock derived from `listings.stock_qty` and `low_stock_threshold` (OD-1).
+- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`, `revenue_egp` under ERD §6.4). `rating_aggregates`; `seller_profiles` (`level`, `level_score`, `avg_response_hours`); recent `seller_orders` on the §4.a allow-list only; low stock derived from `listings.stock_qty` and `low_stock_threshold` (OD-1).
 - **States:** no listings yet → empty CTA; per-widget error. **notFound(): no.**
 - **Composes:** `LevelBadge`, `RatingSummary`, `EmptyState`, `ErrorRetryCard`. **Gap:** seller money trio (§8) for any order row.
 - **Binding:** no acceptance queue. No buyer column. No fee. No order total.
@@ -685,7 +722,7 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 - **Data:** own `seller_orders` on the §4.a allow-list; `order_items` preview. **Deny-list enforced.** No accept action. No `payments` columns.
 - **States:** empty. **notFound(): no.**
 - **Composes:** `StatusBadge`, `EmptyState`. **Gaps:** data table, seller money trio (§8).
-- **Binding:** columns on screen are order ref, items, prep deadline, subtotal, commission, net. Nothing else about the buyer or the fee.
+- **Binding:** columns on screen are order ref, items, prep deadline, subtotal, commission, `refunded_subtotal`, net. Nothing else about the buyer or the fee.
 
 #### P39 Seller order — `/seller/orders/[id]`
 - **v1 #39 AMENDED.** FR-SEL-15, FR-ESC-1, FR-SLA-1, FR-RET-1, R-E01–R-E03, R-U03, R-K07, AC-ESC-1, AC-ESC-2, AC-COU-4, AC-VIS-1.
@@ -693,7 +730,7 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 - **Data:** §4.a allow-list; `order_items`; `order_messages` with `buyerLabel`; `order_status_history`; `returns` for this seller order (`status`, `reason`) and `return_evidence` (seller may accept or reject — R-U03); escalation columns the seller may set: `escalated_at`, `escalation_reason`, `escalation_note`. Seller status writes are only `preparing` and `ready`.
 - **States:** no messages → empty prompt; cancel attempt → refused inline (AC-ESC-1). **notFound(): yes** if not this store. **Guard E.**
 - **Composes:** `OrderTimeline`, `StatusBadge`, `MessageThread`, `Button`, `ConfirmDialog`, `Textarea`. **Gap:** seller money trio (§8).
-- **Binding:** no buyer name, phone, address, city, governorate. No `delivery_fee`, no `total_amount`. No shipment panel and no tracking writer (`shipments` seller SELECT is none). The page shows the order ref and tells the seller to write that ref on the box (R-K07). It does not render the courier label. No sibling seller orders (R-V04: do not read other rows, and do not join `master_orders`). Return reject creates a dispute path for admin; it does not show the buyer. **Do not render `refunded_amount`** (§9).
+- **Binding:** no buyer name, phone, address, city, governorate. No `delivery_fee`, no `total_amount`. No shipment panel and no tracking writer (`shipments` seller SELECT is none). The page shows the order ref and tells the seller to write that ref on the box (R-K07). It does not render the courier label. No sibling seller orders (R-V04: do not read other rows, and do not join `master_orders`). Return reject creates a dispute path for admin; it does not show the buyer. `refunded_subtotal` is on the allow-list (goods portion only).
 
 #### P40 Seller reviews — `/seller/reviews`
 - **v1 #40 AMENDED.** FR-SEL-16, R-R04, REG-44, REG-83.
@@ -705,15 +742,15 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 #### P41 Earnings — `/seller/earnings`
 - **v1 #41 AMENDED.** FR-SEL-17, FR-CLO-1, R-O26, R-O29, AC-CLO-3, REG-90, REG-86.
 - **Role:** seller.
-- **Data:** derived from own `seller_orders` (`subtotal`, `commission_amount`, `confirmed_at`, `balance_confirmed_at`, `delivered_at`, `payout_eligible_at`) and own `payouts`. Eligible display uses subtotal − commission for seller orders whose `payout_eligible_at` has passed and whose balance is confirmed, minus `payouts` in `processed`. **Do not read `payments`.** **Do not read `return_hold_hours`** (admin-only, REG-86). **Do not render `revenue_egp`.** **Do not subtract `refunded_amount`** while §9 is open — say the refund adjustment is not on this screen yet, do not invent a second figure.
+- **Data:** derived from own `seller_orders` (`subtotal`, `commission_amount`, `refunded_subtotal`, `confirmed_at`, `balance_confirmed_at`, `delivered_at`, `payout_eligible_at`) and own `payouts`. Eligible net is `subtotal − commission_amount − refunded_subtotal` for seller orders whose `payout_eligible_at` has passed and whose balance is confirmed, minus `payouts` in `processed`. **Do not read `payments`.** **Do not read `return_hold_hours`** (admin-only, REG-86). The hold is the stamped timestamp.
 - **States:** no earnings → empty; per-widget error. **notFound(): no.**
 - **Composes:** `EmptyState`, `ErrorRetryCard`. **Gap:** seller money trio (§8).
-- **Binding:** subtotal, commission, net. No fee. No order total. No close control.
+- **Binding:** subtotal, commission, `refunded_subtotal`, net. No fee. No order total. No close control. FR-SEL-17 stays computable from these columns (ERD §3.10).
 
 #### P42 Transactions — `/seller/transactions`
 - **v1 #42 AMENDED.** FR-SEL-18, REG-90.
 - **Role:** seller.
-- **Data:** one row per own `seller_orders`: ref, `subtotal`, `commission_amount`, net, `status`, `confirmed_at`, `balance_confirmed_at`. Not `payments.amount`, not `payment_type`, not `delivery_fee`, not `total_amount`.
+- **Data:** one row per own `seller_orders`: ref, `subtotal`, `commission_amount`, `refunded_subtotal`, net, `status`, `confirmed_at`, `balance_confirmed_at`. Not `payments.amount`, not `payment_type`, not `delivery_fee`, not `total_amount`.
 - **States:** empty; error retry. **notFound(): no.**
 - **Composes:** `StatusBadge`, `EmptyState`. **Gaps:** data table, seller money trio (§8).
 
@@ -730,7 +767,7 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 - **Data:** insert `payouts` (`amount` ≥ `min_payout_egp`, `method`, `account_details`). Amount cannot exceed the derived net from #41.
 - **States:** below minimum → inline; submit error. **notFound(): no.**
 - **Composes:** `Input`, `Select`, `Button`.
-- **Binding:** `payouts.amount` is the number the seller types. It is not a delivery fee. The cap it is checked against must stay fee-free (§4.a net).
+- **Binding:** `payouts.amount` is the number the seller types. It is not a delivery fee. The database caps it at the derived available net (ERD §6.4). A form check is not that cap.
 
 #### P45 Level — `/seller/level`
 - **v1 #45 KEPT.** FR-SEL-20, R-S06.
@@ -742,7 +779,7 @@ Seller pages P23–P47 are the §6 proof set. Each one obeys §4.a even when it 
 #### P46 Analytics — `/seller/analytics`
 - **v1 #46 AMENDED.** FR-SEL-21, REG-80 boost clause retained, REG-90.
 - **Role:** seller.
-- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`, `snapshot_date`). **Omit `revenue_egp`** (§9). `boosts.views_during_boost` for the retained boost ROI clause. Do not chart `total_amount`.
+- **Data:** `seller_snapshots` (`profile_views`, `listing_views`, `inquiries_received`, `orders_confirmed`, `revenue_egp`, `snapshot_date`). `revenue_egp` is the ERD §6.4 definition. `boosts.views_during_boost` for the retained boost ROI clause. Do not chart `total_amount` or `delivery_fee`.
 - **States:** no snapshots yet → empty. **notFound(): no.**
 - **Composes:** `EmptyState`, `ErrorRetryCard`. Charts are composition of existing layout, not a new visual spec. If a chart component is required, it is §8 only when the kit cannot draw a series — **flagged** as ChartSeries in §8 because the kit has none.
 
@@ -929,13 +966,13 @@ Admin may see buyer identity and both fees (R-V01, journeys §5.5). That permiss
 
 ## 6. Seller-page proof (N28 + REG-90)
 
-Every seller-role pattern. “Pass” means the §5 block’s data list contains no buyer name, phone, address, city, or governorate, and does not render `delivery_fee` or `total_amount`.
+Every seller-role pattern. “Pass” means the §5 block’s data list contains no buyer name, phone, address, city, or governorate, and does not include `delivery_fee` or `total_amount`. Money columns that are included are fee-free by the ERD definition (§3.10 / §6.4 of `BETK_ERD.md`), not because a page hides them.
 
 | Page | Buyer identity | Delivery fee | Order total | Verdict |
 |---|---|---|---|---|
 | P23 Onboarding | Pickup is the **seller’s** address. No buyer fields. | Not shown. | Not shown. | Pass |
 | P24 Status | None. | None. | None. | Pass |
-| P25 Dashboard | Recent orders use the allow-list. No `buyer_id` render. | Not rendered. | Not rendered. | Pass |
+| P25 Dashboard | Recent orders use the allow-list. No `buyer_id` render. | Denied (not in the data list). `revenue_egp` is subtotal-based. | Denied. | Pass |
 | P26 Store profile | Store city is the store’s public city, not the buyer’s. | None. | None. | Pass |
 | P27 Pickup | Seller’s own pickup. Buyer SELECT of this table is none, so buyers do not see it. | None. | None. | Pass |
 | P28 Return policy | None. | None. | None. | Pass |
@@ -946,11 +983,11 @@ Every seller-role pattern. “Pass” means the §5 block’s data list contains
 | P38 Orders | Allow-list. | Denied. | Denied. | Pass |
 | P39 Order detail | Allow-list. Messages use `buyerLabel`. No `shipments`. No label. | Denied. | Denied. | Pass |
 | P40 Reviews | REG-44 neutral label. | None. | None. | Pass |
-| P41 Earnings | Derived from subtotal and commission. | Denied. | Denied. | Pass |
-| P42 Transactions | Seller-order subtotal, commission, net. No `payments`. | Denied. | Denied. | Pass |
-| P43–P44 Payouts | `payouts.amount` is seller-entered against the fee-free net. | Denied. | Denied. | Pass |
+| P41 Earnings | Derived from `subtotal`, `commission_amount`, `refunded_subtotal`. | Denied. | Denied. | Pass |
+| P42 Transactions | Seller-order subtotal, commission, `refunded_subtotal`, net. No `payments`. | Denied. | Denied. | Pass |
+| P43–P44 Payouts | `payouts.amount` is seller-entered. The database cap is the derived net. | Denied. | Denied. | Pass |
 | P45 Level | Counts and rating. | None. | None. | Pass |
-| P46 Analytics | Views, inquiries, orders, boost views. `revenue_egp` omitted. | Denied. | Denied. | Pass |
+| P46 Analytics | Views, inquiries, orders, boost views, `revenue_egp` (subtotal-based). | Denied. | Denied. | Pass |
 | P47 Dispute | `buyerLabel`. Linked summary is the allow-list. | Denied. | Denied. | Pass |
 
 Buyer-facing pages that must also stay clean of the **per-seller** fee and of commission: P66, P15 (one combined delivery, no commission line, no split), P16 (InstaPay deposit on the master), P17, P18 (combined delivery once). Admin P55, P58, and P76 are allowed to see the split, the proof, and the label.
@@ -1185,7 +1222,7 @@ This is input to Stage D, which is already running. It is not a design.
 |---|---|---|
 | **CartLine** | P66, P15 | `ListingCard` is a discovery card. It has no quantity editor, no blocked state, and no “request a new quote” prompt. |
 | **CheckoutSellerSections** | P15 | Nothing groups lines under N sellers while exposing only one combined total and hiding the per-seller fee and commission. |
-| **SellerOrderMoney** | P25, P38, P39, P41, P42, P43 | `PriceBlock` renders a listing price. Nothing has slots for subtotal, commission, and net **and no slot** for a fee or an order total. A slot that exists will get filled. |
+| **SellerOrderMoney** | P25, P38, P39, P41, P42, P43 | `PriceBlock` renders a listing price. Nothing has slots for subtotal, commission, `refunded_subtotal`, and net **and no slot** for a fee or an order total. A slot that exists will get filled. |
 | **DataTable** | P30, P33, P38, P42, P50, P51, P55, P56, P64, P73, P75 | `components/ui` has no table. `components/shared` has no table. Admin and seller lists should not each invent one. |
 | **RateMatrixEditor** | P63 Rates tab | No grid for origin × destination × weight band (`courier_rates`). |
 | **CourierLabelSheet** | P76 | No print/label primitive. The payload includes buyer name, phone, and address and must be **unable** to mount on a seller route. |
@@ -1212,11 +1249,9 @@ REG-52 (onboarding category picker UX) is also open CD-DELTA-5 and is **not** a 
 
 | ID | Flag | Why it is not filled |
 |---|---|---|
-| **REG-90** | **CLOSED** pin. Seller sees subtotal, commission, net. Never `delivery_fee`, never `total_amount`. | Propagated to the ERD (seller read = NO) and the PRD. Implementation of the column grant is **open for B5 / Stage C**: grants are per Postgres role, and admin is also `authenticated`, so this cannot be a plain `REVOKE` from `authenticated`. |
-| **REG-90 check — `seller_orders.refunded_amount`** | **FLAGGED. Not fee-free.** The column is the rollup of `payments.refunded_amount` (ERD §6.2). Deposit is 50% of (subtotal + delivery) (R-O16), so a refund of what the buyer paid can include delivery-fee money. Seller pages **do not render it**. Displayed net does **not** subtract it. | Do not add a column. B5 decides whether the seller-visible rollup is goods-only. |
-| **REG-90 check — `payouts.amount`** | **Fee-free as a seller-entered number**, provided the cap is the §4.a net. | The contamination path is only `refunded_amount`, which is withheld. |
-| **REG-90 check — `seller_snapshots.revenue_egp`** | **FLAGGED.** The column is seller-readable. No cron writer in the shipped snapshot jobs defines it. Platform `gmv_egp` is `SUM(total_amount)`, which **includes** `delivery_fee`. A writer that copies that pattern would leak the fee. | P25 and P46 omit the column. Do not add a table. Stage C pins the writer to subtotal − commission, or the column stays off seller screens. |
-| **REG-91** | **OPEN.** Buyer cart and checkout need one combined delivery total. Buyer SELECT on `store_pickup_addresses` is none. `courier_rates` is readable by any authenticated user, so the client must not also be handed the origin. | Not a new table. `master_orders.combined_delivery_total` is the stored result at checkout. The pre-checkout projection is B5. Pages do not select the pickup row. |
+| **REG-90** | **CLOSED** pin. Seller reads subtotal, commission, `refunded_subtotal`, and net. Never `delivery_fee`, never `total_amount`. | **B4-FIX:** those seller-readable amounts are fee-free by definition (ERD §3.10, §6.4). The column grant is still **open for B5**: admin is also `authenticated`, so this cannot be a plain `REVOKE`. |
+| **REG-91** | **OPEN.** B5 candidate recorded, not accepted. Public `stores.governorate` is the INVOKER rate origin. Pickup street never participates. Pickup-governorate mismatch is the open edge. | Not a new table. Not a page. |
+| **Built routes outside OD-21** | **STOP.** `/auth/phone` and `/blocked` are `page.tsx` files on `origin/main` and map to no P-number (§1.2). | Corrected count if both are admitted: **79**. OD-21 stays **77**. Not re-frozen here. Register re-read: next free REG-92, none taken. |
 | **REG-79** | **OPEN.** Gate page exists (P06, P07). Trigger vs add-to-cart is not encoded. | |
 | **REG-85** | **OPEN.** P05 and P28 show store policy. Relationship to P69 is not decided. | |
 | **REG-88** | **OPEN.** P15 has a version-gate panel. Which of the four documents block completion is not hard-coded. | |
