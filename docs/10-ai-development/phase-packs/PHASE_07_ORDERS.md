@@ -1,6 +1,7 @@
 # PHASE_07_ORDERS.md — Orders, Checkout & Split Payments (CUSTODIAL)
+> **B7 (2026-09-23):** Every “Phase 08”–“Phase 14” in this file is a **v1 heading (§H)**, not a v2 phase. Map: 08 delivery → v2 Phase 14 courier (shipment RLS is still v2 Phase 08); 09 reviews → v2 Phase 16; 10 disputes → v2 Phase 16; 11 boosts → v2 Phase 20; 12 notifications → v2 Phase 17; 13 earnings → v2 Phase 19; 14 admin → v2 Phase 18. This file is the retired Phase 07 pack. Do not resume it. v2 checkout is Phase 11.
 
-> **REGENERATED 2026-07-23 for the custodial model (OD-8 / ADR-016). Closes REG-57.**
+> **REGENERATED 2026-07-23 for the custodial model (OD-8 / ADR-016). Closes REG-57.** **B7 (2026-09-23):** that close was the T01b regeneration. REG-57 is superseded. This pack is not resumed. A retired phase owns nothing.
 > T00 ✅ and T01 ✅ are DONE and survive intact (CORRECTION-01 §G3) — their sections are unchanged and
 > live above the regenerated task set in the repo copy of this file. Everything from T02 down is
 > rebuilt: payee = BETK, admin deposit verification, commission snapshot, no COD auto-confirm, no
@@ -10,7 +11,7 @@
 > `/checkout` · `/checkout/confirmation/[id]` · `/orders` · `/orders/[id]` (buyer) ·
 > `/seller/orders` · `/seller/orders/[id]` (seller) · **`/admin/payments` (deposit-verification slice only)**.
 >
-> NOT THIS PHASE: shipment create / tracking events / Bosta webhook (Phase 08) · reviews (09) ·
+> NOT THIS PHASE: shipment create / tracking events / Bosta webhook (Phase 08 (v1 heading, §H)) · reviews (09) ·
 > disputes (10) · notifications delivery (12) · seller earnings + derived-balance query + payouts (13) ·
 > the rest of `/admin/payments` and the whole admin console (14). Entry points to those render
 > guidance-only / empty-state per the dead-link rule.
@@ -27,10 +28,10 @@ seller cannot accept until the deposit lands. Resolution = (c), narrowly.**
 | | |
 |---|---|
 | **IN Phase 07 (T05)** | pending-deposit queue (`proof_path IS NOT NULL AND status='pending'`, plus proof-less pending rows shown as awaiting-buyer) · signed-URL proof view from the private `docs` bucket · **confirm deposit** → `payments.status='confirmed'` + `confirmed_by` + `confirmed_at` · `moderation_logs` write **iff** an admin INSERT policy exists (cite-or-flag) |
-| **DEFERRED → Phase 14** | full payment ledger across all orders/statuses · filters · refund action (`status='refunded'`) · the admin console shell, nav, dashboard, SLA counters · every other `/admin/*` page |
-| **DEFERRED → Phase 08+** | **COD-balance confirm** — unexercisable here: it follows courier remittance on a `delivered` order, and `dispatched`/`delivered` are Phase-08 transitions |
+| **DEFERRED → Phase 14 (v1 heading, §H)** | full payment ledger across all orders/statuses · filters · refund action (`status='refunded'`) · the admin console shell, nav, dashboard, SLA counters · every other `/admin/*` page |
+| **DEFERRED → Phase 08 (v1 heading, §H)+** | **COD-balance confirm** — unexercisable here: it follows courier remittance on a `delivered` order, and `dispatched`/`delivered` are Phase-08 (v1 heading, §H) transitions |
 | **NOT BUILT, EVER (REG-56)** | **no order-closure action and no close button.** Closure is DERIVED: both payment rows `confirmed` AND `orders.status='delivered'`. `order_status` has no terminal `closed` member and none may be invented |
-| **REJECT the deposit?** | **Not built.** The escape hatch already exists without it: the admin simply does not confirm, and the buyer re-uploads (`proof_path` is buyer-writable on their own deposit row). A `status='failed'` reject path is Phase-14's — state this in the T05 report rather than improvising |
+| **REJECT the deposit?** | **Not built.** The escape hatch already exists without it: the admin simply does not confirm, and the buyer re-uploads (`proof_path` is buyer-writable on their own deposit row). A `status='failed'` reject path is Phase-14 (v1 heading, §H)'s — state this in the T05 report rather than improvising |
 
 **Grounds (cite these, do not re-derive):** `BETK_PHASES.md` Phase 07 = "…**admin deposit-verification
 gate → seller acceptance**" and AC-SEL-14 = "seller confirm→stock decrement→notify, **gated on the
@@ -98,7 +99,7 @@ deposit row only**. But:
 
 **The same three layers apply to `orders` UPDATE.** Without a column grant, a buyer could UPDATE
 `total_amount` on their own `pending` order. Grant only what Phase 07 writes —
-`status`, `cancelled_by`, `cancellation_reason` — and leave `delivered_at`/tracking columns to Phase 08.
+`status`, `cancelled_by`, `cancellation_reason` — and leave `delivered_at`/tracking columns to Phase 08 (v1 heading, §H).
 **Before revoking, state the current grants and confirm no existing code path UPDATEs `orders`**
 (Phase 07 is the first writer; verify, don't assume).
 
@@ -121,7 +122,7 @@ deposit row only**. But:
   pass-through), snapshotted at creation into `orders.commission_rate` + `orders.commission_amount`.
   Rounding 2dp half-up, `numeric` throughout, computed in SQL (`round(numeric,2)`), never in JS.
 - **Closure is DERIVED (REG-56).** No close action, no close button, no new enum member.
-- **Seller balance is DERIVED and is NOT built here** — Phase 13. Record the rule in the Phase-13
+- **Seller balance is DERIVED and is NOT built here** — Phase 13 (v1 heading, §H). Record the rule in the Phase-13 (v1 heading, §H)
   entry checklist at the exit gate; build no balance query in Phase 07.
 - **`requireVerifiedPhone()` at CHECKOUT ONLY** (the OD-4 trio). `requireActiveUser` on seller
   transitions. **`requireAdmin`** (new, built in T02) on the admin action.
@@ -143,8 +144,8 @@ deposit row only**. But:
   posture. **No contact-exchange decision is owed** (REG-45 is closed-as-not-a-defect).
 - **No `loading.tsx` at or above any segment whose page can reach `notFound()`** — sweep per task,
   state the finding (REG-46/47 class).
-- **Shipments:** buyer/seller READ policies landed at T01. WRITE deferred to Phase 08 — record in the
-  Phase-08 entry checklist at the exit gate. `/orders/[id]` tracking renders empty until then.
+- **Shipments:** buyer/seller READ policies landed at T01. WRITE deferred to Phase 08 (v1 heading, §H) — record in the
+  Phase-08 (v1 heading, §H) entry checklist at the exit gate. `/orders/[id]` tracking renders empty until then.
 - **Standing:** cite-or-flag every schema fact · STOP-and-flag over improvisation · security findings
   surface as findings, never silently patched · file-path action imports · pre-checks UX-only, 23505
   authoritative · compose-only (`components/ui`/`components/shared` are Claude Design's — zero diff,
@@ -187,9 +188,9 @@ delivery-fee-field mint (kickoff §4, post-Phase-07 onboarding pass). **Phase-07
   - admin console shell absent (`AdminShell`/`AdminSidebar`), CD-DELTA-owned, REG-59 class.
 - **Closes owed at the exit gate:** REG-49 closed with evidence · REG-56 restated as satisfied-by-design
   (no close action built) · REG-44 resolution recorded · Phase-07 entry checklist all-✅ ·
-  **Phase-08 entry checklist written** (shipments/tracking WRITE policies, Bosta webhook idempotency,
-  `delivered_at` opens the review window, COD-balance confirm) · **Phase-13 entry checklist written**
-  (derived seller balance formula + `return_hold_hours` gate) · **Phase-14 entry checklist written**
+  **Phase-08 (v1 heading, §H) entry checklist written** (shipments/tracking WRITE policies, Bosta webhook idempotency,
+  `delivered_at` opens the review window, COD-balance confirm) · **Phase-13 (v1 heading, §H) entry checklist written**
+  (derived seller balance formula + `return_hold_hours` gate) · **Phase-14 (v1 heading, §H) entry checklist written**
   (the deferred `/admin/payments` remainder + the rest of the console).
 
 ---
@@ -331,16 +332,16 @@ STEP 4 — MIGRATION (ONE, additive; REG-49; ERD §3 rows 54/57-58 + the OD-8 §
        payment_type='deposit' AND OLD.status='pending'.
   orders UPDATE — same three layers:
     1. REVOKE UPDATE ON betk.orders FROM authenticated; GRANT UPDATE(status, cancelled_by,
-       cancellation_reason) TO authenticated. (delivered_at/tracking columns stay ungranted — Phase 08.)
+       cancellation_reason) TO authenticated. (delivered_at/tracking columns stay ungranted — Phase 08 (v1 heading, §H).)
     2. permissive UPDATE policy: buyer own OR store via betk.my_store_id() OR betk.is_admin().
     3. BEFORE UPDATE trigger for transition legality (WITH CHECK cannot see OLD): pending→confirmed
        only by the store AND only when the order's deposit payment row is status='confirmed'
        (AC-SEL-14 custodial gate, DB-authoritative — REG-33's lesson about app-only guards);
        →cancelled only from pending and only by the buyer (R-O03); confirmed→preparing store-only;
-       everything else RAISEs. Phase-08 transitions are NOT admitted here.
+       everything else RAISEs. Phase-08 (v1 heading, §H) transitions are NOT admitted here.
   Plus the TRAP-1 commission trigger if STEP 2 chose (i). Plus moderation_logs INSERT ONLY if ERD §3
   specs it (else mint REG-66 and defer). NOTHING ELSE TOUCHED — do not smuggle the REG-36 initplan
-  wrap, do not touch shipments (Phase 08), do not add a storage policy.
+  wrap, do not touch shipments (Phase 08 (v1 heading, §H)), do not add a storage policy.
   Apply via MCP apply_migration → rename the local file to the MCP-recorded version → ledger 30→31 1:1
   (paste) → backfill BETK_DATABASE_SCHEMA.sql → advisor sweep, state old + new baselines, 0 unexplained
   findings.
@@ -380,15 +381,15 @@ check-zod-coverage must cover all):
   Assert in tests: stock decremented, sold_out flip at 0, and the CHECK(stock_qty>=0) oversell path
   rolls the whole accept back. Idempotent. Writes a status-history row.
 - markOrderPreparing(orderId) — SELLER, confirmed→preparing, status-history row.
-- NO further transitions (dispatched/delivered/returned are Phase 08 — cite BETK_PHASES, omit).
+- NO further transitions (dispatched/delivered/returned are Phase 08 (v1 heading, §H) — cite BETK_PHASES, omit).
 R-N04-class: capture a PostHog event at order-create, deposit-confirm and accept, each with a code
-comment citing Phase 12 for delivery. NO notifications-table writes, NO WhatsApp/email sends.
+comment citing Phase 12 (v1 heading, §H) for delivery. NO notifications-table writes, NO WhatsApp/email sends.
 
 STEP 6 — QUERIES (lean, typed, injectable client param): getCheckoutContext(inquiryId) (order summary
 + the BETK handles + fee, per TRAP 1's resolution) · getOwnOrders / getOrderDetail (buyer) ·
 getStoreOrders / getStoreOrderDetail (seller — includes buyer name + address per REG-44, and the
 deposit state for the accept gate) · getPendingDepositPayments (admin queue). NO seller-balance query
-(Phase 13).
+(Phase 13 (v1 heading, §H)).
 
 TESTS — unit (pure rules: split arithmetic, commission rounding, BETK-ref format, transition legality)
 + integration on staging (minted fixtures, cleaned, zero residue re-queried):
@@ -486,10 +487,10 @@ delivery and remitted to BETK), OrderTimeline built from REAL order_status_histo
 synthesized), cancel action via ConfirmDialog → cancelOrder → router.refresh() (visible only while
 pending, R-O03).
 - Re-upload path: while the deposit is pending, the buyer can replace the proof (attachDepositProof).
-- Tracking section: renders EMPTY-STATE (Phase 08 owns shipment writes) — guidance-only, no fabricated
-  route. Review / dispute entry points likewise per the dead-link rule (Phase 09/10).
+- Tracking section: renders EMPTY-STATE (Phase 08 (v1 heading, §H) owns shipment writes) — guidance-only, no fabricated
+  route. Review / dispute entry points likewise per the dead-link rule (Phase 09 (v1 heading, §H)/10).
 - NO close/complete affordance anywhere — closure is DERIVED (REG-56). NO seller-balance or earnings
-  figure (Phase 13).
+  figure (Phase 13 (v1 heading, §H)).
 - Order-messages thread ONLY if UI_SPEC pins it on this screen — cite-or-omit. Do not conflate
   order_messages with the Phase-06 inquiry thread.
 - Outsider / unknown id → hard notFound() by status code.
@@ -503,7 +504,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 
 **Done when:** list + detail live both locales; both payment rows and their custodial states render
 correctly; timeline is from real history rows; cancel proven both directions; dead-link rule held for
-Phase 08/09/10 surfaces; no closure affordance; zero ui/shared diff.
+Phase 08 (v1 heading, §H)/09/10 surfaces; no closure affordance; zero ui/shared diff.
 
 ---
 
@@ -517,7 +518,7 @@ verification. Branch feature/phase-07-orders (continue). Sonnet, thinking HIGH (
 SCOPE IS THE §0 SLICE AND NOTHING MORE. Build: the pending-deposit queue, the proof viewer, and the
 confirm action. Do NOT build: the full payment ledger, filters, refunds, COD-balance confirm, order
 closure (there is no close action — REG-56), or any other /admin/* page. State the deferral in your
-report; it goes into the Phase-14 entry checklist at the exit gate.
+report; it goes into the Phase-14 (v1 heading, §H) entry checklist at the exit gate.
 
 STEP 0: loading.tsx sweep. Then check whether AdminShell / AdminSidebar exist in components/shared.
   - If they exist: compose them AS-IS.
@@ -556,7 +557,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 
 **Done when:** the queue, proof viewer and confirm are live and admin-gated; non-admin and anon both
 rejected by status code; the signed URL works for admin while the object stays private; confirm is
-DB-proven and demonstrably unblocks seller acceptance; the Phase-14 deferral list is written; shell
+DB-proven and demonstrably unblocks seller acceptance; the Phase-14 (v1 heading, §H) deferral list is written; shell
 decision recorded (composed or REG-68 flagged); zero ui/shared diff.
 
 ---
@@ -580,7 +581,7 @@ the buyer's name and address, pre-order opacity holds everywhere else.
   never a silent no-op, never a fabricated "confirm payment" affordance for the seller. The seller has
   no payments write path at all (T02 RLS) — do not build one.
 - Also wire markOrderPreparing (confirmed→preparing). Terminal states render read-only. NO dispatched/
-  delivered/returned actions (Phase 08). NO close action (REG-56). NO earnings/balance figure (Phase 13).
+  delivered/returned actions (Phase 08 (v1 heading, §H)). NO close action (REG-56). NO earnings/balance figure (Phase 13 (v1 heading, §H)).
 - The seller's own settlement handles are NOT shown here; if any copy on this screen implies the buyer
   paid the seller, it is wrong — flag it rather than reword shared-kit strings.
 - Cross-seller / unknown id → hard notFound() by status code.
@@ -624,7 +625,7 @@ ZERO feature-code changes (docs-only + a throwaway E2E that is deleted).
    amounts) · no service-role (guard) · proof_path objects are in the PRIVATE docs bucket and
    unreachable publicly · REG-44 recorded + buyer identity STILL grep-absent from all PRE-order seller
    surfaces · binding rules held (loading.tsx sweep whole-app, file-path imports, compose-only diff,
-   dead-link rule for Phase 08/09/10/13/14 surfaces).
+   dead-link rule for Phase 08 (v1 heading, §H)/09/10/13/14 surfaces).
 2. E2E FULL CUSTODIAL LIFECYCLE (staging throwaway, minted + cleaned, residue re-queried = 0):
    inquiry → seller confirms → checkout → order pending + 2 payments pending + commission snapshot →
    buyer uploads proof → seller accept BLOCKED (assert) → admin confirms deposit → seller accepts →
@@ -658,7 +659,7 @@ Env: Windows/PowerShell — no &&. No credentials in output or chat.
 
 **Done when:** every ledger line PASSes with evidence; the full custodial lifecycle is proven
 zero-residue including the blocked-then-unblocked accept; ledger 31/31 and advisor at baseline; the
-Phase-08, Phase-13 and Phase-14 entry checklists are written; REG-62 restated as the live pre-launch
+Phase-08 (v1 heading, §H), Phase-13 (v1 heading, §H) and Phase-14 (v1 heading, §H) entry checklists are written; REG-62 restated as the live pre-launch
 gate; PR open and held.
 
 ---
@@ -676,11 +677,11 @@ this pack's results tracker.
 | Task | Model | Thinking | Status | Branch | Gate | Notes |
 |---|---|---|---|---|---|---|
 | T00 housekeep+reorg | Sonnet | High | ✅ 2026-07-22 | — | — | SESSION_CONTEXT slim + PRECEDENTS + effort rule |
-| T01 DB+RLS | Opus | Max | ✅ 2026-07-23 | feature/phase-07-orders | CI green · ledger 29 · advisor 8 INFO | REG-09/48 CLOSED, REG-49 opened; mig `20260723074953`; ORDER-SET CONTRACT pinned; ADR-017 trigger; shipments READ-now/WRITE-Phase-08 |
+| T01 DB+RLS | Opus | Max | ✅ 2026-07-23 | feature/phase-07-orders | CI green · ledger 29 · advisor 8 INFO | REG-09/48 CLOSED, REG-49 opened; mig `20260723074953`; ORDER-SET CONTRACT pinned; ADR-017 trigger; shipments READ-now/WRITE-Phase-08 (v1 heading, §H) |
 | T01b hygiene+sweep | Sonnet | High | — | — | — | branch re-cut from post-#49 main; unit accounting; 4 OD-8 doc residues |
 | T02 write layer + REG-49 | **Opus** | **Max** | — | — | — | TRAP 1 + TRAP 2; ADR-018; ledger 30→31 |
 | T03 checkout UI | Sonnet | Medium | — | — | — | BETK handles + proof upload + awaiting-ADMIN state |
 | T04 buyer orders | Sonnet | Medium | — | — | — | two payment rows + derived states; no closure affordance |
 | T05 admin deposit verification | Sonnet | **High** | — | — | — | §0 slice ONLY; first admin-gated route; signed URL |
 | T06 seller orders + accept | Sonnet | Medium | — | — | — | accept gated on admin-confirmed deposit; REG-44 |
-| T07 exit gate | **Opus** | **Max** | — | — | — | full custodial E2E; Phase-08/13/14 checklists; PR held |
+| T07 exit gate | **Opus** | **Max** | — | — | — | full custodial E2E; Phase-08 (v1 heading, §H)/13/14 checklists; PR held |

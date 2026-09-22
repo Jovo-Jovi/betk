@@ -4,14 +4,14 @@
 You are an engineer on **BETK**, an Arabic-first (RTL) digital marketplace for Egypt — bilingual Arabic/English with light/dark theming (OD-7) — built on Next.js 15 + Supabase + Tailwind/shadcn + TypeScript strict. Build only what the docs specify. Scope is FROZEN.
 
 ## Product truth
-- Scope: `docs/01-product/BETK_MVP_SCOPE.md` (frozen; 59 pages; do not add features).
-- PRD: `docs/01-product/BETK_PRD.md` (one FR per page; acceptance criteria in §9).
+- Scope: `docs/01-product/BETK_MVP_SCOPE.md` (frozen; **79 pages (OD-21)**; counting rule `docs/00-design/BETK_UI_SPEC.md` §0 — one route pattern per role, locales once; tabs, modals, drawers, steps, and query strings do not count; do not add features). **SUPERSEDED in place (B7, 2026-09-23, REG-87 closed):** “frozen; 59 pages” was the v1 heading count and is not the freeze.
+- PRD: `docs/01-product/BETK_PRD.md` (capability FRs, not one FR per page; acceptance criteria in the PRD). **SUPERSEDED in place (B7, REG-87):** “one FR per page” was the v1 PRD shape.
 - UI Spec: `docs/00-design/BETK_UI_SPEC.md` (the ground truth for every page — route, auth gate, components, data, states). **When asked to build a page, reference its UI Spec section explicitly.**
 
 ## Technical truth
 - Architecture: `docs/02-architecture/BETK_ARCHITECTURE.md` (Supabase JS Client + Zod; PostHog, Resend, Sentry; NO ORM, NO microservices). Decisions in `ADR.md`.
 - Codebase: `docs/02-architecture/BETK_CODEBASE_ARCHITECTURE.md` (feature-first; folders map to UI Spec areas).
-- Data contract: `docs/03-database/BETK_ERD.md` + `BETK_DATABASE_SCHEMA.sql` (43 tables; migration order; triggers; pg_cron).
+- Data contract: `docs/03-database/BETK_ERD.md` + `BETK_DATABASE_SCHEMA.sql` (**51 tables, OD-20**; migration order; triggers; pg_cron). **SUPERSEDED in place (B7):** “43 tables” is the live physical count last measured at B3, not the freeze.
 - API standards: `docs/04-api/API_STANDARDS.md`.
 
 ## Security truth
@@ -41,10 +41,10 @@ You are an engineer on **BETK**, an Arabic-first (RTL) digital marketplace for E
 - After EVERY completed task: update the relevant doc + append to `docs/12-changelog/DEVELOPMENT_JOURNAL.md`. Not at end of sprint.
 
 ## AI workflow
-- Adopt the agent role for the task (`BETK_AI_TEAM.md`); load its skill file(s) from `BETK_AI_SKILLS/`. Opus = architect/reviewer/security; Sonnet = build. No merge without Security + UI-reviewer + QA pass.
+- Adopt the agent role for the task (`BETK_AI_TEAM.md`); load its skill file(s) from `BETK_AI_SKILLS/`. **CF-9:** Grok 4.7 (high) satisfies every former Opus row. Tiers are Max / High / Medium / Low. **SUPERSEDED in place:** “Opus = architect/reviewer/security; Sonnet = build.” Do not report a model mismatch because the window is Grok 4.7. No merge without Security + UI-reviewer + QA pass.
 
 ## Session hygiene
 - Start each session by reading `SESSION_CONTEXT.md` to restore project state. Update it at session end (current phase, last task, open issues, next task). Do not rely on chat memory.
 
 ## Hard rules
-- Scope is FROZEN (MVP Freeze 2026-06-13): OD-1 DERIVED, OD-2 deactivate-only + `users.deleted_at`/`anonymized_at`, OD-3 no campaign entity, OD-4 Google OAuth IN (phone nullable, gated to transactions), OD-5 sessions UI OUT / WhatsApp templates under Admin→Settings→Notifications, OD-6 count=43. Do not invent pages, tables, or features beyond this. If something seems missing, stop and flag — don't improvise schema.
+- Scope is FROZEN (MVP Freeze 2026-06-13): OD-1 DERIVED, OD-2 deactivate-only + `users.deleted_at`/`anonymized_at`, OD-3 no campaign entity, OD-4 Google OAuth IN (phone nullable, gated to transactions), OD-5 sessions UI OUT / WhatsApp templates under Admin→Settings→Notifications, OD-6 count=43 (**SUPERSEDED, B7:** the freeze is OD-20 = 51 tables and OD-21 = 79 pages; OD-1..OD-5 and OD-7 still hold). Do not invent pages, tables, or features beyond the frozen scope. If something seems missing, stop and flag — don't improvise schema.

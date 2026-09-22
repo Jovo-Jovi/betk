@@ -28,7 +28,7 @@
 
 Why this and not a second series: one integer sequence, with a permanent hole at 07, is the rule a later T00 can follow without inventing a prefix. v1’s 08–14 were never executed, so keeping those integers for new work would make one number mean two plans. The hole is only at 07, because that number is an archived branch. The v1 08–14 text stays in §H under renamed headings so the operative `## Phase 08` is unique.
 
-**Task rows.** Model is **Grok 4.7**. Thinking uses the 2026-07-22 effort rule’s job split: **Max** = exit gates, RLS, read-first audits · **High** = migrations, write layers, security review, salvage, T00 packs · **Medium** = compose-only UI on a settled query layer · **Low** = mechanical housekeeping. T00 writes the pack from this section. T00 does not add scope.
+**Task rows.** Model is **Grok 4.7 (high)**. **CF-9:** that tier satisfies every former Opus row. Tiers are **Max / High / Medium / Low**. **SUPERSEDED in place:** “the 2026-07-22 effort rule’s job split” named Opus and Sonnet. The job split itself is unchanged: **Max** = exit gates, RLS, read-first audits · **High** = migrations, write layers, security review, salvage, T00 packs · **Medium** = compose-only UI on a settled query layer · **Low** = mechanical housekeeping. Do not report a model mismatch because the window is Grok 4.7. T00 writes the pack from this section. T00 does not add scope.
 
 **Page owner** = the phase that creates the route, or the signed phase that already shipped it when v2 does not change the route’s behaviour. A later phase may add one named control on that route (disabled until then — guidance-only dead-link rule). It does not become a second owner.
 
@@ -44,7 +44,7 @@ Nothing in Phase 08 starts until the rows whose “Before” cell is **Phase 08*
 
 | Criterion | Owner | Before | Evidence it is true |
 |---|---|---|---|
-| **B7 merged** to `main` | B7 | Phase 08 | `main` contains the B7 merge commit. B7 still owns the REG-65 register gap (no `\| REG-65 \|` row). This plan does not mint it. |
+| **B7 merged** to `main` | B7 | Phase 08 | `main` contains the B7 merge commit. **SUPERSEDED in place (B7, 2026-09-23):** “B7 still owns the REG-65 register gap (no row). This plan does not mint it.” B7 wrote the row. It is **open**, v2 owner **Phase 09**. The number stays burnt. Next free stays **REG-93**. The criterion “B7 merged before Phase 08” stays. |
 | **Stage C schema-delta plan approved** | Stage C author + human approval | Phase 08 | A written Stage C plan exists and is approved. This file names what that plan must contain. It does not write the SQL. |
 | **REG-77 ruleset live** | Human — GitHub branch protection or ruleset | Phase 08 | Required checks are **all eight** names from `.github/workflows/ci.yml`: `Install` · `Lint` · `Typecheck` · `Vitest (unit)` · `Guards` · `Types drift` · `Build` · `RLS smoke (staging)`. A list of one (`RLS smoke (staging)`) does not satisfy this row. |
 | **Guard set scheduled** | This plan (the schedule). Phase 08 builds them. | Phase 08 (schedule must already name an owner; the build is a Phase 08 task) | REG-47 (Guard E), REG-67 (Guard F), REG-74 (Guard G), and REG-92 each have one owner in §4. They are not built inside a feature task. |
@@ -94,7 +94,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** T&C at signup. Catalogue: products only, fixed price, shipping attributes, store categories max 3, food branch. Onboarding: pickup address, seller agreement, delivery-mode toggles retired. REG-51 and REG-72 through the §8 gap list (compose, do not restyle).
 - **Entry.** Phase 08 exit evidence. **Pins before this phase’s agreements work:** REG-75 (backfill vs forced re-accept) and REG-88 (which of the four documents are in the completion gate — do not hard-code the set). **REG-85:** do not state how `stores.return_policy` relates to `/legal/returns`. P05 and P28 keep showing store policy with that relationship unstated.
-- **Exit gate (evidence).** Integration or HTTP proof, per surface: signup without current Buyer T&C creates no usable account (AC-AGR-1); onboarding submit without a seller-agreement acceptance row is refused (AC-AGR-3); a service listing publish is refused (AC-CAT-1); a listing without weight or dimensions is refused (AC-CAT-2); a fourth store category is refused (AC-CAT-4); food publish without food approval is refused (R-S10); P23 and P27 render no `{delivery, pickup, remote}` toggles; P04 share and P01–P05 store-name navigation use the Stage D components (DOM has the control, not only the hydration string).
+- **Exit gate (evidence).** Integration or HTTP proof, per surface: signup without current Buyer T&C creates no usable account (AC-AGR-1); onboarding submit without a seller-agreement acceptance row is refused (AC-AGR-3); a service listing publish is refused (AC-CAT-1); a listing without weight or dimensions is refused (AC-CAT-2); a fourth store category is refused (AC-CAT-4); food publish without food approval is refused (R-S10); P23 and P27 render no `{delivery, pickup, remote}` toggles and onboarding no longer stores a delivery fee (REG-65; close by deletion under OD-10, baseline §11); P04 share and P01–P05 store-name navigation use the Stage D components (DOM has the control, not only the hydration string).
 - **Owns.** Pages and codes on the `PAGES:` / `CODES:` lines.
 - **Blocked.** Stage D: **ShareButton** (REG-51; P04, P05), **Navigable store identity** (REG-72; P01, P02, P04, P05), **DataTable** (P33), **ProofViewer** (P49). Stage E / legal gate: lawyer-reviewed **Buyer T&C, Seller Agreement, Return & Refund Policy, Privacy Policy** before P67–P70, the signup acceptance, and the seller e-sign show that prose. REG-62’s **price band** blocks **launch** of publish (AC-CAT-3). Building against a sentinel is not launch.
 
@@ -117,7 +117,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** Account before add-to-cart. Seller quote (band, 24h, prep) writes a cart line. No confirmed-inquiry checkout CTA.
 - **Entry.** Phase 09 exit evidence. **REG-79 is pinned** (add-to-cart vs checkout). This phase does not choose the trigger and does not encode one. If the pin says add-to-cart requires a verified phone, Phase 11 implements that check (it owns FR-AUTH-4) and may edit the cart action. CartLine is in the kit.
-- **Exit gate (evidence).** AC-CART-1..7 and AC-QTE-1..6 as integration tests: guest add leaves zero `cart_items`; over-stock add is refused; quote accept inserts one line at the quoted price; expired quote blocks the line; payment-window expiry restores fixed-price lines and restores a custom line only while `quote_expires_at` is in the future (REG-82).
+- **Exit gate (evidence).** AC-CART-1..7 and AC-QTE-1..6 as integration tests: guest add leaves zero `cart_items`; over-stock add is refused; quote accept inserts one line at the quoted price; expired quote blocks the line; payment-window expiry restores fixed-price lines and restores a custom line only while `quote_expires_at` is in the future (REG-82). Quote expiry is derived from `quote_expires_at` at read (R-Q06); it is not a cron. The production payment-window sweeper is Phase 11 (§8). This exit’s evidence is the integration test.
 - **Owns.** P13, P14, P36, P37, P66 and the cart/quote codes.
 - **Blocked.** Stage D: **CartLine** (P66, and the checkout page’s lines when Phase 11 starts).
 
@@ -136,7 +136,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** One cart checkout writes one master, N seller orders, N shipments, and two payment rows per child, or nothing. Version gate before completion. No delivery-mode picker.
 - **Entry.** Phase 10 exit evidence. **REG-81 pinned** (child `display_ref` format — do not invent `BETK-2026-000123`). REG-88 still pinned (Phase 09 did not hard-code the document set). CheckoutSellerSections is in the kit. Stage E prose for whichever documents the pin puts in the gate.
-- **Exit gate (evidence).** One integration test: N-seller cart → 1 `master_orders` + N `seller_orders` + N `shipments` + 2N `payments`, stock decremented, `converted_to_order_id` unchanged. A second test: the same attempt rolled back leaves zero of those rows (AC-CHK-1, AC-CHK-2). A buyer with a missing required acceptance gets no master (AC-CHK-4). Response JSON has one combined delivery total and no per-seller fee (AC-CHK-6). Phone-NULL submit navigates to `/auth/phone` (rewired unit test).
+- **Exit gate (evidence).** One integration test: N-seller cart → 1 `master_orders` + N `seller_orders` + N `shipments` + 2N `payments`, stock decremented, `converted_to_order_id` unchanged. A second test: the same attempt rolled back leaves zero of those rows (AC-CHK-1, AC-CHK-2). A buyer with a missing required acceptance gets no master (AC-CHK-4). Response JSON has one combined delivery total and no per-seller fee (AC-CHK-6). Phone-NULL submit navigates to `/auth/phone` (rewired unit test). A further test sets `payment_deadline` in the past and runs the sweeper: the master is cancelled, tracked stock is restored, the cart is restored per REG-82, and one in-app `notifications` row exists for the buyer. Cadence is every minute (§8). SMS is Phase 17.
 - **Owns.** P10, P15. **Restores** from `archive/phase-07-v1-single-seller`: `src/features/buyer-account` address query/action + `validations/address.ts`, and `tests/unit/checkoutForm.phoneGate.navigate.unit.test.ts` (rewire call sites; do not merge the rest of that tree).
 - **Blocked.** Stage D: **CheckoutSellerSections**. Legal gate: the documents REG-88 names, published. REG-62 **commission %** blocks **launch** (a snapshot of the sentinel `0` is not launch).
 
@@ -157,7 +157,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** One InstaPay proof on the master. One admin action confirms every child deposit and releases every child. Buyer history is the master. No seller acceptance. COD-balance confirm stays **disabled** on P58 until Phase 14 (stated reason: courier remit is not built).
 - **Entry.** Phase 11 exit evidence. **Restores `requireAdmin`** from the archive tag before the first admin write. ProofViewer is in the kit.
-- **Exit gate (evidence).** Integration: one `confirm` on a 3-seller master sets three deposit rows confirmed and three seller orders `confirmed` (AC-PAY-4 / AC-ADM-18). A seller `UPDATE` of `pending → confirmed` is refused. Proof reject cancels the children and restores tracked stock (AC-PAY-5). Buyer order detail does not offer cancel after proof (HTTP or action result, R-O22). P58 has no enabled COD-confirm control (DOM).
+- **Exit gate (evidence).** Integration: one `confirm` on a 3-seller master sets three deposit rows confirmed and three seller orders `confirmed` (AC-PAY-4 / AC-ADM-18). A seller `UPDATE` of `pending → confirmed` is refused. Proof reject cancels the children and restores tracked stock (AC-PAY-5). Buyer order detail does not offer cancel after proof (HTTP or action result, R-O22). P58 has no enabled COD-confirm control (DOM). Release inserts one in-app `notifications` row per seller (R-F05: order ref, item count, ready-by). That row is the evidence. SMS is Phase 17.
 - **Owns.** P16, P17, P18, P58.
 - **Blocked.** Stage D: **ProofViewer**. REG-62 **`betk_instapay_handle` set** blocks **launch** of payment instructions. An empty handle is not a business value.
 
@@ -178,7 +178,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** Released orders arrive committed. Seller moves preparing → ready only. Escalation is the only seller exit. Seller sees the §4.a allow-list (subtotal, commission, `refunded_subtotal`, net) and no buyer identity.
 - **Entry.** Phase 12 exit evidence. SellerOrderMoney and DataTable are in the kit. `display_ref` renders only when non-null (REG-81 already pinned).
-- **Exit gate (evidence).** Seller order JSON for a fixture order **lacks** `delivery_fee`, `total_amount`, buyer name, phone, address, and city, and **includes** subtotal, commission, and net (AC-VIS-1). Seller cancel and seller `pending → confirmed` are refused (AC-SEL-14 retired — the test is the refusal). A 50% and an 80% clock on one order produce the two notifications and then an escalation row (AC-SLA-3). Out-of-stock escalation sets `stock_qty = 0` (AC-STK, enforced by the Phase 08 trigger; this phase’s test is the seller action that reaches it).
+- **Exit gate (evidence).** Seller order JSON for a fixture order **lacks** `delivery_fee`, `total_amount`, buyer name, phone, address, and city, and **includes** subtotal, commission, and net (AC-VIS-1). Seller cancel and seller `pending → confirmed` are refused (AC-SEL-14 retired — the test is the refusal). A 50% and an 80% clock on one order produce two in-app `notifications` rows and then an escalation row (AC-SLA-3). The ladder is a new `pg_cron` every 15 minutes (§8). SMS is Phase 17. Out-of-stock escalation sets `stock_qty = 0` (AC-STK, enforced by the Phase 08 trigger; this phase’s test is the seller action that reaches it).
 - **Owns.** P25, P38, P39, P55, P75.
 - **Blocked.** Stage D: **SellerOrderMoney** (P25, P38, P39), **DataTable** (P38, P55, P75).
 
@@ -239,7 +239,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** One review per seller order. One dispute per seller order. No master-level review or dispute. Reviews render no buyer name and no buyer location.
 - **Entry.** Phase 12 shipped P18, so the review and dispute entry points exist as disabled controls. Enable them here. A delivered or dispatched seller order is required, so Phase 14’s delivery path is the practical predecessor for eligibility. Dispute SLA does not need the courier gate’s mechanism choice.
-- **Exit gate (evidence).** Two seller orders under one master accept two reviews and refuse a second review on the same seller order (R-O07). A dispute insert on a master id fails. Resolution writes outcome, moderation log, and a notification to both parties (AC-ADM-9). The review DOM has the neutral buyer label and no `buyer_profiles` name (REG-44).
+- **Exit gate (evidence).** Two seller orders under one master accept two reviews and refuse a second review on the same seller order (R-O07). A dispute insert on a master id fails. Resolution writes outcome, a moderation log, and one in-app `notifications` row to each party (AC-ADM-9). The 47h alert is the live hourly `dispute-sla-alert` job (§8); Phase 16’s evidence is the row. The live job sets `channel` to `sms`. SMS delivery is Phase 17. This phase does not rewrite that SQL. The review DOM has the neutral buyer label and no `buyer_profiles` name (REG-44).
 - **Owns.** P19, P20, P21, P40, P47, P53, P56, P57.
 - **Blocked.** Stage D: **DataTable** (P56).
 
@@ -257,7 +257,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 ### Phase 17 — Notifications and buyer saves
 
-- **Goal.** Notification center, wishlist, followed stores, and admin broadcast (fan-out, no campaign table). Launch channel is SMS (R-N07). WhatsApp templates stay on P63 (Phase 14).
+- **Goal.** Notification center, wishlist, followed stores, and admin broadcast (fan-out, no campaign table). Launch channel is SMS (R-N07). WhatsApp templates stay on P63 (v2 Phase 14, the courier settings page). Earlier phases insert `notifications` rows as their exit evidence (§8). This phase adds the center and SMS delivery. It does not take over the payment-window sweeper or the prep-SLA ladder.
 - **Entry.** Inquiry notifications already exist (Phase 06). This phase adds the center, the restock subscription, and the v2 event set. Navigable store identity is in the kit before P12 wires it.
 - **Exit gate (evidence).** A restock from `sold_out` to stock > 0 inserts one notification for a subscriber (R-N06). Unread badge count equals unread rows for that user. Broadcast creates N notification rows and zero campaign rows (OD-3). Channel preference off means that channel is not sent (R-N01).
 - **Owns.** P11, P12, P22, P62.
@@ -322,7 +322,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 
 - **Goal.** Ship the retained v1 boost path (REG-80). Do not add a boost requirement.
 - **Entry.** Phase 09 exit (listings are products at a fixed price). **Parallel** with Phases 10–19. Not on the order critical path.
-- **Exit gate (evidence).** One active boost per listing is enforced by the existing partial unique index (a second insert fails). Admin confirm moves a boost to active. The expire job sets it expired. P02 ranking puts an active boost above an otherwise equal unboosted listing (R-B04). No new boost table in `pg_tables`.
+- **Exit gate (evidence).** One active boost per listing is enforced by the existing partial unique index (a second insert fails). Admin confirm moves a boost to active. The expire job sets it expired. That job is the live `expire-boosts` schedule, every 15 minutes (§8). No notification row is required for this exit. P02 ranking puts an active boost above an otherwise equal unboosted listing (R-B04). No new boost table in `pg_tables`.
 - **Owns.** P34, P35, P65.
 - **Blocked.** None on Stage D or Stage E. Boost approval does not need a new kit row in §8.
 
@@ -378,7 +378,7 @@ Phase 06 `CODES:` none
 
 **Do not resume. Do not number new work 07.** Tag: `archive/phase-07-v1-single-seller`.
 
-The only register item that still says “regenerate the Phase 07 pack” is **REG-57**. This plan supersedes that instruction. The row stays open for a later close. No v2 page, table, or PRD code is owned by 07. Owning one would resume it.
+The only register item that still said “regenerate the Phase 07 pack” was **REG-57**. **SUPERSEDED (B7, 2026-09-23):** the row is superseded. Phase 07 owns nothing. A retired phase owns no open item. No v2 page, table, or PRD code is owned by 07. Owning one would resume it.
 
 Salvage from that tag is named on Phases 11 and 12. `modlog_admin_insert` is not salvaged; it is already on `main`.
 
@@ -492,7 +492,7 @@ Phase 14 consumes ADR-024’s open branch. It is not a second implementer of the
 
 ### 4.e OPEN REG → one home
 
-Open means the register status is not closed. Standing rules (REG-19, REG-24, REG-40, REG-43’s derive-at-read warning, REG-69) stay standing and are not re-homed. REG-65 has **no row**; B7 reconciles it. This plan does not mint it.
+Open means the register status is not closed. Standing rules (REG-19, REG-22, REG-24, REG-40, REG-69) stay open with a standing pin and are not re-homed. REG-43’s derive-at-read warning stays with that closed row. **SUPERSEDED (B7):** “REG-65 has no row; B7 reconciles it. This plan does not mint it.” B7 wrote the row. It is open. Owner is Phase 09.
 
 | REG | Home |
 |---|---|
@@ -514,13 +514,14 @@ Open means the register status is not closed. Standing rules (REG-19, REG-24, RE
 | REG-53 | Phase 09 closes the decision by R-K01. No mode derivation. |
 | REG-54 | Phase 08 doc sweep when the rename lands. Docs only. |
 | REG-56 | Phase 19. Derived closure. No new enum member. |
-| REG-57 | Phase 07 retired. Do not regenerate that pack. Row stays open for a later close. |
+| REG-57 | **Superseded (B7).** Not open. Phase 07 owns nothing. Successor work is v2 Phases 11, 12, 13, and 14. |
 | REG-58 | Stage D pin. Existing `SearchBar`. Does not block Phase 09. |
 | REG-59 | Stage D pin. P09 shell. Page owner stays Phase 02. |
 | REG-60 | Stage D pin. Seller chrome logo. Not REG-72. |
 | REG-62 | Launch gate. See §5. Not a build phase. |
 | REG-63 | Named pin: do not drop `cod_enabled` in a v2 phase. Removal is a shape change this plan does not authorize. |
 | REG-64 | Phase 09 (P29 copy). |
+| REG-65 | **Open (B7).** Phase 09. Onboarding dead delivery-fee field. Close by deletion under OD-10. Number burnt. |
 | REG-67 | Phase 08 (Guard F). Scheduled in §0. |
 | REG-70 | Named pin: no new `moderation_target` member. Phase 18 and Phase 12 obey it. |
 | REG-72 | Phase 09, blocked on Navigable store identity. Phase 17 wires P12 after the component exists. |
@@ -533,7 +534,7 @@ Open means the register status is not closed. Standing rules (REG-19, REG-24, RE
 | REG-81 | Pin **before Phase 11**. |
 | REG-85 | Pin **before Phase 15**, and before any edit that relates store policy to the platform policy. Tied to Stage E. |
 | REG-86 | Named pin beside REG-62. Do not add `return_hold_hours` to that gate. Phase 19 still honours R-O29. |
-| REG-87 | Named pin: docs sweep of the master prompt. Not this plan. Not a build phase. |
+| REG-87 | **Closed (B7).** Master prompt now says 79 pages (OD-21) and the §0 counting rule. Not a build phase. |
 | REG-88 | Pin **before Phase 09** agreements work. Tied to Stage E. Phase 11 reads the pin; it does not choose the set. |
 | REG-92 | Phase 08. Lint or runtime test. Not a typecheck. |
 
@@ -614,12 +615,36 @@ Other Stage A rows marked SURVIVES (ADR-019’s pattern, PRECEDENTS, the journal
 Counted from the `CODES:` lines, the page table, and the 51-row table in this file:
 
 - Every operative phase **01–06 and 08–20** owns at least one page, code, or table.
-- **Phase 07** owns REG-57 and nothing else, on purpose.
+- **Phase 07** owns nothing. **SUPERSEDED (B7):** “owns REG-57 and nothing else, on purpose.” REG-57 is superseded.
 - Pages P01–P79 appear once.
 - ADR-020..025 appear once, all on Phase 08.
 - Open REGs in §4.e appear once.
 
 A missing code, a second owner, or a phase with an empty owns-set is a **STOP**. Do not paper over it with a new table, page, or requirement.
+
+---
+
+## 8. Time-driven work (B7)
+
+**Choice.** Earlier phases write in-app `notifications` rows as their exit evidence. Phase 17 adds the notification center and SMS delivery. The payment-window sweeper stays in Phase 11. The prep-SLA ladder stays in Phase 13. The `notifications` table already exists (first write Phase 06, RLS Phase 01). This section does not move those jobs into Phase 17 and does not add a table.
+
+Cadences below were re-read at B7 from `supabase/migrations/20260622083154_cron.sql` and `supabase/migrations/20260716130533_reschedule_daily_cron_utc.sql` (the `cron.schedule` calls). The UTC migration retimes only the three daily jobs. `expire-boosts` stays `*/15 * * * *`. `dispute-sla-alert` stays `0 * * * *`. `cleanup-otp-tokens` stays `30 * * * *`. This is not a live `cron.job` query. The daily jobs are too coarse for a payment window and for a prep-SLA ladder. They stay daily where the work is nightly.
+
+| Behaviour | Owner | Mechanism | Cadence | Evidence before Phase 17 |
+|---|---|---|---|---|
+| Deposit-window expiry and cart/stock restore (REG-82, R-O21, R-C07) | Phase 11 writes the deadline at checkout and owns the sweeper. Phase 10’s exit tests restore as a function. | New `pg_cron` sweeper | Every minute (`* * * * *`). A launch window of about 30 minutes cannot use a daily job. | One in-app `notifications` row for the buyer, plus the cancelled master and the restored stock and cart. |
+| Quote expiry at 24h (R-Q06) | Phase 10 | Derived at read from `quote_expires_at` | No cron | The integration test that an expired quote blocks the line. No notification row. |
+| Prep SLA at 50% and 80%, then breach escalation (R-F03, AC-SLA-3, OD-16) | Phase 13 | New `pg_cron` | Every 15 minutes, the same grain as live `expire-boosts` | Two in-app notification rows, then an escalation row. SMS is Phase 17. |
+| Seller notified when the order is released (R-F05) | Phase 12 | The admin confirm action. Not a cron. | On that action | One in-app row per seller (order ref, item count, ready-by). |
+| Dispute alert about one hour before the SLA (R-N05, AC-ADM-9) | Phase 16 | Live job `dispute-sla-alert` | Hourly `0 * * * *` | The `notifications` row. The live body sets `channel` to `sms` and is not rewritten here. A sent SMS is not the Phase 16 gate. SMS delivery is Phase 17. |
+| Boost expiry (R-B03) | Phase 20 | Live job `expire-boosts` | `*/15 * * * *` | Status becomes expired. No notification row for the exit. |
+| Seller level recalculation | Phase 19 | Live job `recalculate-seller-levels` | Daily `0 0 * * *` UTC | The level rows. Daily is the right grain. |
+| Platform snapshot | Phase 19 | Live job `daily-platform-snapshot` | Daily `5 22 * * *` UTC | The snapshot row. The `revenue_egp` writer stays unpinned (REG-26). |
+| Seller snapshots | Phase 19 | A new daily job of the same class. It is not one of the six live jobs. | Daily | The snapshot row. No finer cadence. |
+| Temporary suspension lift (R-M03) | Phase 18 | Live job `lift-temp-suspensions` | Daily `0 1 * * *` UTC | The status flip. No new notification requirement. |
+| OTP token cleanup | Signed Phase 02 | Live job `cleanup-otp-tokens` | Hourly `30 * * * *` | Already live. Not a v2 task. No Phase 17 dependency. |
+| Approval SLA of 24h (R-M01 / G7) | Phase 09 for the approval action. Phase 18 if a dashboard shows the figure. | A clock-measured metric. Not a sweeper. | No cron | Not a notification exit. |
+| Archive notifications at 90 days | Not a v2 phase | v1 §H only | Not added | Adding it would add scope. Not added. |
 
 ---
 
@@ -675,43 +700,43 @@ Decide OD-1…OD-6 (MVP Scope §6) and sign. **No development begins until this 
 - **Tests:** integration (checkout atomicity, split payment dedupe, status transitions); E2E full purchase.
 - **Docs:** API_STANDARDS, journal.
 
-### Historical v1 plan — Phase 08 — Delivery & Tracking
+### Historical v1 plan — Phase 08 (v1 heading, §H) — Delivery & Tracking
 - Features: shipment create, tracking number/url, shipment_tracking_events, courier (Bosta) webhook, delivery confirmation opens review window (delivered_at).
 - **Acceptance:** shipment 1:1 with order; tracking events render in timeline; delivered_at set.
 - **Tests:** integration (webhook idempotency, status mapping).
 - **Docs:** API_STANDARDS (webhooks), journal.
 
-### Historical v1 plan — Phase 09 — Reviews & Ratings
+### Historical v1 plan — Phase 09 (v1 heading, §H) — Reviews & Ratings
 - Features: FR-BUY-10, FR-SEL-16. Leave review (≤3 photos, 48h edit), one seller reply, rating_aggregates trigger recompute, admin verify/hide later.
 - **Acceptance:** AC (one review/order R-O07/R-R02; edit ≤48h R-R03; one immutable reply R-R04; aggregate recompute R-R07).
 - **Tests:** integration (eligibility, edit window, aggregate); E2E review.
 - **Docs:** journal.
 
-### Historical v1 plan — Phase 10 — Disputes & Buyer Protection
+### Historical v1 plan — Phase 10 (v1 heading, §H) — Disputes & Buyer Protection
 - Features: FR-BUY-11..12, FR-SEL-22, FR-ADM-9. Raise dispute (≤5 evidence), dispute thread, admin resolution + notify both, SLA 48h + 47h alert, refund-type touches payments.
 - **Acceptance:** AC-ADM-9 (resolution sets outcome+notes, logs, notifies both; SLA alert at 47h); one active dispute/order (R-O06/R-D06); eligibility delivered/dispatched (R-D01).
 - **Tests:** integration (eligibility, resolution, SLA cron); E2E dispute lifecycle.
 - **Docs:** journal.
 
-### Historical v1 plan — Phase 11 — Boosts & Promotions
+### Historical v1 plan — Phase 11 (v1 heading, §H) — Boosts & Promotions
 - Features: FR-SEL-11..12, FR-ADM-17. Boost purchase (packages), admin payment confirm→activate, concurrent-boost guard, auto-expire, ROI.
 - **Acceptance:** one active boost/listing (R-B01/R-L08); activates ≤5min of confirm (R-B02); auto-expire cron (R-B03); boosted ranking (R-B04).
 - **Tests:** integration (concurrency guard, expiry); E2E boost→confirm.
 - **Docs:** journal.
 
-### Historical v1 plan — Phase 12 — Buyer extras: Wishlist, Following, Notifications
+### Historical v1 plan — Phase 12 (v1 heading, §H) — Buyer extras: Wishlist, Following, Notifications
 - Features: FR-BUY-3..4, FR-BUY-13. Wishlist + restock toggle (R-N06), follow stores, notifications center + unread badge, channel prefs.
 - **Acceptance:** restock alert fires on stock>0 transition; unread badge accurate; channel prefs honored (R-N01).
 - **Tests:** integration (restock trigger, unread index); E2E wishlist/follow.
 - **Docs:** journal.
 
-### Historical v1 plan — Phase 13 — Seller Analytics, Earnings & Payouts
+### Historical v1 plan — Phase 13 (v1 heading, §H) — Seller Analytics, Earnings & Payouts
 - Features: FR-SEL-3,17..21. Dashboard KPIs, earnings, transactions, request payout (min 100), level progress (nightly recalc), analytics charts.
 - **Acceptance:** payout ≥ EGP 100 (R-O09), manual processing (R-O10); level thresholds (R-S06); snapshots drive charts.
 - **Tests:** integration (payout min, level recalc cron); E2E payout request.
 - **Docs:** journal.
 
-### Historical v1 plan — Phase 14 — Admin Console
+### Historical v1 plan — Phase 14 (v1 heading, §H) — Admin Console
 - Features: FR-ADM-1..8,10..16. Dashboard+SLA, approvals, user/seller mgmt (strikes, ban confirm), listings/reviews/flagged moderation, categories, orders/payments/payouts mgmt, editorial collections, broadcast + templates, settings (CHECK on numeric keys), moderation log.
 - **Acceptance:** approval SLA 24h (R-M01); temp suspension auto-lift (R-M03); permanent ban confirm (R-M04); flagged review 24h (R-M05); auto-flag keywords (R-M06); moderation log immutable (R-M02).
 - **Tests:** integration (each admin action logs + RLS admin-only); E2E approve seller, resolve flag.
@@ -721,7 +746,7 @@ Decide OD-1…OD-6 (MVP Scope §6) and sign. **No development begins until this 
 > Pack: `phase-packs/PHASE_DS_DESIGN_SYSTEM.md`. Brief: `00-design/BETK_DESIGN_BRIEF.md`. Surface: **Claude Design**, not Cursor.
 > **Placement (your choice):**
 > - **Option A — Early (lower rework, recommended):** run right after Phase 01/03 so page-building phases (04–14) consume finished shared components. The token foundation already lands in Phase 01 (T03); this phase turns it into the full component set.
-> - **Option B — Late polish (matches "backend/APIs first"):** run here, after Phase 14, as a consolidated visual pass over the functional UI built in Cursor. Accept some restyle rework on pages already built.
+> - **Option B — Late polish (matches "backend/APIs first"):** run here, after Phase 14 (v1 heading, §H), as a consolidated visual pass over the functional UI built in Cursor. Accept some restyle rework on pages already built.
 - **Objectives:** stand up the design system in Claude Design from `BETK_DESIGN_BRIEF.md` + the GitHub frontend subfolder; generate/refine the §4 shared components (RTL, tokens, all states); export to a `feature/design-*` branch.
 - **Tasks:** see the pack (DS01 set up system · DS02 generate shared components · DS03 page layouts/shells · DS04 export to branch · DS05 Cursor wires data + UI-reviewer gate).
 - **Acceptance:** every shared component matches its UI Spec §3/§4 usage, is RTL-correct, uses tokens (no hardcoded colors), extends shadcn, and renders empty/loading/error states; merged via PR through CI + UI-reviewer + Security gates.

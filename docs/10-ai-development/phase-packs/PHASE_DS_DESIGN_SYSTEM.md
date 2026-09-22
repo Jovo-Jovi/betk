@@ -1,5 +1,6 @@
 # PHASE DS — Design System & UI Polish (Claude Design) · Task Pack
-> Surface: **Claude Design** (canvas + chat), linked to the GitHub repo, plus a Cursor hand-off step. Brief: `docs/00-design/BETK_DESIGN_BRIEF.md`. Placement: Option A (early, after Phase 01/03) or Option B (late polish, after Phase 14) — see `BETK_PHASES.md` Phase DS.
+> **B7 (2026-09-23):** Every “Phase 08”–“Phase 14” in this file is a **v1 heading (§H)**, not a v2 phase. Map: 08 delivery → v2 Phase 14 courier (shipment RLS is still v2 Phase 08); 09 reviews → v2 Phase 16; 10 disputes → v2 Phase 16; 11 boosts → v2 Phase 20; 12 notifications → v2 Phase 17; 13 earnings → v2 Phase 19; 14 admin → v2 Phase 18. A forward reference to the retired number 07 is that checkout phase; v2 checkout is Phase 11.
+> Surface: **Claude Design** (canvas + chat), linked to the GitHub repo, plus a Cursor hand-off step. Brief: `docs/00-design/BETK_DESIGN_BRIEF.md`. Placement: Option A (early, after Phase 01/03) or Option B (late polish, after Phase 14 (v1 heading, §H)) — see `BETK_PHASES.md` Phase DS.
 > Prompts here are written **for Claude Design chat**, except DS05 which is a **Cursor** task. RTL/Arabic is the #1 risk — every prompt restates it.
 
 ## Definition of done
