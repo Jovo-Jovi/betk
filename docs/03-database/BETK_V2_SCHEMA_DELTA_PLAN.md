@@ -1067,9 +1067,12 @@ Guard G (REG-74): suite-start residue detector. The seven ids stay the expected 
 This plan is a proposal. Applying M1 is not authorized by writing this file.
 
 | field | value |
-|---|---|
-| Approver | |
-| Date | |
-| Approved plan SHA | |
-
-Stage C is NOT approved until this block is signed by the human.
+Approver: Jiovanny (scope owner)
+Date: 2026-09-23
+Approved plan content: commit 3bec2ea135cb972ca58d4b5ed667d09d7cff9c65
+Scope: the full plan, including D1-D4 and all DRAFT SQL (incl. the §8.2.3
+listing-weight CHECK).
+Conditions carried into Phase 08: CF-11 (rehearsal mechanism proven before M1
+touches staging) and CF-12 (every empty admin_settings key has a pin owner before
+its consuming phase).
+Stage C is APPROVED for implementation in Phase 08.
