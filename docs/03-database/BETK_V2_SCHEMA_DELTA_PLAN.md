@@ -2,7 +2,7 @@
 
 > **PLAN ONLY.** This file is the Stage C contract for Phase 08. It writes no migration, no `src/`, and no SQL outside the labelled **DRAFT** blocks below.
 >
-> **UNSIGNED.** Stage C is not approved. The block at the end is empty on purpose.
+> **UNSIGNED.** Stage C is not approved. The block at the end is empty on purpose. C-FIX (2026-09-23, scope owner) records D1–D4 as DECIDED in §8.2. That record is not a signature. Phase 08 does not start.
 >
 > **Authority.** `BETK_ERD.md` §1–§13 (51 tables, OD-20), ADR-020..025, `BETK_UI_SPEC.md` §4–§5 data lines, `BETK_PHASES.md` Phase 08 and §8. Live facts are from MCP `execute_sql` (`SELECT` only), `list_migrations`, and `get_advisors` on namespace `project-0-BETK-supabase-betk`. `BETK_DATABASE_SCHEMA.sql` is not a source.
 >
@@ -314,7 +314,7 @@ Each item is in the ERD, an ADR, or a REG the ERD already cites. Nothing in this
 | `refunded_subtotal numeric(10,2)` | NO, default 0 | CHECK `0 <= refunded_subtotal <= subtotal` |
 | `payout_eligible_at` | YES | stamped on `delivered`, not during N27 |
 
-`delivery_method` and `status` are not rewritten (ERD §3.5, §4). The semantic reading of the two `confirmed` rows is an open decision (§8), not a column change.
+`delivery_method` is not rewritten (ERD §3.5). `status` of the five non-cancelled zombies is rewritten to `cancelled` in M5 (D1, §4.9, §8.2.1). The two rows that are already `cancelled` are not rewritten. `confirmed_at` is not cleared.
 
 **Other amendments (ERD §6.3).**
 
@@ -392,7 +392,7 @@ New and replaced policies use `(select auth.uid())` so they add no `auth_rls_ini
 | RLS + policies for the 8 new tables, matching ERD §8. `master_orders` SELECT is buyer or admin. **Seller none** (N28). `store_pickup_addresses` SELECT is own seller or admin. **Buyer none.** `cart_items` has no phone gate (REG-79) | ERD §8 | 08 |
 | Phone-gate RESTRICTIVE INSERT on `master_orders` and on `seller_orders` (the existing `orders_phone_gate` follows the rename). Also already live on `seller_profiles` and `payouts` | ERD §8, R-A07 | 08 for the master |
 | Rewrite `payments_access`: drop `(o.store_id = my_store_id())`. Buyer via `seller_orders.buyer_id`, or admin. **Seller none** | ERD §8; N28; ADR-021 | 08 |
-| Rewrite `shipments_access` and `shipment_tracking_events_access`: drop the store leg. Seller none | ERD §8, R-V02 | 08 |
+| Rewrite `shipments_access` and `shipment_tracking_events_access`: drop the store leg. Seller none. Add the `shipments` INSERT policy ERD §8 names as checkout (not live; M2 does not create it, because `shipments` is not a new table) | ERD §8, R-V02 | 08 (M7) |
 | `order_messages_*` **keeps** the store leg | ERD §8 | 08 confirms, does not strip |
 | `orders_access` / `orders_update` stay buyer OR store OR admin at the **row**. Column hiding is the grant (ADR-020), not a second policy. When these policies are recreated they use `(select auth.uid())` | ERD §8; ADR-019 | 08 |
 | `bp_self` and `reviews_public` stay self/admin and visible/author/admin. Do not restore a public name or governorate branch | REG-44 WON'T-FIX; ERD §9; UI spec P04/P19 | 08 does not add one |
@@ -425,9 +425,9 @@ ADR-025 rework list, all Phase 08:
 |---|---|
 | `decrement_stock_on_confirm` / `trg_decrement_stock_on_confirm` | Detach the trigger **before** any backfill that could set `confirmed`. The function is then only called from `checkout_from_cart`. It skips `stock_qty IS NULL`, sets `sold_out` at 0, sets `stock_touched_at`. It does not run on admin release |
 | `create_order_from_inquiry` | Drop in the same migration that creates `checkout_from_cart`. N27 does not call it |
-| `checkout_from_cart` | New INVOKER. `search_path` pinned. EXECUTE revoked from PUBLIC, granted to `authenticated`. Writes master, N seller orders, items, 2N payments, N shipments, decrements stock, consumes the cart. Inserts `delivery_fee` and `total_amount` from locals. Does not SELECT or RETURN them (CF-2). Child `betk_ref` is NULL. ADR-022 allocation lives inside this function. Does not write `converted_to_order_id` |
+| `checkout_from_cart` | New INVOKER. `search_path` pinned. Created in the rename transaction (M6). That transaction **revokes** EXECUTE from PUBLIC, `anon`, and `authenticated` and does not grant it. `GRANT EXECUTE … TO authenticated` is the last statement of M7, after the grants and policies that migration lands (§6, M6). Writes master, N seller orders, items, 2N payments, N shipments, decrements stock, consumes the cart. Inserts `delivery_fee` and `total_amount` from locals. Does not SELECT or RETURN them (CF-2). Child `betk_ref` is NULL. ADR-022 allocation lives inside this function. Does not write `converted_to_order_id`. If `payment_window_minutes` is empty or not a positive integer, the function raises and writes nothing (D4) |
 | `enforce_order_transition` | Rework in place to ERD §7.1. Does not drop `buyer_id` first. `pending → confirmed` is admin release only. Buyer cancel only while master `proof_path` is null. Seller never stamped as `cancelled_by` |
-| `enforce_payment_update` | Rework. Buyer does not write child `proof_path`. On admin verification, copy master proof onto each deposit row and set `proof_snapshot_at` (ADR-021). On balance confirm, stamp `balance_confirmed_at` only. On refund, write the **goods portion** to `refunded_subtotal` and do not copy `SUM(payments.refunded_amount)`. The arithmetic that splits goods from fee is open (§8) |
+| `enforce_payment_update` | Rework. Buyer does not write child `proof_path`. On admin verification, copy master proof onto each deposit row and set `proof_snapshot_at` (ADR-021). On balance confirm, stamp `balance_confirmed_at` only. On refund, write the goods portion the admin supplies to `refunded_subtotal` (D2, §8.2.2). Do not prorate. Do not copy `SUM(payments.refunded_amount)`. The CHECK `0 <= refunded_subtotal <= subtotal` bounds the write |
 | `set_inquiry_converted_order` / `trg_set_inquiry_converted_order` | Drop. Column and `fk_inquiries_order` stay. No new writer (CF-4) |
 | `set_order_commission_snapshot` | Rework only if the body must name `seller_orders`. It already stamps from `subtotal` only. Keep that |
 | `enforce_master_proof_update` | New DEFINER BEFORE UPDATE on `master_orders`. Buyer sets the two proof columns once, before `payment_deadline`, while children are `pending` and proof is null. Stamps `proof_uploaded_at` |
@@ -437,7 +437,7 @@ ADR-025 rework list, all Phase 08:
 | `enforce_store_category_cap` | New DEFINER BEFORE INSERT on `store_categories`. Reads `seller_category_limit` |
 | Payout INSERT cap | New BEFORE INSERT on `payouts`. DEFINER, `search_path` pinned, EXECUTE revoked, filters to `NEW.store_id`. Cap is ERD §6.4. A page check is not the boundary |
 | ADR-023 equality | Trigger on `store_pickup_addresses` INSERT and UPDATE, **and** on `stores` UPDATE OF `governorate`. Both directions (CF-3). Not a new column |
-| `submit_seller_application` / `resubmit_seller_application` | Stay INVOKER. Body stops treating `delivery_options` and the two category varchars as authority and writes `store_categories` and `store_pickup_addresses`. Signature: see §8. The live caller on `main` is `src/features/seller-onboarding/actions/submitSellerApplication.ts` |
+| `submit_seller_application` / `resubmit_seller_application` | Stay INVOKER. Body stops treating `delivery_options` and the two category varchars as authority and writes `store_categories` and `store_pickup_addresses`. Argument list unchanged in Phase 08 (D3, §8.2.4). Phase 09 owns the onboarding change (REG-65). The live caller on `main` is `src/features/seller-onboarding/actions/submitSellerApplication.ts` |
 
 `payout_eligible_at` is stamped inside the reworked order transition when status becomes `delivered`: `delivered_at + return_hold_hours` from `admin_settings`. The key stays off the REG-69 array (REG-86). The seller reads the timestamp, not the key.
 
@@ -518,7 +518,7 @@ The migration role is the owner. BEFORE UPDATE triggers still fire. RLS does not
 
 `enforce_order_transition` (live body) raises only when `cancelled_by` or `cancellation_reason` changes outside `pending → cancelled`, or when `status` changes to something other than the three v1 transitions. An UPDATE that changes **only** `master_order_id` (and no status, no cancel metadata) returns NEW. It passes.
 
-`trg_decrement_stock_on_confirm` fires only when `status` changes **to** `confirmed`. The N27 backfill does not change `status`. The trigger is still dropped first (ADR-025, Phase 08 exit 7), so a mistaken status write cannot decrement stock.
+`trg_decrement_stock_on_confirm` fires only when `status` changes **to** `confirmed`. D1 sets five rows to `cancelled`, not to `confirmed`. The trigger is still dropped first (M4, ADR-025, Phase 08 exit 7), so a mistaken status write cannot decrement stock. `restore_stock_on_cancel` does not exist until M8, which is after the D1 write.
 
 `trg_set_order_commission_snapshot` is BEFORE INSERT. The backfill does not insert into `orders`.
 
@@ -552,13 +552,15 @@ Before-image captured 2026-09-22 (7 rows). Phase 08 fails the migration if any `
 | `5c7cd87d-9a09-4819-8217-055e06df0302` | `da73deed-…` | pending → cancelled | `ceaf82c5ea6811d9b54dad054ce24d2f` |
 | `08b94ebe-06b2-4041-b0e0-2ee6239298e2` | `c7ba4f04-…` | pending → confirmed | `ac58be52f37544d8460a4661ad996829` |
 
-No `ALTER TABLE ... DISABLE TRIGGER` is required for the writes this plan actually does. Disable would be a broader foot-gun (it would also silence a bad status write). The detach of `trg_decrement_stock_on_confirm` is a drop, not a session disable, and ADR-025 already requires it.
+The `master_order_id` link does not disable a trigger. It changes only that column and passes `enforce_order_transition` (§3, first paragraphs). D1 is the one status write, and it cannot pass that function (§4.9). M5 disables **only** `trg_enforce_order_transition` around those five UPDATEs and five history INSERTs, then enables it before commit. Not `DISABLE TRIGGER ALL`. Not `session_replication_role`. The detach of `trg_decrement_stock_on_confirm` stays a drop in M4, not a session disable.
 
 ---
 
 ## 4. N27 steps
 
-Order is additive, then the stock-trigger detach, then the copy, then the rename, then tighten, then grants, then function replacement, then drops. Drops are only the functions and the one trigger ADR-025 names. No table is dropped. History rules and the history foreign key are not altered.
+Order is additive, then the stock-trigger detach, then the copy, then the D1 cancel (§4.9), then the rename, then tighten, then grants, then function replacement, then drops. No table is dropped. History rules and the history foreign key are not altered.
+
+**Drops last, with one exception.** `create_order_from_inquiry` is dropped in the rename transaction (M6), not in M8. Its body is text-bound (`INSERT INTO betk.orders`, §2.1) and would break at the rename. Rewriting that body onto `seller_orders` and leaving the function would be a second checkout. Neither is allowed. The other drops stay last: M8 drops `trg_set_inquiry_converted_order` and `set_inquiry_converted_order`.
 
 ### 4.1 Additive
 
@@ -568,7 +570,7 @@ Invariant: `orders` still 7, history md5 unchanged, `listings.stock_qty` unchang
 
 ### 4.2 Detach stock-on-confirm
 
-`DROP TRIGGER trg_decrement_stock_on_confirm ON betk.orders` before any later statement that could set `status = 'confirmed'`. This backfill does not set status. The drop is still first.
+`DROP TRIGGER trg_decrement_stock_on_confirm ON betk.orders` before any later statement that could set `status = 'confirmed'`. D1 sets `cancelled`, not `confirmed`. The drop is still first, so a mistaken status write cannot decrement stock.
 
 ### 4.3 Synthetic masters
 
@@ -600,7 +602,7 @@ END
 $n27$;
 ```
 
-Then insert one master per order and set `orders.master_order_id`. That UPDATE is the write §3 already passed through `enforce_order_transition`.
+Then insert one master per order and set `orders.master_order_id`. That UPDATE is the write §3 already passed through `enforce_order_transition`. It runs while `trg_enforce_order_transition` is still enabled. The D1 status write is the next step (§4.9), not this one.
 
 ### 4.4 Link and legacy payments
 
@@ -627,11 +629,11 @@ Grants and the policy rewrites in §1.5–§1.6. Then the remaining function and
 Run after the tighten step, and again after the function migration. Expected results are in the comments.
 
 ```sql
--- DRAFT. Row counts unchanged except the new parent.
+-- DRAFT. Row counts. History gains the five D1 rows. Children stay 7.
 SELECT
   (SELECT count(*) FROM betk.seller_orders) AS children,          -- 7
   (SELECT count(*) FROM betk.master_orders) AS masters,           -- 7
-  (SELECT count(*) FROM betk.order_status_history) AS history,    -- 7
+  (SELECT count(*) FROM betk.order_status_history) AS history,    -- 12
   (SELECT count(*) FROM betk.payments) AS payments,               -- 0
   (SELECT count(*) FROM betk.order_items) AS items;               -- 0
 
@@ -660,9 +662,9 @@ WHERE m.buyer_id IS DISTINCT FROM s.buyer_id
    OR m.delivery_address_id IS DISTINCT FROM s.delivery_address_id
    OR m.betk_ref IS DISTINCT FROM s.betk_ref;                      -- 0
 
--- DRAFT. Status was not rewritten.
+-- DRAFT. D1 rewrote the five non-cancelled rows. The two that were already cancelled stay cancelled.
 SELECT status, count(*) FROM betk.seller_orders GROUP BY status;
--- pending 3, cancelled 2, confirmed 2
+-- cancelled 7
 
 -- DRAFT. No stock movement. Capture stock_qty before M04 and compare after.
 SELECT id, stock_qty FROM betk.listings ORDER BY id;
@@ -671,7 +673,49 @@ SELECT id, stock_qty FROM betk.listings ORDER BY id;
 -- 8edcd182-… = NULL
 ```
 
-History uses the §3 md5 query, not a row count alone. The seven order ids in §5 still exist.
+History uses the §3 md5 query, not a row count alone. The seven original history ids in §3 still exist and their md5s are unchanged. Exactly five new rows exist (§4.9). The seven order ids in §5 still exist.
+
+### 4.9 D1 — cancel the five non-cancelled zombies
+
+**DECIDED** 2026-09-23, scope owner. §8.2.1.
+
+**Which migration.** M5 (`v2_08_n27_masters`), after the `master_order_id` link and before `SET NOT NULL`. The link UPDATE still runs with `trg_enforce_order_transition` enabled.
+
+**Which rows.** Five. Three `pending`: `81147596-94ee-4a25-b634-34c043409242`, `b327bfb8-f807-418e-9448-1fb645351f3b`, `41c5b2c2-e5e0-4a60-9d28-3dc467a23a2a`. Two `confirmed`: `02482319-a2a7-4b54-aaf1-8c24b5a95150`, `c7ba4f04-eefd-489a-b8de-5daa917e998b`. Each becomes `cancelled`. Each gets one appended `order_status_history` row. The two already-cancelled rows are untouched: `e5d776fc-1402-484e-84c4-d2b441f5868f`, `da73deed-0670-4cc7-bccd-064b8d301b6f`. No second history row for those two.
+
+**Why.** Measured 2026-09-23: `order_items` 0, `payments` 0, `orders` 7, history 7. v2 `confirmed` is admin release after a verified deposit (ERD §6.2, ADR-025). That is false for these rows. Left as `pending` or `confirmed`, the Phase 11 deposit-window sweeper and the Phase 13 prep-SLA ladder would act on them. No stock moves: zero items, M4 has dropped `trg_decrement_stock_on_confirm`, and `restore_stock_on_cancel` is not created until M8.
+
+`confirmed_at` stays as stored. `cancellation_reason` stays NULL (nullable; the two existing cancelled rows are also NULL). `orders.cancelled_by` is set to `system` on the five only.
+
+**Why the transition does not pass the trigger, and why “after the rework” is not the fix.** Measured `pg_get_functiondef(betk.enforce_order_transition)` on 2026-09-23. `pending → cancelled` raises `BETK_ORDER_CANCEL_BUYER_ONLY` unless `OLD.buyer_id = auth.uid()`. A migration’s `auth.uid()` is NULL. `confirmed → cancelled` raises `BETK_NOT_CANCELLABLE` (`OLD.status <> 'pending'`). The M8 rework (ERD §7.1) still does not admit this write: system cancel from `pending` requires a `payment_deadline` that has passed, and these masters are inserted with `payment_deadline` NULL; `confirmed → cancelled` is admin escalation only. M8 also creates `restore_stock_on_cancel`, which would see a later cancel. The write stays in M5, before that trigger exists.
+
+**Scoped disable.** Same M5 transaction, only around the five UPDATEs and the five INSERTs:
+
+```sql
+-- DRAFT. Phase 08, M5. Not DISABLE TRIGGER ALL. Not session_replication_role.
+ALTER TABLE betk.orders DISABLE TRIGGER trg_enforce_order_transition;
+-- five UPDATEs, five history INSERTs
+ALTER TABLE betk.orders ENABLE TRIGGER trg_enforce_order_transition;
+```
+
+Abort before the DISABLE if `payments` ≠ 0, `order_items` ≠ 0, or those five ids are not the three `pending` plus two `confirmed` named above. The DISABLE is transactional: an abort rolls it back. ENABLE runs before commit. The migration fails if `pg_trigger.tgenabled` for `trg_enforce_order_transition` is not `O` after ENABLE.
+
+**Actor columns on the appended row.** INSERT only. History is append-only (`no_update_order_history`, `no_delete_order_history`, both `DO INSTEAD NOTHING`). Live nullability measured 2026-09-23 from `information_schema.columns` on `betk.order_status_history`:
+
+| column | nullable | default | this row holds |
+|---|---|---|---|
+| `id` | NO | `gen_random_uuid()` | default |
+| `order_id` | NO | none | that order’s id |
+| `from_status` | YES | none | the status before the update (`pending` or `confirmed`) |
+| `to_status` | NO | none | `cancelled` |
+| `changed_by` | YES | none | NULL. FK `order_status_history_changed_by_fkey` references `betk.users`. There is no `auth.uid()`. Do not insert a user id |
+| `changed_by_type` | NO | none | `system`. `cancelled_by_type` labels measured the same day: `buyer`, `seller`, `admin`, `system`. The column has no default, so the INSERT supplies it |
+| `notes` | YES | none | `N27: cancelled; zero items and zero payments` |
+| `created_at` | NO | `now()` | default |
+
+**Verification, same transaction, before commit.** The §3 md5 of each of the original seven history ids is unchanged. `count(*)` from `order_status_history` is 12. Rows whose `id` is not one of those seven: exactly 5. Each of the five orders has exactly one new row with `to_status = cancelled`, `changed_by` NULL, `changed_by_type = system`, and that notes text. Each of the two already-cancelled orders still has exactly one history row. `listings.stock_qty` matches the capture taken before this statement. Payments stay 0. Items stay 0.
+
+The five INSERTs are a point of no return. The delete rule will not remove them. There is no down-step that deletes them.
 
 ---
 
@@ -683,7 +727,7 @@ Cluster query (executed): `orders` joined to nothing that returned rows for item
 
 **Origin, from the rows plus REG-71’s recorded prefixes (not from a fresh guess).** Two bursts on 2026-07-23, about a minute apart. Users were created 15–20 seconds before the orders. `betk_ref` values are exactly the residue prefixes REG-71 names: `P7T02B-8cf7a1cb-*`, `P7T02B-a97d046c-*`, and `BETK-20260723-A04E` / `E239` / `E926`. History notes are `order created`, `order cancelled by buyer`, and `order accepted by seller`. The `BETK-YYYYMMDD-XXXX` shape is what `create_order_from_inquiry` writes. The `P7T02B-…-L` / `-M` shape is the T02b write-layer pair (cancel / accept) from that same purge record. Phone users in the cluster have a null email. The only `gmail.com` user (`8c614e74-…`, seller, created 2026-07-20) owns store `b741aa58-…` and listing `151532d9-…` (`stock_qty` 50). **No order, inquiry, or address references that store.** The migration does not touch it.
 
-**Stock.** Both listings the inquiries point at have `stock_qty` NULL, so the live decrement function’s `stock_qty IS NOT NULL` filter matches nothing. `order_items` is 0, so there is no line whose quantity could have been subtracted and still be visible. The migration’s own proof is: do not change `status`, and compare `stock_qty` before and after. It is not a claim that a past UPDATE was replayed.
+**Stock.** Both listings the inquiries point at have `stock_qty` NULL, so the live decrement function’s `stock_qty IS NOT NULL` filter matches nothing. `order_items` is 0, so there is no line whose quantity could have been subtracted and still be visible. D1 changes five statuses to `cancelled` and does not change `stock_qty`. The proof is the before/after `stock_qty` compare in §4.9. It is not a claim that a past UPDATE was replayed.
 
 **Payments.** Zero rows on every order. `confirmed_at` on the two confirmed orders was stamped (the live trigger stamps it on `pending → confirmed`) and no deposit row survives. This plan does not insert payments to make the story tidy.
 
@@ -691,7 +735,7 @@ Cluster query (executed): `orders` joined to nothing that returned rows for item
 
 **v2 constraints these rows do not violate, if the plan refuses the checks that would invent a violation.** Money CHECKs already hold (`total = subtotal + fee`). `refunded_subtotal` default 0 is within `subtotal`. `display_ref` NULL is what REG-81 requires for the migration. `combined_delivery_total` 0 passes `>= 0`. `master_orders.betk_ref` is `varchar(25)` NOT NULL and UNIQUE. All seven refs fit. Four of them are `P7T02B-…`, which is not the new-checkout format `BETK-YYYYMMDD-XXXX`. Copying them is what ERD §4 requires. A format CHECK is not in the ERD as a constraint and would reject those four; this plan does not add one. A CHECK that every seller order has two payments would fail all seven; it is not in the ERD as a table constraint and this plan does not add it.
 
-**Status label.** ERD §4 says leave `pending` / `confirmed` / `cancelled` stored and do not rewrite them through `enforce_order_transition`. The two `confirmed` rows are the unresolved decision in §8. The mechanical copy below does not change `status`.
+**Status label.** The tables below are the stored image measured before M5. D1 (§4.9, decided 2026-09-23) then sets the five non-cancelled rows to `cancelled` and appends one history row each. The two already-cancelled rows stay as stored. `confirmed_at` is not cleared. This overrides ERD §4’s “do not rewrite status” for these five rows only: leaving `pending` or `confirmed` would hand them to the Phase 11 sweeper and the Phase 13 SLA ladder, and v2 `confirmed` means a verified deposit these rows do not have.
 
 Shared master defaults for every row: `combined_delivery_total = 0.00`, proof columns NULL, `payment_deadline` NULL, `recipient_name` NULL, `recipient_phone` NULL. Child `delivery_method` stays `delivery`. Child `commission_rate` and `commission_amount` stay `0.00`. `display_ref` stays NULL. `refunded_subtotal` becomes 0. `balance_confirmed_at` and `payout_eligible_at` stay NULL.
 
@@ -710,10 +754,11 @@ Shared master defaults for every row: `combined_delivery_total = 0.00`, proof co
 | payments / items / shipment / dispute / review / messages | none |
 | history | 1 row, NULL → pending, changed_by the buyer, note `order created` |
 | master | copy buyer, address, ref; snapshots from that address; delivery total 0 |
+| after M5 | `cancelled`, `cancelled_by = system`, one new history row (§4.9). This row is one of the five |
 
 ### 5.2 `b327bfb8-f807-418e-9448-1fb645351f3b`
 
-Same buyer, store, address, and money as 5.1. Status `pending`. Ref `BETK-20260723-E239`. Inquiry `3b5a6c3c-963a-46c9-b231-8502980534ab` (same listing, `converted_to_order_id` NULL). History NULL → pending, note `order created`. Created 20:22:16 UTC. Master is a second row, not a shared master: v1 is 1:1.
+Same buyer, store, address, and money as 5.1. Status `pending`. Ref `BETK-20260723-E239`. Inquiry `3b5a6c3c-963a-46c9-b231-8502980534ab` (same listing, `converted_to_order_id` NULL). History NULL → pending, note `order created`. Created 20:22:16 UTC. Master is a second row, not a shared master: v1 is 1:1. After M5: `cancelled`, `cancelled_by = system`, one new history row (§4.9).
 
 ### 5.3 `e5d776fc-1402-484e-84c4-d2b441f5868f`
 
@@ -726,8 +771,9 @@ Same buyer, store, address, and money as 5.1. Status `pending`. Ref `BETK-202607
 | money | 200.00 + 0.00 = 200.00 |
 | history | pending → cancelled, changed_by the buyer, note `order cancelled by buyer` |
 | master | buyer copied; `delivery_address_id` NULL; snapshots NULL; ref copied; delivery total 0 |
+| after M5 | untouched. Already `cancelled`. No new history row |
 
-### 5.4 `02482319-a2a7-4b54-aaf1-8c24b5a95150` — confirmed, unresolved semantic
+### 5.4 `02482319-a2a7-4b54-aaf1-8c24b5a95150` — confirmed, cancelled by D1
 
 | | |
 |---|---|
@@ -740,20 +786,21 @@ Same buyer, store, address, and money as 5.1. Status `pending`. Ref `BETK-202607
 | what v1 `confirmed` was | seller acceptance. The note and `changed_by_type` say that. The live function also required a confirmed deposit at the time of the UPDATE. No deposit row exists now |
 | what v2 `confirmed` means | admin release (ERD §6.2, ADR-025). `confirmed_at` is the deposit-confirmed fact the seller reads |
 | master | same shape as 5.3 (no address, no proof, delivery total 0). Status column is not on the master |
+| after M5 | `cancelled`, `cancelled_by = system`, `confirmed_at` left set, one new history row (§4.9) |
 
-The label mapping is not derivable as a single instruction. ERD §4 says leave the stored status. ERD §6.2 says this status means admin release. Both cannot describe this row without a human choice. §8 lists it. The copy in §4 does not change the label and does not null `confirmed_at`.
+D1 (2026-09-23) is the human choice. The stored `confirmed` label is not left in place. `confirmed_at` is not cleared.
 
 ### 5.5 `41c5b2c2-e5e0-4a60-9d28-3dc467a23a2a`
 
-Second burst, 20:23:40 UTC. Status `pending`. Ref `BETK-20260723-E926`. Buyer `98404561-9335-4036-a640-43ce3ea8e351`. Store `7d3ba387-9014-4f13-b8ff-5e32deadd777` (seller `c263af6c-…`). Inquiry `95f2b10e-4cc9-4f9b-b5a0-1d7cea692447`, listing `8edcd182-…` (`stock_qty` NULL), `converted_to_order_id` NULL. Address `ce829d0f-cd68-49eb-a381-afe369f5c27c` (Cairo / Nasr City). Money 100.00. History NULL → pending, note `order created`. Master copies buyer, address, ref; delivery total 0.
+Second burst, 20:23:40 UTC. Status `pending`. Ref `BETK-20260723-E926`. Buyer `98404561-9335-4036-a640-43ce3ea8e351`. Store `7d3ba387-9014-4f13-b8ff-5e32deadd777` (seller `c263af6c-…`). Inquiry `95f2b10e-4cc9-4f9b-b5a0-1d7cea692447`, listing `8edcd182-…` (`stock_qty` NULL), `converted_to_order_id` NULL. Address `ce829d0f-cd68-49eb-a381-afe369f5c27c` (Cairo / Nasr City). Money 100.00. History NULL → pending, note `order created`. Master copies buyer, address, ref; delivery total 0. After M5: `cancelled`, `cancelled_by = system`, one new history row (§4.9).
 
 ### 5.6 `da73deed-0670-4cc7-bccd-064b8d301b6f`
 
-Status `cancelled`, `cancelled_by = buyer`. Ref `P7T02B-a97d046c-L`. Same buyer and store as 5.5. Inquiry and address NULL. Money 200.00. History pending → cancelled, note `order cancelled by buyer`. Master like 5.3.
+Status `cancelled`, `cancelled_by = buyer`. Ref `P7T02B-a97d046c-L`. Same buyer and store as 5.5. Inquiry and address NULL. Money 200.00. History pending → cancelled, note `order cancelled by buyer`. Master like 5.3. After M5: untouched. No new history row.
 
-### 5.7 `c7ba4f04-eefd-489a-b8de-5daa917e998b` — confirmed, same unresolved semantic
+### 5.7 `c7ba4f04-eefd-489a-b8de-5daa917e998b` — confirmed, cancelled by D1
 
-Status `confirmed`. `confirmed_at` 2026-07-23 20:23:44.162 UTC. Ref `P7T02B-a97d046c-M`. Same buyer and store as 5.5. Inquiry and address NULL. Money 200.00. No payments. History pending → confirmed, `changed_by` `c263af6c-…`, `changed_by_type = seller`, note `order accepted by seller`. Same open decision as 5.4. The copy does not change the label.
+Status `confirmed`. `confirmed_at` 2026-07-23 20:23:44.162 UTC. Ref `P7T02B-a97d046c-M`. Same buyer and store as 5.5. Inquiry and address NULL. Money 200.00. No payments. History pending → confirmed, `changed_by` `c263af6c-…`, `changed_by_type = seller`, note `order accepted by seller`. After M5: same outcome as 5.4 (`cancelled`, `cancelled_by = system`, `confirmed_at` left set, one new history row).
 
 ---
 
@@ -767,6 +814,23 @@ Expected performance delta: `auth_rls_initplan` does not rise. Replaced policies
 
 ### Phase 08
 
+### Fail-closed intermediates (C-FIX, 2026-09-23)
+
+Every new table is created in M2. `ENABLE ROW LEVEL SECURITY` is in that same migration, before commit. Measured `pg_default_acl` on `betk` for `postgres` grants `anon` and `authenticated` `arwd` on new tables at `CREATE TABLE`. Without RLS in the same committed migration, that grant would expose the table. With RLS on and no policy yet, the table is deny-all. Policies for these eight are also in M2, so the committed state has policies. They are not split onto a later migration. Statement order inside the one M2 transaction, per table: `CREATE TABLE`, then `ENABLE ROW LEVEL SECURITY`, then `CREATE POLICY`, then any grant beyond the default ACL.
+
+| new table | create | RLS enable | policies |
+|---|---|---|---|
+| `cart_items` | M2 | M2 | M2 |
+| `master_orders` | M2 | M2 | M2 |
+| `returns` | M2 | M2 | M2 |
+| `return_evidence` | M2 | M2 | M2 |
+| `agreement_acceptances` | M2 | M2 | M2 |
+| `store_categories` | M2 | M2 | M2 |
+| `courier_rates` | M2 | M2 | M2 |
+| `store_pickup_addresses` | M2 | M2 | M2 |
+
+No new table is created in M3–M8. The six existing zero-policy tables (`dispute_evidence`, `dispute_messages`, `flagged_content`, `restock_alerts`, `seller_strikes`, `whatsapp_templates`) already have RLS on (§0.9). Their policies land in M7. `sessions` and `otp_tokens` stay zero policies, RLS already on. None of those eight is a new table, and none is committed with RLS off.
+
 **M1 — `v2_08_enum_labels`**
 - Objects: `order_status` + `ready`; new enums; four `doc_type` labels.
 - Preconditions: §0 enum list.
@@ -776,7 +840,7 @@ Expected performance delta: `auth_rls_initplan` does not rise. Replaced policies
 - **Point of no return:** enum labels stay.
 
 **M2 — `v2_08_new_tables`**
-- Objects: the 8 new tables, their CHECKs, FKs, partial uniques, the courier exclusion, RLS, policies in the `(select auth.uid())` form, grants. `btree_gist` in `extensions`. No rows except what a default needs. No synthetic masters yet (`master_orders` may be created empty here).
+- Objects: the 8 new tables, their CHECKs, FKs, partial uniques, the courier exclusion, RLS enabled in this same migration (table above), policies in the `(select auth.uid())` form, grants. `btree_gist` in `extensions`. No rows except what a default needs. No synthetic masters yet (`master_orders` may be created empty here). `shipments` is not in this migration; its INSERT policy is M7.
 - Preconditions: M1 committed (new enums). `btree_gist` absent.
 - Verify: `pg_tables` count for `betk` + `betk_analytics` = 51. The 8 new tables have at least one policy each, except none of them is `sessions` or `otp_tokens`.
 - Advisor delta: rls-no-policy does not include the new tables. Unindexed-FK INFO rises. Initplan does not rise.
@@ -784,7 +848,7 @@ Expected performance delta: `auth_rls_initplan` does not rise. Replaced policies
 - Point of no return: no, until M5 writes masters.
 
 **M3 — `v2_08_additive_columns`**
-- Objects: §1.2 columns, the NOT VALID listing CHECK, `admin_settings` keys. Keys whose ERD §6.3 text states a default meaning are seeded with that meaning (`quote_tolerance_multiplier` 2, `quote_validity_hours` 24, `prep_cap_days` 3, `seller_category_limit` 3). Keys with no stated number (`price_band_*`, `payment_window_minutes`, `return_window_hours`, `food_requirements`, the four agreement version keys) are inserted as empty text. Empty means “not configured”, the REG-62 pattern. The checkout gate set is not hard-coded (REG-88).
+- Objects: §1.2 columns, the NOT VALID listing CHECK, `admin_settings` keys. Keys whose ERD §6.3 text states a default meaning are seeded with that meaning (`quote_tolerance_multiplier` 2, `quote_validity_hours` 24, `prep_cap_days` 3, `seller_category_limit` 3). Keys with no stated number are inserted as empty text: `price_band_min_egp`, `price_band_max_egp`, `payment_window_minutes`, `return_window_hours`, `food_requirements`, `agreement_buyer_terms_version`, `agreement_seller_agreement_version`, `agreement_return_policy_version`, `agreement_privacy_version`. Empty means “not configured”. Each consumer fails closed (D4, §8.2.5). The checkout gate set is not hard-coded (REG-88).
 - Preconditions: M2. Active listing count re-read; if it is not the §0 count, the NOT VALID choice still holds, a validated CHECK still does not.
 - Verify: new columns nullable or defaulted; `chk_active_listing_shipping.convalidated` is false; history md5 unchanged; orders still 7.
 - Advisor delta: none expected on security.
@@ -800,28 +864,29 @@ Expected performance delta: `auth_rls_initplan` does not rise. Replaced policies
 - Point of no return: no.
 
 **M5 — `v2_08_n27_masters`**
-- Objects: §4.3 insert and link. Abort guards for payments ≠ 0 and orders ≠ 7. Then `SET NOT NULL` on `master_order_id`. Then `betk_ref` DROP NOT NULL.
-- Preconditions: M4 applied. History md5 equals §3. Payments count 0. The UPDATE touches only `master_order_id`.
-- Verify: §4.8 queries, plus history md5.
+- Objects: §4.3 insert and link (trigger still enabled; the UPDATE touches only `master_order_id`). Abort guards for payments ≠ 0, order_items ≠ 0, and orders ≠ 7. Then §4.9: disable only `trg_enforce_order_transition`, cancel the five named rows, insert five history rows, enable the trigger. Then `SET NOT NULL` on `master_order_id`. Then `betk_ref` DROP NOT NULL.
+- Preconditions: M4 applied. History md5 equals §3. Payments count 0. Items count 0. The five ids still have the statuses §4.9 names.
+- Verify: §4.8 queries, §4.9 (original 7 md5s unchanged, exactly 5 new history rows), `tgenabled = 'O'` on `trg_enforce_order_transition`.
 - Advisor delta: none expected (no new policy).
-- Down-step before `SET NOT NULL`: null `master_order_id`, delete the masters. **After `SET NOT NULL`:** deleting a master fails NO ACTION. That is forward-fix only.
-- **Point of no return:** the `SET NOT NULL`.
+- Down-step before the five history INSERTs and before `SET NOT NULL`: null `master_order_id`, delete the masters. **After the five INSERTs:** no down-step deletes them (`no_delete_order_history`). **After `SET NOT NULL`:** deleting a master fails NO ACTION. Both are forward-fix only.
+- **Point of no return:** the five history INSERTs, and the `SET NOT NULL`.
 
 **M6 — `v2_08_rename_seller_orders`**
-- Objects, one transaction: rename; rewrite `enforce_payment_update` so its body says `betk.seller_orders`; reschedule jobid 8 onto `betk.seller_orders`; `DROP FUNCTION betk.create_order_from_inquiry`; `CREATE FUNCTION betk.checkout_from_cart` (INVOKER, pinned `search_path`, EXECUTE granted to `authenticated` only, CF-2, ADR-022 inside it). Does not rename constraints or indexes. Does not leave a commit whose function body or cron command still says `betk.orders`.
+- Objects, one transaction: rename; rewrite `enforce_payment_update` so its body says `betk.seller_orders`; reschedule jobid 8 onto `betk.seller_orders`; `DROP FUNCTION betk.create_order_from_inquiry` (the drops-last exception, §4: the body is text-bound and would break at the rename); `CREATE FUNCTION betk.checkout_from_cart` (INVOKER, pinned `search_path`, CF-2, ADR-022 inside it, D4 empty-window raise). Then `REVOKE EXECUTE ON FUNCTION betk.checkout_from_cart FROM PUBLIC, anon, authenticated`. No `GRANT` to `authenticated` in this migration. Does not rename constraints or indexes. Does not leave a commit whose function body or cron command still says `betk.orders`.
 - Preconditions: M5. Every child has a master. rg confirms the text-bound list in §2 is the one this migration covers. `checkout_from_cart` inserts into tables that already exist (M2, M3, M5) and does not call `set_inquiry_converted_order`.
-- Verify: `to_regclass('betk.orders')` is null; `to_regclass('betk.seller_orders')` is not; `to_regprocedure` of `create_order_from_inquiry` is null; `pg_get_functiondef` of `enforce_payment_update` and of `checkout_from_cart` does not contain `betk.orders`; `checkout_from_cart`’s `RETURNING` list is not `*`; `cron.job` command for `daily-platform-snapshot` does not contain `betk.orders`; history FK still references the same relation (OID), still NO ACTION; rules still `DO INSTEAD NOTHING`.
+- Why EXECUTE stays revoked here. The function is created before M7’s grants and policy rewrites, including ADR-020 and the `shipments` INSERT policy. `betk` has no default EXECUTE ACL for functions (measured `pg_default_acl`: function defaults are on `public` only). PostgreSQL still grants EXECUTE to PUBLIC on `CREATE FUNCTION` unless revoked. A missing GRANT is not a revoke. M6 revokes PUBLIC, `anon`, and `authenticated` in the same transaction as the create. Until M7’s GRANT, `authenticated` cannot call it.
+- Verify: `to_regclass('betk.orders')` is null; `to_regclass('betk.seller_orders')` is not; `to_regprocedure` of `create_order_from_inquiry` is null; `pg_get_functiondef` of `enforce_payment_update` and of `checkout_from_cart` does not contain `betk.orders`; `checkout_from_cart`’s `RETURNING` list is not `*`; `routine_privileges` for `checkout_from_cart` has no EXECUTE for `authenticated` or `anon`; `cron.job` command for `daily-platform-snapshot` does not contain `betk.orders`; history FK still references the same relation (OID), still NO ACTION; rules still `DO INSTEAD NOTHING`.
 - Advisor delta: `checkout_from_cart` is INVOKER with `search_path` pinned, so search_path WARN stays 6 and definer-exec stays 2+2.
 - Down-step: forward-fix. Restoring `create_order_from_inquiry` would reopen the retired checkout, and renaming the table back after this commit breaks the new function.
 - **Point of no return:** the commit, for any session still sending `.from("orders")`, and for the dropped RPC. Main’s RLS smoke will fail against staging until the Phase 08 PR’s test edits are what CI runs. Apply this migration from that PR’s branch, with the test edits already in the branch.
 
 **M7 — `v2_08_grants_and_policies`**
-- Objects: ADR-020 revoke and column grant; ADR-021 payments UPDATE list; `master_orders` grants; policy rewrites in §1.5; REG-69 array; policies on the six zero-policy tables; confirm zero policies on `sessions` and `otp_tokens`.
-- Preconditions: M6. Column list for the SELECT grant is generated from `information_schema.columns` at apply time, minus `delivery_fee` and `total_amount`, not typed from memory.
-- Verify: `column_privileges` for `authenticated` SELECT on `seller_orders` excludes those two and includes `refunded_subtotal`. `anon` has no SELECT on `seller_orders`. `payments` authenticated UPDATE does not include `proof_path` or `transfer_reference`. `pg_policies.qual` for `payments_access` does not contain `my_store_id`. `sessions` and `otp_tokens` still have zero policies. `modlog_admin_insert` still exactly one.
+- Objects: ADR-020 revoke and column grant; ADR-021 payments UPDATE list; `master_orders` grants; policy rewrites in §1.5, including the new `shipments` INSERT policy (checkout); REG-69 array; policies on the six zero-policy tables; confirm zero policies on `sessions` and `otp_tokens`. Last statement, after those grants and policies: `GRANT EXECUTE ON FUNCTION betk.checkout_from_cart TO authenticated`. Not to `anon`. Not to PUBLIC.
+- Preconditions: M6. `authenticated` has no EXECUTE on `checkout_from_cart`. Column list for the SELECT grant is generated from `information_schema.columns` at apply time, minus `delivery_fee` and `total_amount`, not typed from memory.
+- Verify: `column_privileges` for `authenticated` SELECT on `seller_orders` excludes those two and includes `refunded_subtotal`. `anon` has no SELECT on `seller_orders`. `payments` authenticated UPDATE does not include `proof_path` or `transfer_reference`. `pg_policies.qual` for `payments_access` does not contain `my_store_id`. A `shipments` INSERT policy exists. `sessions` and `otp_tokens` still have zero policies. `modlog_admin_insert` still exactly one. `authenticated` has EXECUTE on `checkout_from_cart`; `anon` does not.
 - Advisor delta: rls-no-policy 8 → 2. Initplan does not rise. Replaced policies’ initplan lints clear.
-- Down-step: restore the previous grants and policy expressions from this plan’s §0. Possible, and easy to get wrong. Prefer forward-fix after production traffic.
-- Point of no return: soft. The grant is reversible SQL. The app break from `select *` is immediate (REG-92).
+- Down-step: restore the previous grants and policy expressions from this plan’s §0, and revoke the new EXECUTE. Possible, and easy to get wrong. Prefer forward-fix after production traffic.
+- Point of no return: soft. The grant is reversible SQL. The app break from `select *` is immediate (REG-92). The EXECUTE grant is the moment `checkout_from_cart` becomes callable by `authenticated`.
 
 **M8 — `v2_08_functions`**
 - Objects: the rest of §1.7. `checkout_from_cart` already exists from M6; this migration replaces its body only if a trigger created here must be called from it, still without a `SELECT` or `RETURNING` of the hidden columns. ADR-023 on both write paths, payout cap, full `enforce_payment_update` (`refunded_subtotal`, `balance_confirmed_at`, proof copy), `enforce_order_transition` per ERD §7.1, `release_seller_orders`, `restore_stock_on_cancel`, `touch_stock`, `enforce_store_category_cap`, `enforce_master_proof_update`. Last statements: `DROP TRIGGER trg_set_inquiry_converted_order` and `DROP FUNCTION set_inquiry_converted_order`. `create_order_from_inquiry` is already gone; this migration does not recreate it.
@@ -829,7 +894,7 @@ Expected performance delta: `auth_rls_initplan` does not rise. Replaced policies
 - Verify: Phase 08 exit items 6, 8, and 9 in `BETK_PHASES.md`. `pg_get_functiondef(checkout_from_cart)` shows the two money columns assigned from locals and a `RETURNING` list that is not `*`. ADR-023 trigger count is 2 (pickup writes, and `stores.governorate` updates). `to_regprocedure` of `set_inquiry_converted_order` is null. `converted_to_order_id` and `fk_inquiries_order` still exist.
 - Advisor delta: search_path WARN stays 6. Definer-exec stays 2+2. New definers revoke EXECUTE.
 - Down-step: forward-fix.
-- **Point of no return:** the drop of `set_inquiry_converted_order`. The checkout RPC’s point of no return was M6.
+- **Point of no return:** the drop of `set_inquiry_converted_order`. The checkout function’s create-and-revoke point of no return was M6. `authenticated` EXECUTE is M7.
 
 ### Not in Phase 08
 
@@ -868,7 +933,7 @@ Phase 08 rehearses on a preview branch by seeding the **shape**, then running M4
 - 2 addresses, 2 stores, listings with `stock_qty` NULL, plus one unrelated listing with a non-null stock
 - `betk_ref` values that include both a `BETK-YYYYMMDD-XXXX` value and a `P7T02B-…` value, each unique and ≤ 25 characters
 
-The rehearsal asserts §4.8 and the history md5 of the **seed**, not the staging md5. It also asserts the unrelated listing’s `stock_qty` is unchanged and that an attempted `DELETE` of a history-bearing order still fails. Staging is not touched until that rehearsal passes. The seven staging ids are not copied onto the preview; the shape is.
+The rehearsal asserts §4.8 and §4.9 against the **seed**, not the staging md5: the seed’s original seven history md5s are unchanged, and exactly five new history rows exist (`changed_by` NULL, `changed_by_type = system`, notes `N27: cancelled; zero items and zero payments`). All seven children are `cancelled`. The two seed rows that started `cancelled` have no second history row. It also asserts the unrelated listing’s `stock_qty` is unchanged and that an attempted `DELETE` of a history-bearing order still fails. Staging is not touched until that rehearsal passes. The seven staging ids are not copied onto the preview; the shape is.
 
 ### 7.3 What rollback means
 
@@ -876,14 +941,14 @@ The rehearsal asserts §4.8 and the history md5 of the **seed**, not the staging
 |---|---|
 | M1 | labels remain. Forward-fix |
 | M2–M4 | drop the new objects and recreate the stock trigger, if no master rows exist |
-| M5 after `SET NOT NULL` | forward-fix. A down migration would have to drop NOT NULL, delete masters, and prove history md5. Do not plan on it after the apply is committed |
+| M5 after the five history INSERTs, or after `SET NOT NULL` | forward-fix. The history rows cannot be deleted. A down migration would have to drop NOT NULL, delete masters, and prove the original seven md5s. Do not plan on it after the apply is committed |
 | M6–M8 | forward-fix. The relation name, the grants, and the retired RPC are the new baseline |
 
 “Rollback” after M5’s point of no return means a new forward migration, not a reset of staging and not a delete of the seven orders.
 
 ---
 
-## 8. Conflicts and open decisions
+## 8. Conflicts and decisions
 
 ### 8.1 Conflicts with the rules (resolved in this plan, not by a new table)
 
@@ -891,59 +956,77 @@ The rehearsal asserts §4.8 and the history md5 of the **seed**, not the staging
 |---|---|
 | Seller is inside live `payments_access`, `shipments_access`, and `shipment_tracking_events_access`. N28 and ERD §8 say seller none | M7 rewrites those three. `order_messages` keeps the seller |
 | ADR-019 lets the buyer UPDATE `payments.proof_path`. ADR-021 moves that write to the master | M7 narrows the grant. The trigger copies |
-| v1 `pending → confirmed` is seller acceptance and fires stock. ADR-025 / OD-15: admin release, stock at checkout | M4 detaches the trigger before M5. M8 rewrites the transition. N27 does not change status, so the seven are not pushed through the new transition |
+| v1 `pending → confirmed` is seller acceptance and fires stock. ADR-025 / OD-15: admin release, stock at checkout | M4 detaches the trigger before M5. M8 rewrites the transition. D1 cancels the five non-cancelled zombies in M5 (§4.9) so they are not left for the Phase 11 sweeper or the Phase 13 SLA ladder. The two already-cancelled rows are not rewritten |
 | `select *` on `seller_orders` will raise `42501` after ADR-020. Generated `Row` still lists the columns | REG-92 is a lint or a runtime test in Phase 08, not `tsc` and not types-drift |
 | REG-36 wants every policy rewritten to `(select auth.uid())`. Phase 08 must not rewrite every policy | Only new and replaced policies use that form |
 | REG-37 wants the 37 unindexed FKs indexed. Phase 08 must not be that sweep | New FK INFO lints are an expected delta. The old 37 stay |
 | ERD §8 seller may read own `seller_documents`. The docs-bucket sentence says seller-NO | Seller-NO means no seller read of a **buyer** proof. Own-prefix SELECT stays. No new bucket, no new table |
-| `submit_seller_application` signature “is Stage C” (ERD §7) and the live caller on `main` still sends the old argument list | Open decision 8.2.4. Breaking the signature at M8 breaks onboarding on staging the moment the migration commits |
-| Two `confirmed` rows mean seller-accepted in the history and admin-released in v2 | Open decision 8.2.1. The copy does not rewrite them |
+| `submit_seller_application` signature “is Stage C” (ERD §7) and the live caller on `main` still sends the old argument list | **DECIDED** D3 (2026-09-23). Argument list unchanged in Phase 08. Phase 09 owns the onboarding change. M8 does not break the caller |
+| Two `confirmed` rows mean seller-accepted in the history and admin-released in v2. Three `pending` rows have no deposit either | **DECIDED** D1 (2026-09-23). M5 sets those five to `cancelled` and appends one history row each (§4.9). The original history rows are not updated |
 
-### 8.2 Unresolved decisions (human)
+### 8.2 Decisions
 
-The plan does not pick these. Recommendations are recommendations.
+D1–D4 were decided by the scope owner on 2026-09-23. They are not the §10 signature. Phase 08 does not apply M1 until that block is signed. 8.2.3 stays the drafted listing-CHECK recommendation; signing the plan accepts it. No REG was minted. Next free remains REG-93.
 
-**8.2.1 The two confirmed orders (`02482319-…`, `c7ba4f04-…`).**
+**8.2.1 D1 — the five non-cancelled zombies. DECIDED 2026-09-23.**
 
-History: `changed_by_type = seller`, note `order accepted by seller`, `confirmed_at` set, zero payment rows. v2 reads `status = confirmed` and `confirmed_at IS NOT NULL` as admin release.
+The three `pending` rows and the two `confirmed` rows (`02482319-…`, `c7ba4f04-…`) migrate as `cancelled`. Each gets one appended `order_status_history` row citing N27. INSERT only. The two already-cancelled rows are untouched. Mechanism, actor columns, and the check (original 7 md5s unchanged, exactly 5 new rows) are §4.9. Migration is M5.
 
-| option | effect |
-|---|---|
-| A. Leave `status` and `confirmed_at` as stored (ERD §4’s “no status rewrite”) | The rows look released. There is no deposit. Payout stays impossible because `balance_confirmed_at` and `payout_eligible_at` stay NULL |
-| B. Null `confirmed_at` and set `status` back to `pending` | Matches “no deposit”. It is a status rewrite ERD §4 forbids, and it must not run through a trigger that treats the write as a new transition. It also rewrites history if anyone inserts a history row. This plan forbids that history write |
-| C. Leave the label and add a comment column or a flag | A new column the ERD does not list. **Stopped.** Not an option this plan can take |
+Reason: zero items and zero payments, so v2 `confirmed` (admin-released after a verified deposit) is false, and left as-is the Phase 11 deposit-window sweeper and the Phase 13 SLA ladder would act on them. No stock moves.
 
-Recommendation: **A**, because B rewrites status and C invents a column. The approval block is what accepts A. Until it is signed, Phase 08 does not apply M5.
-
-**8.2.2 Goods-portion formula for `refunded_subtotal`.**
-
-ERD §3.10 says the trigger writes the goods portion and does not copy `payments.refunded_amount`. It does not state the split. These seven rows have nothing to refund, so M5 does not need the formula. M8’s trigger does, before any refund exists.
+The earlier options are closed by this decision, not left open:
 
 | option | effect |
 |---|---|
-| A. Admin action passes the goods portion explicitly; the trigger only checks `0 <= refunded_subtotal <= subtotal` and writes that value | No invented proration. The fee remainder stays on `payments.refunded_amount` |
-| B. Prorate `refunded_amount` by `subtotal / total_amount` inside the trigger | Uses the hidden total. The ERD does not state this ratio |
+| A. Leave `status` and `confirmed_at` as stored | Not taken. The rows would look released, or would stay in the sweeper and the SLA ladder |
+| B. Null `confirmed_at` and set `status` back to `pending` | Not taken. That puts them back on the payment window |
+| C. A comment column or a flag | Not taken. The ERD does not list that column |
 
-Recommendation: **A**.
+`confirmed_at` is left set. Status becomes `cancelled`.
+
+**8.2.2 D2 — `refunded_subtotal`. DECIDED 2026-09-23. Accepted as recommended (A).**
+
+The admin supplies the goods portion at refund time. `enforce_payment_update` writes that value. It does not prorate by `subtotal / total_amount` and it does not copy `SUM(payments.refunded_amount)`. The CHECK `0 <= refunded_subtotal <= subtotal` bounds it. These seven rows have nothing to refund; M5 does not need the formula. M8’s trigger does, before any refund exists.
+
+| option | effect |
+|---|---|
+| A. Admin passes the goods portion; the trigger checks the bounds and writes that value | **Taken.** No invented proration. The fee remainder stays on `payments.refunded_amount` |
+| B. Prorate inside the trigger | Not taken. Uses the hidden total. The ERD does not state this ratio |
 
 **8.2.3 Listing shipping CHECK.**
 
-Recommendation already drafted: `NOT VALID`, no backfill, no `VALIDATE` in Phase 08. The alternative is to invent weight and dimensions for 3 active listings. That alternative is rejected in the draft. Signing the plan accepts `NOT VALID`.
+Not a C-FIX decision. Recommendation already drafted: `NOT VALID`, no backfill, no `VALIDATE` in Phase 08. The alternative is to invent weight and dimensions for 3 active listings. That alternative is rejected in the draft. Signing the plan accepts `NOT VALID`.
 
-**8.2.4 `submit_seller_application` signature.**
+**8.2.4 D3 — `submit_seller_application`. DECIDED 2026-09-23. Accepted (B).**
+
+Argument list unchanged in Phase 08. Phase 09 owns the onboarding change (REG-65: drop the dead fee field, and only then narrow the signature). M8 keeps the arguments the live caller already sends, stops treating `p_delivery_options` and the category varchars as authority, and writes `store_categories` and `store_pickup_addresses` from `p_governorate`, `p_city`, and the category text.
 
 | option | effect |
 |---|---|
-| A. Change the signature in M8 and change `submitSellerApplication.ts` in the same Phase 08 PR | Matches “signature change is Stage C”. The staging app is broken between the migration commit and the deploy of that PR |
-| B. Keep the argument list. Ignore `p_delivery_options` and the category varchars as authority. Write `store_categories` and `store_pickup_addresses` from the arguments the caller already sends (`p_governorate`, `p_city`, category text). Phase 09 drops the dead fee field (REG-65) and only then narrows the signature | Onboarding keeps working. The ERD’s “signature change” waits for the caller |
+| A. Change the signature in M8 and change `submitSellerApplication.ts` in the same Phase 08 PR | Not taken. Staging onboarding breaks between the migration commit and the deploy |
+| B. Keep the argument list. Phase 09 narrows it | **Taken** |
 
-Recommendation: **B**.
+**8.2.5 D4 — empty `admin_settings` keys. DECIDED 2026-09-23, on condition.**
 
-**8.2.5 Empty `admin_settings` keys.**
+M3 seeds the four keys whose ERD §6.3 text states a default meaning: `quote_tolerance_multiplier` 2, `quote_validity_hours` 24, `prep_cap_days` 3, `seller_category_limit` 3. Those are documented defaults, not empty. M3 inserts the nine keys below as empty text. Empty means not configured. `payment_window_minutes` is not seeded as 30. The REG-88 document set is not hard-coded.
 
-Recommendation drafted in M3: seed the four ERD default-meanings; leave the unnumbered keys empty; do not pick `payment_window_minutes` or the REG-88 document set. Signing accepts that.
+No consumer below fails open. An empty value is not treated as zero, as unlimited, as “no document required”, or as a bypass of a neighbouring key.
 
-No REG was minted. Next free remains REG-93.
+| key | consumer | when empty |
+|---|---|---|
+| `price_band_min_egp` | Phase 09 publish (R-L21, AC-CAT-3) and Phase 10 quote send (R-Q07) | **Fails closed.** Empty is not a number, so a price cannot be inside the band. Publish is refused. Quote send is refused. Not 0. Not unbounded. REG-62 already blocks launch of publish until the band is set |
+| `price_band_max_egp` | same pair of consumers | **Fails closed.** Same rule. Either key empty is enough to refuse |
+| `payment_window_minutes` | `checkout_from_cart` writes `master_orders.payment_deadline` (R-O21). Phase 11’s sweeper cancels when that deadline has passed | **Fails closed.** Empty, or not a positive integer, makes the function raise and write no master. It does not store a NULL deadline. A NULL deadline would let the order sit where the sweeper never fires |
+| `return_window_hours` | Phase 15 return request (R-M07). Distinct from `return_hold_hours` | **Fails closed.** The request is refused while the value is empty or not a positive integer. Not unlimited. No fallback to `return_hold_hours` (payout hold, REG-86) |
+| `food_requirements` | no parser. ERD §6.3: value shape is admin text, not parsed by that spec. Food publish is R-S10 | **Fails closed.** This key grants nothing. Food publish stays refused until food approval (Phase 09 exit). An empty string does not satisfy that approval and does not skip it |
+| `agreement_buyer_terms_version` | Phase 09 signup (AC-AGR-1, R-G01) | **Fails closed.** Empty is not a current version. Signup does not create a usable account. Empty is not “no document required” |
+| `agreement_seller_agreement_version` | Phase 09 onboarding submit (AC-AGR-3, R-G04) | **Fails closed.** Submit is refused |
+| `agreement_return_policy_version` | Phase 11 checkout, only for a document the REG-88 pin includes (R-G02, AC-CHK-4) | **Fails closed.** This plan does not choose the pin. Empty is not “excluded from the gate” and is not an accepted version. If the pin includes the document, checkout writes no master while the value is empty. If the pin excludes it, checkout does not consult the key |
+| `agreement_privacy_version` | same as the return-policy key | **Fails closed.** Same rule |
+
+Already empty on staging, not re-seeded by M3, and not a fail-open: `betk_instapay_handle` (Phase 12 payment instructions; REG-62 blocks launch; an empty handle is not a business value), `betk_vodafone_cash` and `betk_orange_cash` (removed from the REG-69 array; not buyer rails; emptiness does not enable a rail). `commission_rate_pct` is `'0'`, not empty; REG-62 blocks launch on that sentinel. It is not in this list.
+
+---
 
 ---
 
@@ -957,8 +1040,8 @@ Model for every row is Grok 4.7 (CF-9). Thinking is the `BETK_PHASES.md` tier. M
 | Read-first re-measure against §0 before the first apply | Max | none |
 | M1–M3 additive | Max | M1, M2, M3 |
 | CF-1 detach | Max | M4 |
-| N27 / REG-76 including the 7 | Max | M5, M6 |
-| CF-2 `checkout_from_cart` never SELECT/RETURN the hidden columns. Created in the rename transaction, which also drops `create_order_from_inquiry` | Max | M6 |
+| N27 / REG-76 including the 7, and D1’s five cancels plus five history inserts | Max | M5, M6 |
+| CF-2 `checkout_from_cart` never SELECT/RETURN the hidden columns. Created in the rename transaction, which also drops `create_order_from_inquiry` (text-bound body). EXECUTE stays revoked until M7 grants it to `authenticated` | Max | M6 creates and revokes; M7 grants |
 | CF-3 ADR-023 both write paths | Max | M8 |
 | CF-4 drop the inquiry converted-order writer; column stays | Max | M8 |
 | ADR-020 grant, ADR-021 proof copy and payments grant, ADR-022 inside the RPC, transition rework, `refunded_subtotal` stamp, payout cap, REG-69 array, `ready`, docs-bucket seller-NO as §1.8 | Max | M7, M8 |
@@ -975,7 +1058,7 @@ Guard F (REG-67): physical `page.tsx` count against the 79. Phase 08 adds no `pa
 
 Guard G (REG-74): suite-start residue detector. The seven ids stay the expected undeletable set until M5 gives them masters. After M5 the detector’s expected orphans are still these seven ids, now with parents, not a license to delete them.
 
-`src/` that must change with the rename: none of the executable queries. `src/lib/supabase/types.ts` changes only by CI. Comment barrels listed in §2.3 are updated so they do not name `betk.orders`. Onboarding `src/` changes only if decision 8.2.4 is signed as option A.
+`src/` that must change with the rename: none of the executable queries. `src/lib/supabase/types.ts` changes only by CI. Comment barrels listed in §2.3 are updated so they do not name `betk.orders`. Onboarding `src/` does not change in Phase 08 (D3). Phase 09 owns that caller.
 
 ---
 
