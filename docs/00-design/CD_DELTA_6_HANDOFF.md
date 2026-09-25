@@ -1,5 +1,7 @@
 # CD-DELTA-6 handoff brief. Input to Claude Design. Not a design. Token names only.
 
+§5 decisions are answered in §8. Build to §8 where the two differ.
+
 Provenance for the human: branch base `07fbe95b000e2e444e555a2a43be6231619fee62` (PR #66 merge). This file does not mint a REG, OD, ADR, token, page, table, or requirement. Next free stays REG-93 / OD-22 / ADR-026.
 
 Repo paths below are citations. Claude Design does not need the repository. Every rule required to build the kit is in this file.
@@ -148,9 +150,9 @@ Applies to `ListingCard`, `SellerMiniCard`, and `StoreCard`. Existing name props
 | Prop | TS type | Required | Source | Note |
 |---|---|---|---|---|
 | storeName | string | yes on the cited pages | LIVE | `stores.name_ar` / `stores.name_en`. The page picks the locale column. ListingCard’s current prop is optional; these pages pass it. |
-| storeHref | string | no, until §5a sanctions it | LIVE | Page builds the public store route from `stores.slug`. Absent means the name stays text. |
+| storeHref | string | no | LIVE | Page builds the public store route from `stores.slug`. Absent means the name stays text. |
 
-Callback, named and not implemented, only if §5a picks a callback instead of `storeHref`: `onOpenStore`. The control emits navigation to that public store route. It does not emit a seller-console route.
+The sanctioned destination is optional `storeHref` (§8a). There is no `onOpenStore` callback. When `storeHref` is set, the name navigates to that public store route. It does not navigate to a seller-console route.
 
 **3. States**
 
@@ -197,7 +199,7 @@ M3. This component takes no buyer-name prop and no buyer-location prop (REG-44; 
 - [ ] The store link and the listing activation are separate keyboard stops on ListingCard.
 - [ ] No hardcoded Arabic or English.
 - [ ] Nothing about the link is hover-only.
-- [ ] Existing card signatures change only as §5a sanctions.
+- [ ] Existing card signatures change only by optional `storeHref` on ListingCard, SellerMiniCard, and StoreCard. Absent, current behaviour.
 
 ### 2.3 DataTable — Wave 1
 
@@ -283,7 +285,7 @@ Callback, named and not implemented: `onLoadError`. The component emits that whe
 
 **3. States**
 
-Default: the file displays. Loading: a placeholder until the URL loads. Empty: no `sourceUrl`, so nothing is framed as a document. Error: the URL failed, or the type is outside §5f; the error string shows. Disabled: not an editor, so there is no disabled edit state.
+Default: the file displays. Loading: a placeholder until the URL loads. Empty: no `sourceUrl`, so nothing is framed as a document. Error: the URL failed, or the type is not png, jpeg, or webp; the error string shows. Disabled: not an editor, so there is no disabled edit state.
 
 **4. Variants**
 
@@ -323,8 +325,8 @@ M3. This component takes no buyer-name prop and no buyer-location prop (REG-44; 
 - [ ] AR-RTL light, AR-RTL dark, EN-LTR light, and EN-LTR dark.
 - [ ] Empty: no `sourceUrl` shows the empty string, not a fake document.
 - [ ] Loading: placeholder until the URL loads.
-- [ ] Error: failed URL, or a type outside §5f, shows `proof.error` or `proof.unsupported`.
-- [ ] Displays the file types §5f sanctions, and does not assume any other type.
+- [ ] Error: failed URL, or a type other than png, jpeg, or webp, shows `proof.error` or `proof.unsupported`.
+- [ ] Displays png, jpeg, and webp, and does not assume any other type.
 - [ ] No hardcoded Arabic or English.
 - [ ] Keyboard reaches the viewer; the image has an accessible name; nothing is hover-only.
 
@@ -753,7 +755,7 @@ M3. This component takes no buyer-name prop and no buyer-location prop (REG-44; 
 - [ ] Dates and amounts are LTR islands.
 - [ ] No hardcoded Arabic or English.
 - [ ] A point’s value is available without hover.
-- [ ] No new dependency unless §5e is sanctioned by the human.
+- [ ] No new dependency. If one is unavoidable, stop and flag. Do not add it.
 - [ ] No chart-chrome spec is implied beyond the series the page passes (UI spec §8).
 
 ---
@@ -858,11 +860,15 @@ What it blocks: ChartSeries, first needed by Phase 19.
 
 Question: which types must display?
 
-Measured this session, names only, no downloads, `storage.objects` grouped by bucket and name extension: `docs` has `jpg` (2 objects). `media` has `png` (3 objects). `media` is not the docs bucket. No other extension was present. PDF was not present. Do not assume PDF.
+Staging sample, not the contract. Measured this session, names only, no downloads, `storage.objects` grouped by bucket and name extension: `docs` has `jpg` (2 objects). `media` has `png` (3 objects). `media` is not the docs bucket. No other extension was present. PDF was not present. Do not assume PDF.
 
-Options: (1) display jpeg only, and any other URL uses `proof.unsupported`; (2) also display types that are not in this measurement.
+Live upload contract. `MIME_EXT` maps `image/png`, `image/jpeg`, `image/jpg`, and `image/webp` in `src/app/[locale]/(seller-onboarding)/seller/onboarding/_components/OnboardingWizard.tsx` lines 69-74, `src/app/[locale]/(seller)/seller/status/_components/ResubmitPanel.tsx` lines 32-37, and `src/app/[locale]/(seller)/seller/store/_components/StoreProfileForm.tsx` lines 49-54.
 
-Recommendation: (1), because that is the measured docs bucket. Seller documents and payment proofs are the docs bucket (UI spec §9). A further type is a human sanction, not an assumption.
+Options: (1) display png, jpeg, and webp, and any other type shows `proof.unsupported`; (2) display only the staging sample.
+
+Recommendation: Display png, jpeg, webp — the types the live upload paths accept. Any other type shows `proof.unsupported`.
+
+FLAG: the payment-proof upload (P16, TARGET master_orders.proof_path) is not built. Phase 12 must accept a subset of png/jpeg/webp or revisit this decision.
 
 Who decides: human.
 
@@ -952,3 +958,18 @@ Per-wave acceptance:
 - four-context proof per item (AR-RTL / EN-LTR, each in light and dark);
 - zero hardcoded strings;
 - no forbidden field in any props type.
+
+---
+
+## 8. Human decisions (2026-09-25)
+
+a = (1) Optional `storeHref` on ListingCard, SellerMiniCard, StoreCard. Absent → current behaviour.
+b = (1) Fallback is one control that copies the public URL; label is a string prop. Channels stay unenumerated.
+c = (3) Both: the component's `audience: "admin"` guard AND a Phase 14 engineering CI import ban. The component guard is defense-in-depth; the data layer and the CI ban are the boundary.
+d = shadcn `table` via the official CLI, byte-vanilla; sort and pagination are controlled props; one table with inline-axis scroll at the mobile breakpoint.
+e = (1) No new dependency. If Claude Design finds one unavoidable, it stops and flags; it does not add it.
+f = Display png, jpeg, webp — the types the live upload paths accept. Any other type shows `proof.unsupported`.
+g = REG-58 and REG-60 ride with Wave 1. REG-52 and REG-59 are recorded, not closed, by this delta.
+h = (2) The handoff stays self-contained; the design-repo placeholder is not a source. REG-23 stays OPEN.
+i = (1) Optional logo activation callback on ConsoleSidebar.
+j = (1) No allow-list in DataTable. Page review enforces the N28 columns.
