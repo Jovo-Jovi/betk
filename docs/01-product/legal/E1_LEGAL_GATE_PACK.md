@@ -43,6 +43,18 @@ Session clock: `SELECT clock_timestamp() AT TIME ZONE 'UTC'` → **2026-09-23 20
 
 `get_project` is **not** in that namespace’s tool catalog (catalog inspected this window). It was not called. Hosting region is therefore not measured. See §1.5.
 
+#### Human-reported region measurements (2026-09-25)
+
+These values were reported by the human on 2026-09-25. This window did not re-measure them. They are the §1.5 results. The paragraph above is the 2026-09-23 read.
+
+- **V1. Supabase database.** Frankfurt, Germany (Amazon Web Services). Method: IP geolocation of the database host. The dashboard's region code was not read.
+- **V2. Supabase Auth and Storage.** UNKNOWN — human to confirm. Same project as the database; not separately measured.
+- **V3. Vercel (application host) functions.** fra1 (Frankfurt, Germany). Method: `regions: ["fra1"]` on production deployment dpl_DMq7UFDmHXFECYKVEF2BDsC82kRK (PR #65 merge). The project record has no region field. Edge network locations and preview deployments: not measured.
+- **V4. PostHog.** UNKNOWN — human to confirm. An EU-cloud PostHog project exists (eu.posthog.com). The deployed NEXT_PUBLIC_POSTHOG_HOST was not read. When that variable is unset, the code default is the US host `https://app.posthog.com` (`src/services/posthog.ts:17`).
+- **V5. Sentry.** UNKNOWN — human to confirm. The organization data-region setting and the live DSN hostname were not read.
+- **V6. TorvoSMS.** API host smsapi.torvochat.com is in Frankfurt, Germany (Hostinger). Method: DNS resolution + IP geolocation. Where message content is stored: UNKNOWN — Torvo has not stated.
+- **V7. Google, Resend, WhatsApp, Twilio, generic SMS helper, Bosta, courier.** UNKNOWN — human to confirm. Unchanged.
+
 `admin_settings` status query (keys only; values not printed):
 
 ```sql
@@ -217,15 +229,16 @@ Readers follow ERD §8 unless noted. “Seller none” for buyer identity is N28
 
 ### 1.4 Third parties and processors
 
-“WIRED” means an import and a call that can leave the process. “STUB” means the module exists and the provider HTTP call is a comment, not executed. “DECLARED” means a key name in `.env.example` or `supabase/functions/.env.example` only. Key **names** were read from those example files. No env file with values was opened. Regions were not measured (see §1.5).
+“WIRED” means an import and a call that can leave the process. “STUB” means the module exists and the provider HTTP call is a comment, not executed. “DECLARED” means a key name in `.env.example` or `supabase/functions/.env.example` only. Key **names** were read from those example files. No env file with values was opened. Region cells follow §1.5. The 2026-09-25 values are human-reported; this window did not re-measure them.
 
 | Name | Role for BETK | Data the code sends | Wiring | Region |
 |---|---|---|---|---|
-| Supabase (Postgres, GoTrue Auth, Storage) | Database, sign-in, file buckets | Rows in §1.3, including phone, email on `auth.users`, proofs, ID paths | WIRED (`@supabase/supabase-js`, `@supabase/ssr`) | **UNKNOWN — human to confirm** |
+| Supabase (Postgres, GoTrue Auth, Storage) | Database, sign-in, file buckets | Rows in §1.3, including phone, email on `auth.users`, proofs, ID paths | WIRED (`@supabase/supabase-js`, `@supabase/ssr`) | **V1.** Frankfurt, Germany (Amazon Web Services). Method: IP geolocation of the database host. The dashboard's region code was not read. **V2.** Auth and Storage: UNKNOWN — human to confirm. Same project as the database; not separately measured. |
+| Vercel | Application host (Next.js) | The request and response traffic of every page, route handler and middleware it runs | WIRED (deployed; project `betk`) | **V3.** fra1 (Frankfurt, Germany). Method: `regions: ["fra1"]` on production deployment dpl_DMq7UFDmHXFECYKVEF2BDsC82kRK (PR #65 merge). The project record has no region field. Edge network locations and preview deployments: not measured. |
 | Google OAuth | Sign-in provider beside phone OTP | The button calls `signInWithOAuth({ provider: "google" })`. Callback records `auth_provider = google` on `betk.users` and does not write an email there (no column). GoTrue’s `auth.users.email` / `identities` columns exist. What Google transmits beyond that is **UNPINNED**. | WIRED. `GoogleSignInButton.tsx`. Keys `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` declared in `.env.example`. | **UNKNOWN — human to confirm** |
-| TorvoSMS | OTP text delivery | Recipient phone and a message that contains the one-time code. `countryCode` in the posted body is the characters `20` (`send-sms-hook/lib.ts`). | WIRED in `supabase/functions/send-sms-hook` (`fetch` POST). Hosted hook enablement is a dashboard step the config file says it does not push (`supabase/config.toml` `[auth.hook.send_sms]` comment). | **UNKNOWN — human to confirm** |
-| PostHog | Product events | `distinctId` is the user id (UUID). Browser init sets autocapture off, pageviews off, `person_profiles: "identified_only"`. `identifyUser` sends that id only and has **no caller** outside its definition. Events also send ids such as `inquiry_id` and `listing_id`, not name, phone, or email (`posthog.ts`, `posthog.server.ts`). | WIRED (`posthog-js` init, `posthog-node` `capture`). | **UNKNOWN — human to confirm**. Code default host string if the env host is unset: `https://app.posthog.com` (`src/services/posthog.ts`). The live host was not read. |
-| Sentry | Error reports | `Sentry.setUser({ id })` only. Init options do not set a personal-data flag (`SENTRY_INIT_OPTIONS` has `dsn`, `tracesSampleRate`, `debug`). Whether the SDK attaches an IP when that flag is absent is **UNPINNED**. | WIRED (`@sentry/nextjs`). | **UNKNOWN — human to confirm** |
+| TorvoSMS | OTP text delivery | Recipient phone and a message that contains the one-time code. `countryCode` in the posted body is the characters `20` (`send-sms-hook/lib.ts`). | WIRED in `supabase/functions/send-sms-hook` (`fetch` POST). Hosted hook enablement is a dashboard step the config file says it does not push (`supabase/config.toml` `[auth.hook.send_sms]` comment). | **V6.** API host smsapi.torvochat.com is in Frankfurt, Germany (Hostinger). Method: DNS resolution + IP geolocation. Where message content is stored: UNKNOWN — Torvo has not stated. |
+| PostHog | Product events | `distinctId` is the user id (UUID). Browser init sets autocapture off, pageviews off, `person_profiles: "identified_only"`. `identifyUser` sends that id only and has **no caller** outside its definition. Events also send ids such as `inquiry_id` and `listing_id`, not name, phone, or email (`posthog.ts`, `posthog.server.ts`). | WIRED (`posthog-js` init, `posthog-node` `capture`). | **V4.** UNKNOWN — human to confirm. An EU-cloud PostHog project exists (eu.posthog.com). The deployed NEXT_PUBLIC_POSTHOG_HOST was not read. When that variable is unset, the code default is the US host `https://app.posthog.com` (`src/services/posthog.ts:17`). |
+| Sentry | Error reports | `Sentry.setUser({ id })` only. Init options do not set a personal-data flag (`SENTRY_INIT_OPTIONS` has `dsn`, `tracesSampleRate`, `debug`). Whether the SDK attaches an IP when that flag is absent is **UNPINNED**. | WIRED (`@sentry/nextjs`). | **V5.** UNKNOWN — human to confirm. The organization data-region setting and the live DSN hostname were not read. |
 | Resend | Transactional email, intended | `sendEmail(to, template, vars)` accepts a recipient address. `emails.send` is commented and not called. No caller of `sendEmail` was found in `src/`. | STUB. Keys `RESEND_API_KEY`, `RESEND_FROM_ADDRESS` in `.env.example`. | **UNKNOWN — human to confirm** |
 | WhatsApp Cloud API | Template messages, intended | `sendTemplate` accepts a recipient phone. The HTTP call is a comment (`src/services/whatsapp.ts`). | STUB. Keys `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_ID` in `.env.example`. Table `whatsapp_templates` is LIVE and admin-only (ERD §8). | **UNKNOWN — human to confirm** |
 | `src/services/sms.ts` | Supplemental SMS, intended | Function accepts a phone and a body. HTTP call is a comment. This is not the OTP hook. | STUB. Key `SMS_PROVIDER_KEY` in `.env.example`. | **UNKNOWN — human to confirm** |
@@ -236,13 +249,17 @@ Readers follow ERD §8 unless noted. “Seller none” for buyer identity is N28
 
 ### 1.5 Hosting regions
 
+Human-reported 2026-09-25. This window did not re-measure them. A result is only as wide as the method in its row.
+
 | Place | What was measured | Result |
 |---|---|---|
-| Supabase database | MCP catalog has no `get_project`. `pg_settings` name list includes `TimeZone`, `log_timezone`, and `cluster_name`. Those values were not read, and a timezone is not a cloud region. | **UNKNOWN — human to confirm** |
-| Supabase Auth | Same project as the database. No separate region tool. | **UNKNOWN — human to confirm** |
-| Supabase Storage | Same project. Buckets `docs` (public false) and `media` (public true) measured. | **UNKNOWN — human to confirm** |
-| Application host | No `vercel.json` in the repo (glob `vercel.json`, 0 files, 2026-09-23). `next.config.ts` has no region key (search for `regions` / `preferredRegion` / `vercel`, no matches). | **UNKNOWN — human to confirm** |
-| PostHog, Sentry, Resend, TorvoSMS, Google, WhatsApp, Bosta | No read-only tool in this window returned a data region. Env values were not opened. | **UNKNOWN — human to confirm** |
+| V1. Supabase database | Human-reported. Method: IP geolocation of the database host. The dashboard's region code was not read. | **Frankfurt, Germany (Amazon Web Services).** |
+| V2. Supabase Auth and Storage | Human-reported. Same project as the database; not separately measured. | **UNKNOWN — human to confirm.** |
+| V3. Vercel (application host) functions | Human-reported. Method: `regions: ["fra1"]` on production deployment dpl_DMq7UFDmHXFECYKVEF2BDsC82kRK (PR #65 merge). The project record has no region field. Edge network locations and preview deployments were not measured. | **fra1 (Frankfurt, Germany).** Edge network locations and preview deployments: not measured. |
+| V4. PostHog | Human-reported. An EU-cloud PostHog project exists (eu.posthog.com). The deployed NEXT_PUBLIC_POSTHOG_HOST was not read. When that variable is unset, the code default is the US host `https://app.posthog.com` (`src/services/posthog.ts:17`). | **UNKNOWN — human to confirm.** |
+| V5. Sentry | Human-reported. The organization data-region setting and the live DSN hostname were not read. | **UNKNOWN — human to confirm.** |
+| V6. TorvoSMS | Human-reported. Method: DNS resolution + IP geolocation of API host smsapi.torvochat.com. Torvo has not stated where message content is stored. | **API host: Frankfurt, Germany (Hostinger).** Where message content is stored: **UNKNOWN — human to confirm.** |
+| V7. Google, Resend, WhatsApp, Twilio, generic SMS helper, Bosta, courier | Not measured. Unchanged. | **UNKNOWN — human to confirm.** |
 
 ---
 
@@ -281,7 +298,7 @@ Version behaviour for all four: acceptance at signup for the buyer terms, and a 
 - Pages: public `/legal/privacy` (P70). Guest-readable (AC-AGR-4). Whether it is inside the completion gate is REG-88. P08’s binding line names buyer terms, not this document.
 - Codes: R-G05, FR-AGR-1, AC-AGR-4, R-V01–R-V04, OD-2, R-A07 (phone gate location is open: named holds are checkout, become-seller, and payout; add-to-cart is not decided, REG-79).
 - Acceptance fields: TARGET row `document = privacy` if a later pin says to store one. Not chosen.
-- Topics from §1: the inventory in §1.3; the processors and stubs in §1.4; every region in §1.5 is unknown; deactivate-only and unused `anonymized_at`; no storage DELETE policy; government-ID images; food social URL admin-only; courier label; PostHog and Sentry receive the user id; TorvoSMS receives the phone and the one-time code; Google sign-in; in-app messages rather than a counterparty phone link (UI §4.g).
+- Topics from §1: the inventory in §1.3; the processors and stubs in §1.4; the regions in §1.5, including those still marked UNKNOWN; deactivate-only and unused `anonymized_at`; no storage DELETE policy; government-ID images; food social URL admin-only; courier label; PostHog and Sentry receive the user id; TorvoSMS receives the phone and the one-time code; Google sign-in; in-app messages rather than a counterparty phone link (UI §4.g).
 - Pins: REG-88, REG-75, `agreement_privacy_version` empty.
 
 ---
@@ -319,12 +336,12 @@ Rank: an answer that could change the core model, then an answer that blocks lau
 - Answer format: the artefact set can be the approval file, or it cannot, with what is missing named as a question back to the product owner rather than as a new feature designed here.
 - If adverse: **F-4**.
 
-**Q5. Blocks launch.** Whether the personal data in §1.3 may be stored and processed with the processors in §1.4, given that every region in §1.5 is unknown, including cross-border hosting.
+**Q5. Blocks launch.** Whether the personal data in §1.3 may be stored and processed with the processors in §1.4 at the regions in §1.5 — the database and the application's server functions in Frankfurt, Germany, the SMS provider's API host in Frankfurt, and analytics and error-reporting regions not yet confirmed — including any step that applies because these regions are outside Egypt **[unverified — counsel to confirm]**.
 
 - Candidate instruments or registration duties: **[unverified — counsel to confirm]**. Not named here on purpose (R2).
 - Facts: §1.3, §1.4, §1.5.
 - Why it matters: launch of any phase that stores these fields waits on this answer. An answer that the current hosts cannot be used is a stack change.
-- Answer format: a list of hosts that counsel needs named before advising, and a yes/no/not-yet on proceeding while regions are unknown. Not a hosting design.
+- Answer format: Per processor: yes, no, or yes with conditions; plus any unconfirmed region counsel needs before advising.
 - If adverse: **F-5**.
 
 **Q6. Blocks launch.** What should happen to government-ID images and the rest of §1.3 when someone asks for erasure, given deactivate-only accounts, unused `anonymized_at`, append-only history, and no storage DELETE policy.

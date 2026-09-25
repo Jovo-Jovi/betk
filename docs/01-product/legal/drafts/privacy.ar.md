@@ -39,16 +39,17 @@ DRAFT — NOT LEGALLY REVIEWED — NOT FOR PUBLICATION.
 
 | الجهة | ما يرسله الكود الحالي | هل الإرسال قائم؟ | المنطقة |
 |---|---|---|---|
-| Supabase (قاعدة البيانات والدخول والملفات) | الحقول أعلاه | نعم | UNKNOWN — human to confirm |
+| Supabase (قاعدة البيانات والدخول والملفات) | الحقول أعلاه | نعم | قاعدة البيانات: فرانكفورت، ألمانيا (أمازون)، بتحديد جغرافي لعنوان خادم قاعدة البيانات. رمز المنطقة في لوحة التحكم لم يُقرأ. الدخول والملفات: UNKNOWN — human to confirm. نفس المشروع، ولم يُقاسا وحدهما. |
+| Vercel | يشغّل الموقع وكود الخادم، فيمرّ به الطلب الذي يحمل البيانات أعلاه | نعم | كود الخادم: فرانكفورت، ألمانيا، مقروء من النشر الحي. مواقع شبكة الحافة: لم تُقاس. |
 | Google | الدخول. التطبيق يبدأ دخول غوغل. | نعم | UNKNOWN — human to confirm |
-| TorvoSMS | رقم الهاتف ورسالة تحتوي رمز المرة الواحدة | نعم | UNKNOWN — human to confirm |
-| PostHog | معرّف المستخدم الداخلي وأسماء الأحداث. التقاط محتوى الصفحة مغلق. | نعم | UNKNOWN — human to confirm |
-| Sentry | معرّف المستخدم الداخلي عند الخطأ. لا يُضبط بريد ولا هاتف في هذا النداء. | نعم | UNKNOWN — human to confirm |
+| TorvoSMS | رقم الهاتف ورسالة تحتوي رمز المرة الواحدة | نعم | مضيف الإرسال: فرانكفورت، ألمانيا (Hostinger)، بتحليل اسم النطاق ثم التحديد الجغرافي لعنوان الشبكة. مكان تخزين نص الرسالة: UNKNOWN — human to confirm. المزود لم يذكر ذلك. |
+| PostHog | معرّف المستخدم الداخلي وأسماء الأحداث. التقاط محتوى الصفحة مغلق. | نعم | UNKNOWN — human to confirm. يوجد مشروع على السحابة الأوروبية. مضيف النشر لم يُقرأ. إذا لم يُضبط المضيف، فالافتراضي في الكود هو المضيف الأمريكي (`src/services/posthog.ts:17`). |
+| Sentry | معرّف المستخدم الداخلي عند الخطأ. لا يُضبط بريد ولا هاتف في هذا النداء. | نعم | UNKNOWN — human to confirm. إعداد منطقة البيانات واسم المضيف الحي لم يُقرأا. |
 | Resend | بريد مستلم مقصود. نداء الإرسال غير مكتوب. | لا | UNKNOWN — human to confirm |
 | WhatsApp | هاتف مستلم مقصود. نداء الإرسال غير مكتوب. | لا | UNKNOWN — human to confirm |
 | المندوب | الاسم والهاتف والعنوان على ملصق مخطط | غير مبني | UNKNOWN — human to confirm |
 
-<!-- cite: src/services/posthog.ts; SentryProvider; send-sms-hook/lib.ts; resend.ts and whatsapp.ts stubs -->
+<!-- cite: src/services/posthog.ts:17; SentryProvider; send-sms-hook/lib.ts; resend.ts and whatsapp.ts stubs; human-reported regions 2026-09-25 -->
 
 ## ٥. الرسائل
 

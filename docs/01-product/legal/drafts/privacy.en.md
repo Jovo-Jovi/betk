@@ -38,16 +38,17 @@ The buyer, and staff. Not the seller. A courier is meant to see the buyer’s na
 
 | Provider | What the current code sends | Call is live? | Region |
 |---|---|---|---|
-| Supabase (database, sign-in, files) | The fields above | Yes | UNKNOWN — human to confirm |
+| Supabase (database, sign-in, files) | The fields above | Yes | Database: Frankfurt, Germany (Amazon Web Services), by IP geolocation of the database host. The dashboard region code was not read. Sign-in and files: UNKNOWN — human to confirm. Same project; not measured separately. |
+| Vercel | Runs the website and its server code, so it handles the requests that carry the data above | Yes | Server code: Frankfurt, Germany, read from the live deployment. Edge network locations: not measured. |
 | Google | Sign-in. The app starts Google sign-in. | Yes | UNKNOWN — human to confirm |
-| TorvoSMS | Phone number and a message that contains the one-time code | Yes | UNKNOWN — human to confirm |
-| PostHog | Internal user id and event names. Page autocapture is off. | Yes | UNKNOWN — human to confirm |
-| Sentry | Internal user id on errors. Email and phone are not set in that call. | Yes | UNKNOWN — human to confirm |
+| TorvoSMS | Phone number and a message that contains the one-time code | Yes | API host: Frankfurt, Germany (Hostinger), by DNS resolution and IP geolocation. Where the message text is stored: UNKNOWN — human to confirm. The provider has not stated that. |
+| PostHog | Internal user id and event names. Page autocapture is off. | Yes | UNKNOWN — human to confirm. An EU-cloud project exists. The deployed host was not read. When that host is unset, the code default is the US host (`src/services/posthog.ts:17`). |
+| Sentry | Internal user id on errors. Email and phone are not set in that call. | Yes | UNKNOWN — human to confirm. The data-region setting and the live host name were not read. |
 | Resend | Intended recipient email. The send call is not written. | No | UNKNOWN — human to confirm |
 | WhatsApp | Intended recipient phone. The send call is not written. | No | UNKNOWN — human to confirm |
 | Courier | Name, phone, and address on a future label | Not built | UNKNOWN — human to confirm |
 
-<!-- cite: src/services/posthog.ts; SentryProvider; send-sms-hook/lib.ts; resend.ts and whatsapp.ts stubs -->
+<!-- cite: src/services/posthog.ts:17; SentryProvider; send-sms-hook/lib.ts; resend.ts and whatsapp.ts stubs; human-reported regions 2026-09-25 -->
 
 ## 5. Messages
 

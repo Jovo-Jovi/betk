@@ -30,7 +30,7 @@ An engineer prepared it from the product’s own specification and from a read-o
 | Deactivate-only | Closing an account marks it closed and blocks login. The product does not delete the person and does not anonymise them. A column reserved for a future anonymisation time exists and is unused. |
 | Live | The column or bucket exists in the staging database today. |
 | Target | The column or table is specified and not created yet. |
-| Unknown region | Nobody measured where that provider stores data. The word UNKNOWN below means that, and nothing else. |
+| Unknown region | UNKNOWN means that row was not measured. It does not mean inside or outside Egypt. |
 
 Internal tracking numbers from the engineering register are not used in this note.
 
@@ -117,20 +117,20 @@ Who sees the buyer’s address: the buyer, and staff. The seller does not. The c
 
 | Who | What they receive in the current code | Live call? | Data region |
 |---|---|---|---|
-| Supabase | The database, sign-in, and the file buckets above | Yes | UNKNOWN — human to confirm |
+| Supabase | The database, sign-in, and the file buckets above | Yes | Database: Frankfurt, Germany (Amazon Web Services), by IP geolocation of the database host. The dashboard region code was not read. Sign-in and file storage: UNKNOWN — human to confirm. Same project; not measured separately. |
+| Vercel | Runs the website and its server code, so it handles the requests that carry the data above | Yes | Server code: Frankfurt, Germany, read from the live deployment. Edge network locations: not measured. |
 | Google | Sign-in. The app starts a Google sign-in. An email column exists on the sign-in system. | Yes | UNKNOWN — human to confirm |
-| TorvoSMS | The phone number and a text message that contains the one-time code | Yes, in the SMS hook | UNKNOWN — human to confirm |
-| PostHog | The user’s internal id, and event names. Autocapture of page content is switched off in code. Name, phone, and email are not in the identify call. | Yes | UNKNOWN — human to confirm |
-| Sentry | The user’s internal id on error reports. The code does not set an email or a phone. Whether the product also sends an IP address is not pinned. | Yes | UNKNOWN — human to confirm |
+| TorvoSMS | The phone number and a text message that contains the one-time code | Yes, in the SMS hook | API host: Frankfurt, Germany (Hostinger), by DNS resolution and IP geolocation. Where the message text is stored: UNKNOWN — human to confirm. The provider has not stated that. |
+| PostHog | The user’s internal id, and event names. Autocapture of page content is switched off in code. Name, phone, and email are not in the identify call. | Yes | UNKNOWN — human to confirm. An EU-cloud project exists. The deployed host was not read. When that host is unset, the code default is the US host. |
+| Sentry | The user’s internal id on error reports. The code does not set an email or a phone. Whether the product also sends an IP address is not pinned. | Yes | UNKNOWN — human to confirm. The data-region setting and the live host name were not read. |
 | Resend | Intended: a recipient email. The send call is not written. | No | UNKNOWN — human to confirm |
 | WhatsApp | Intended: a recipient phone and a template. The send call is not written. | No | UNKNOWN — human to confirm |
 | A generic SMS helper | Intended: a phone and a text. The send call is not written. This is not the one-time-code hook. | No | UNKNOWN — human to confirm |
 | Twilio | Named in a local config block that is switched off. | No | UNKNOWN — human to confirm |
 | Bosta | A stub describes a shipment with both parties’ names, phones, and streets, and a cash amount. The call is not written. Bosta is not the chosen courier. | No | UNKNOWN — human to confirm |
 | The future courier | Name, phone, and address on a label, plus the cash balance | Not built | UNKNOWN — human to confirm |
-| The application host | The website itself. No region is written in the project file. | The host is not measured here | UNKNOWN — human to confirm |
 
-UNKNOWN means this exercise did not measure the region. It does not mean the region is inside or outside Egypt.
+Where a region is known, the row says how it was read. UNKNOWN means it was not measured. It does not mean inside or outside Egypt.
 
 ---
 
@@ -154,9 +154,9 @@ Answer with those two points.
 
 Answer yes or no. If no, name what is missing as advice, not as a new screen.
 
-**5. Personal data and hosting.** May the data listed above be processed by the providers listed above, while every data region is still unknown, including where a provider is outside Egypt?
+**5. Personal data and hosting.** The database and the website's server code run in Frankfurt, Germany. The SMS provider's servers are in Frankfurt. Where analytics and error reports are stored is not yet confirmed. May the data listed above be processed this way, outside Egypt, and is any registration, permission, or transfer step needed first? Please answer per provider: yes, no, or yes with conditions, and name any region you still need confirmed.
 
-Answer with the facts you still need (which regions) and whether it is advisable to launch while those regions are unknown. Candidate registration duties: [unverified — counsel to confirm]. Please name them in your answer if they matter. They are not stated here.
+Candidate registration duties: [unverified — counsel to confirm]. Please name them in your answer if they matter. They are not stated here.
 
 **6. Identity images and erasure.** Someone asks for their data to be erased. The product can only deactivate the account. Identity images sit in a private bucket with no delete rule. Order history cannot be deleted. What should happen to (i) the identity images, (ii) the order history, and (iii) the rest of the account?
 
@@ -187,7 +187,7 @@ Please write these four. Engineering will publish them on public pages and store
 1. **Buyer terms.** Facts to cover: the 50% InstaPay deposit and the single proof; the 50% cash balance per shipment; who holds the money along the timeline above; cancellation only before the proof; returns after confirmation; the seller cannot cancel; a quote is valid 24 hours and may be up to twice the listed price; the payment window is not set; the buyer does not see the commission.
 2. **Seller agreement.** Facts to cover: commission is a percentage of the goods subtotal and the percentage is not set; payout to the seller’s own handle after delivery and the return hold; the seller never sees the buyer’s name, phone, or address; the seller cannot cancel; food photos and the staff-only social link; the pickup address is for staff and the courier.
 3. **Return and refund policy.** Facts to cover: a return is requested on a delivered seller order with a reason and evidence; the seller can accept (refund) or reject (dispute, then staff); the refund can be partial; stock does not come back automatically; a confirmed deposit is not undone by buyer cancellation; the return window is unset; the shop’s own return text has no decided relationship to this policy.
-4. **Privacy policy.** Facts to cover: the data list, the providers, the unknown regions, deactivate-only closure, identity images, the courier label, the analytics id, the SMS phone and code, and Google sign-in.
+4. **Privacy policy.** Facts to cover: the data list, the providers, the hosting regions (Germany for the database, server code and SMS provider; analytics and error reports not yet confirmed), deactivate-only closure, identity images, the courier label, the analytics id, the SMS phone and code, and Google sign-in.
 
 Periods, liability caps, governing law, venue, age, notice, and fees belong in your text. They are not decided in this note.
 
