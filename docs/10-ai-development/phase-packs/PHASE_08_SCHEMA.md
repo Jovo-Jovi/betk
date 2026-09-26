@@ -78,7 +78,7 @@ Performance, `observed_at` **2026-09-26T10:21:10.030Z**: unindexed FK 37, auth R
 - **Backup.** T03 STEP 0. A human pastes a restorable point into `SESSION_CONTEXT.md` before M1. T00 did not check the plan tier (plan §7.1).
 - **Rehearsal cost approval.** The human approves cost when T02 asks. T00 did not create a branch.
 - **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the rehearsal branch.
-- **Rehearsal execution.** Option B (2026-09-26). The human creates the rehearsal branch in the dashboard and runs the SQL. The agent prepares the scripts and checks the pasted results. T02 has not written the scripts. Cost is the usage when the human creates that branch.
+- **Rehearsal execution.** Option B (2026-09-26). The human creates the rehearsal branch in the dashboard and runs the SQL. T02 wrote the kit under `docs/03-database/rehearsal/`. Next is human review of that kit, then the human runs it, then T02-VERIFY. Cost is the usage when the human creates that branch.
 
 ### MCP calls in T00
 
@@ -171,9 +171,40 @@ Options:
 
 **Recommendation: B**, until A exists. Do not use C as the rehearsal. The decision above is that recommendation, now chosen.
 
-**Where the rehearsal SQL is staged.** Committed at `docs/03-database/rehearsal/n27-shape.sql`, written by T02, not by T00. Not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply that path. A never-committed script would not be reviewable. T00 does not write the file, because this pack must not contain the SQL.
+**D-A (human, 2026-09-26), verbatim:** D-A §4.8 money: the invariant is §4.8's own sentence "Sums are the live totals". The printed "1000.00" is an arithmetic erratum (3 × 100 + 4 × 200 = 1100.00; live 1100.00 at T01). Every money assertion, in the rehearsal and in T05, compares the sums captured immediately before M4 with the sums after. No printed constant. The signed plan file is not edited.
 
-**Project id.** Every rehearsal apply, seed, and assert uses `BRANCH_PROJECT_REF`, the ref returned for the rehearsal branch, held as a variable. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
+**D-B (human, 2026-09-26), verbatim:** D-B Rehearsal binding: T03 and T05 apply the staging texts T02 writes, byte-for-byte, verified by sha256.
+
+**Rehearsal binding (D-B).** T03 and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. FLAG: D-B names T03 and T05 only. T04 applies M4, and `M4.sql` is in the kit, but T04's prompt was not given that line.
+
+The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
+
+Files:
+
+- `docs/03-database/rehearsal/README.md`
+- `docs/03-database/rehearsal/staging-text/M1.sql` … `M6.sql`
+- `docs/03-database/rehearsal/run/00_guard_and_sentinel.sql`
+- `docs/03-database/rehearsal/run/01_M1.sql`
+- `docs/03-database/rehearsal/run/02_M2.sql`
+- `docs/03-database/rehearsal/run/03_M3.sql`
+- `docs/03-database/rehearsal/run/04_seed_shape.sql`
+- `docs/03-database/rehearsal/run/05_M4.sql`
+- `docs/03-database/rehearsal/run/06_M5.sql`
+- `docs/03-database/rehearsal/run/07_M6.sql`
+- `docs/03-database/rehearsal/run/08_asserts.sql`
+
+SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only:
+
+| File | SHA256 |
+|---|---|
+| `M1.sql` | `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c` |
+| `M2.sql` | `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995` |
+| `M3.sql` | `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037` |
+| `M4.sql` | `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8` |
+| `M5.sql` | `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7` |
+| `M6.sql` | `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32` |
+
+**Project id.** Under option B the human runs the SQL editor on the dashboard branch. The agent does not call `apply_migration` or `execute_sql` for the rehearsal. `BRANCH_PROJECT_REF` stays a variable for option A, if that tool argument ever exists. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
 
 **Evidence the rehearsal pastes, when it is unblocked.**
 
@@ -330,9 +361,27 @@ STEP Z file list: docs/03-database/rehearsal/n27-shape.sql, SESSION_CONTEXT.md, 
 Commit message: docs(p08-t02): record the N27 rehearsal evidence
 ```
 
+Executed 2026-09-26 under the replacement prompt (option B). Do not re-run the prompt above. The kit is `docs/03-database/rehearsal/`. The check is T02-VERIFY.
+
+### T02-VERIFY
+
+```text
+MODEL: Grok 4.7 · THINKING: Max
+Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then check the human's pasted rehearsal outputs against docs/03-database/rehearsal/.
+
+The agent does not run the rehearsal SQL. Do not call apply_migration, create_branch, or delete_branch. Staging reads are SELECT via execute_sql, list_migrations, and get_advisors only.
+
+Check the pasted 00–08 outputs against the kit. PASS requires all three: the 08 table has all_pass = true; the human pasted proof the rehearsal branch is deleted; staging is unchanged (list_migrations still the 31 versions ending 20260723140552, and betk.orders still has 7 rows).
+
+Record the pasted evidence in SESSION_CONTEXT. STOP if any of the three is missing or false.
+STEP Z file list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md.
+Commit message: docs(p08-t02-verify): record the N27 rehearsal evidence
+```
+
 ### T03
 
 ```text
+Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T03 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
@@ -371,6 +420,7 @@ Commit message: feat(p08-t04): detach stock-on-confirm before N27
 ### T05
 
 ```text
+Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T05 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
@@ -469,7 +519,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | option B and 3f chosen 2026-09-26; scripts not written | §4.4 human decision |
+| T02 | kit written 2026-09-26 (option B); human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B |
 | T03 | | |
 | T04 | | |
 | T05 | | |

@@ -1,0 +1,121 @@
+DO $rehearsal_guard$
+BEGIN
+  IF (SELECT count(*) FROM betk.orders) <> 0 THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_ORDERS_NONEMPTY';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM betk.orders
+    WHERE id IN (
+      '81147596-94ee-4a25-b634-34c043409242',
+      'b327bfb8-f807-418e-9448-1fb645351f3b',
+      'e5d776fc-1402-484e-84c4-d2b441f5868f',
+      '02482319-a2a7-4b54-aaf1-8c24b5a95150',
+      '41c5b2c2-e5e0-4a60-9d28-3dc467a23a2a',
+      'da73deed-0670-4cc7-bccd-064b8d301b6f',
+      'c7ba4f04-eefd-489a-b8de-5daa917e998b'
+    )
+  ) THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_STAGING_ORDER_PRESENT';
+  END IF;
+
+  IF (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 31 THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_MIGRATION_COUNT';
+  END IF;
+
+  IF (SELECT max(version) FROM supabase_migrations.schema_migrations) <> '20260723140552' THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_MIGRATION_TIP';
+  END IF;
+
+  IF EXISTS (
+    SELECT version FROM supabase_migrations.schema_migrations
+    EXCEPT
+    SELECT unnest(ARRAY[
+      '20260622082729',
+      '20260622082748',
+      '20260622082812',
+      '20260622082833',
+      '20260622082857',
+      '20260622082914',
+      '20260622082935',
+      '20260622083013',
+      '20260622083032',
+      '20260622083052',
+      '20260622083131',
+      '20260622083154',
+      '20260622083209',
+      '20260622091700',
+      '20260630232657',
+      '20260716124323',
+      '20260716125122',
+      '20260716130533',
+      '20260718153021',
+      '20260718230302',
+      '20260719133011',
+      '20260719133052',
+      '20260719134903',
+      '20260720083710',
+      '20260720095552',
+      '20260721111355',
+      '20260722115026',
+      '20260722124510',
+      '20260723074953',
+      '20260723110557',
+      '20260723140552'
+    ]::text[])
+  ) OR EXISTS (
+    SELECT unnest(ARRAY[
+      '20260622082729',
+      '20260622082748',
+      '20260622082812',
+      '20260622082833',
+      '20260622082857',
+      '20260622082914',
+      '20260622082935',
+      '20260622083013',
+      '20260622083032',
+      '20260622083052',
+      '20260622083131',
+      '20260622083154',
+      '20260622083209',
+      '20260622091700',
+      '20260630232657',
+      '20260716124323',
+      '20260716125122',
+      '20260716130533',
+      '20260718153021',
+      '20260718230302',
+      '20260719133011',
+      '20260719133052',
+      '20260719134903',
+      '20260720083710',
+      '20260720095552',
+      '20260721111355',
+      '20260722115026',
+      '20260722124510',
+      '20260723074953',
+      '20260723110557',
+      '20260723140552'
+    ]::text[])
+    EXCEPT
+    SELECT version FROM supabase_migrations.schema_migrations
+  ) THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_MIGRATION_SET';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'rehearsal') THEN
+    RAISE EXCEPTION 'BETK_REHEARSAL_SCHEMA_EXISTS';
+  END IF;
+END
+$rehearsal_guard$;
+
+CREATE SCHEMA rehearsal;
+
+CREATE TABLE rehearsal.sentinel (
+  note text PRIMARY KEY
+);
+
+INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only');
+
+SELECT note FROM rehearsal.sentinel;
