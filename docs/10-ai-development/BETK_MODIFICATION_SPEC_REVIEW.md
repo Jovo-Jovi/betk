@@ -1,5 +1,7 @@
 # BETK — Review of the Modifications & New Business Rules spec
 
+> **CF-10 (2026-09-26):** Eight Phase 07+ mentions in the body below are v1 numbering. This banner maps them. The body is unchanged. (1) Line 29 “from 07 onward”, (6) line 214 “from 07 onward”, and (8) line 237 “from 07 onward”: 07 has no v2 equivalent (`BETK_PHASES.md` §3); the later v1 numbers follow the register-header map (08 delivery → v2 Phase 14, shipment RLS still v2 Phase 08; 12 notifications → v2 Phase 17). (2) Line 104 “Phase 12” and (3) line 105 “Phase 12”: v2 Phase 17 (`BETK_PHASES.md` Phase 17; same map). (4) Line 195 “Phase 08 shipments plan”: v2 Phase 14 courier, and shipment RLS stays v2 Phase 08 (`phase-packs/PHASE_06_MESSAGING.md` line 2; `BETK_PHASES.md` Phase 14 and Phase 08). (5) Line 201 “Phase 07”: no v2 equivalent (`BETK_PHASES.md` §3). The T05 deposit-verification work named in that sentence is v2 Phase 12 (`BETK_PHASES.md` Phase 12). (7) Line 215 “Phase-07”: no v2 equivalent (`BETK_PHASES.md` §3; tag `archive/phase-07-v1-single-seller`).
+
 > **Status:** REVIEW ONLY. Nothing here is authorized, nothing is planned yet. This document confirms
 > what I understood, names what conflicts, and proposes how to sequence the re-baseline.
 > **Requested next step:** you confirm/correct §2, answer **Q0**, and rule on the **Q-register** in §4.

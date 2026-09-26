@@ -547,6 +547,13 @@ Open means the register status is not closed. Standing rules (REG-19, REG-22, RE
 | REG-81 `display_ref` format | Phase 11 | Checkout stores null rather than an invented format. Seller pages render only non-null. |
 | REG-85 store policy vs platform policy | Phase 15, and any Phase 09 edit of that relationship | Leave the relationship unstated. |
 | REG-88 which documents gate completion | Phase 09 agreements work | Do not hard-code the four names into the gate. |
+| REG-93 `payment_window_minutes` | Phase 11 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-94 `return_window_hours` | Phase 15 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-95 `food_requirements` | Phase 09 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-96 `agreement_buyer_terms_version` | Phase 09 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-97 `agreement_seller_agreement_version` | Phase 09 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-98 `agreement_return_policy_version` | Phase 11 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
+| REG-99 `agreement_privacy_version` | Phase 11 | Value empty after M3; consumer fails closed (plan §8.2.5). Staging may use a labelled placeholder written by a named task. Production needs the pinned value. |
 
 ---
 

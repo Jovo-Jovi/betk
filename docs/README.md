@@ -15,11 +15,11 @@
 `.cursor/` and `docs/` must both sit at the repo root (same level as `.git`) or the glob rules won't auto-attach.
 
 ## docs/ map (Dev OS Step 12 structure)
-- `00-design/BETK_UI_SPEC.md` — UI ground truth (59 pages)
+- `00-design/BETK_UI_SPEC.md` — UI ground truth (79 pages, OD-21). SESSION_CONTEXT is authoritative for counts
 - `00-design/BETK_DESIGN_BRIEF.md` — brief for Claude Design setup (tokens, fonts, RTL, component inventory)
-- `01-product/BETK_MVP_SCOPE.md` (frozen scope + OD-1…OD-6 decisions) · `BETK_PRD.md` (FRs + acceptance)
+- `01-product/BETK_MVP_SCOPE.md` (frozen scope + OD-1…OD-21 decisions) · `BETK_PRD.md` (FRs + acceptance). SESSION_CONTEXT is authoritative for counts
 - `02-architecture/` — `BETK_ARCHITECTURE.md`, `BETK_CODEBASE_ARCHITECTURE.md`, `ADR.md`
-- `03-database/` — `BETK_ERD.md` (RLS/index/type mapping, 43-table inventory) · `BETK_DATABASE_SCHEMA.sql` (contract + freeze deltas)
+- `03-database/` — `BETK_ERD.md` (RLS/index/type mapping, 51-table inventory, OD-20) · `BETK_DATABASE_SCHEMA.sql` (contract + freeze deltas). SESSION_CONTEXT is authoritative for counts
 - `04-api/API_STANDARDS.md`
 - `06-security/SECURITY_GUIDELINES.md`
 - `07-testing/TESTING_STRATEGY.md`
@@ -41,14 +41,14 @@
 - `10-ai-development/BETK_MODIFICATION_SPEC_REVIEW.md`
 
 ## Status
-- **Docs complete.** Scope **FROZEN & signed 2026-06-13** (OD-1…OD-6 in `BETK_MVP_SCOPE.md §6`; includes OD-4 Google OAuth IN and the OD-2 `users.deleted_at`/`anonymized_at` additions).
+- **Docs complete.** Scope **FROZEN** (OD-1…OD-21; SESSION_CONTEXT is authoritative for counts). The 2026-06-13 signature covered OD-1…OD-6 in `BETK_MVP_SCOPE.md §6`, including OD-4 Google OAuth IN and the OD-2 `users.deleted_at`/`anonymized_at` additions.
 - **Build underway** — Phase 01 Foundation. **Live phase/task is in `10-ai-development/SESSION_CONTEXT.md`** (this README is not the status tracker).
 
 ## Cursor rules (auto-execution)
 Authoritative rules live in **`.cursor/rules/*.mdc`** at the repo root: one always-on core rule + glob-scoped rules (database / actions-api / ui / tests) that auto-attach from the files you touch + two agent-requested review rules (security / UI). You only pick the model; the core rule flags a model mismatch. Full mechanism: `10-ai-development/HOW_RULES_AUTORUN.md`.
 
 ## Key frozen facts (don't drift)
-- 43 physical tables (not "28"). Authoritative inventory: `BETK_ERD.md §1.1`.
+- 51 tables (OD-20). SESSION_CONTEXT is authoritative for counts. Authoritative inventory: `BETK_ERD.md §1.1`.
 - Auth: phone-OTP **+ Google OAuth**; `users.phone_number` nullable; **verified phone required before transacting** (checkout / become-seller / payout).
 - Design system (`components/ui` + `components/shared`) owned by Claude Design; Cursor composes + wires data, never restyles.
 - Scope is frozen: no new pages/tables/features beyond `BETK_MVP_SCOPE.md`.
