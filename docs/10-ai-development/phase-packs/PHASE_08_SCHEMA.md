@@ -77,8 +77,8 @@ Performance, `observed_at` **2026-09-26T10:21:10.030Z**: unindexed FK 37, auth R
 
 - **Backup.** T03 STEP 0. A human pastes a restorable point into `SESSION_CONTEXT.md` before M1. T00 did not check the plan tier (plan §7.1).
 - **Rehearsal cost approval.** The human approves cost when T02 asks. T00 did not create a branch.
-- **3f.** Human chooses M4–M6 only (recommendation below) or also runs M7–M8 on the branch as DDL proof with no new assertions.
-- **Rehearsal execution.** BLOCKED. §4. T02 does not run until the human picks an option that can address the branch ref.
+- **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the rehearsal branch.
+- **Rehearsal execution.** Option B (2026-09-26). The human creates the rehearsal branch in the dashboard and runs the SQL. The agent prepares the scripts and checks the pasted results. T02 has not written the scripts. Cost is the usage when the human creates that branch.
 
 ### MCP calls in T00
 
@@ -154,7 +154,9 @@ Candidate sequence, which the docs do not contradict:
 
 **This catalog cannot perform step 3.** `execute_sql` and `apply_migration` take a query and, for apply, a name. They take no project ref. The server is project-scoped, so those calls hit staging. `create_branch` says to use the returned ref, and the sibling tools do not accept it. Calling them for rehearsal SQL would target staging. That is forbidden.
 
-**Rehearsal task status: BLOCKED.** Human choice. Options:
+**Rehearsal task status.** The human decided on 2026-09-26 (verbatim under the options table): option B, and M4–M6 only. The agent still has no branch-ref argument, so rehearsal SQL is not applied from this catalog. T02 prepares the scripts. The human creates the dashboard branch and runs the SQL. The agent checks the pasted results.
+
+Options:
 
 | Option | What it does | Trade-off |
 |---|---|---|
@@ -162,7 +164,12 @@ Candidate sequence, which the docs do not contradict:
 | B. Human runs the SQL on a dashboard branch | Human creates the branch (cost is the usage in §4.1), runs the same M1–M3, seed, M4–M6, asserts, then deletes | Matches §7.2. The agent does not hold a connection to that ref. Evidence is pasted back. **Recommendation.** |
 | C. Treat GitHub Preview as the rehearsal | Preview replays git migrations then seeds once | Docs contradict the seed-between-M3-and-M4 shape. This is the DDL-parse proof only. Reject as the rehearsal. |
 
-**Recommendation: B**, until A exists. Do not use C as the rehearsal.
+**Human decision (2026-09-26), verbatim:**
+
+§4.4 = option B: the human creates the rehearsal branch in the dashboard and runs the SQL; the agent prepares the scripts and checks the pasted results.
+3f = rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the rehearsal branch.
+
+**Recommendation: B**, until A exists. Do not use C as the rehearsal. The decision above is that recommendation, now chosen.
 
 **Where the rehearsal SQL is staged.** Committed at `docs/03-database/rehearsal/n27-shape.sql`, written by T02, not by T00. Not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply that path. A never-committed script would not be reviewable. T00 does not write the file, because this pack must not contain the SQL.
 
@@ -292,7 +299,7 @@ Steps:
 
 Evidence to paste: the §0 re-measure, the ledger pair, advisor counts with observed_at.
 Done-when: the re-measure is in SESSION_CONTEXT and no migration file was added.
-STEP Z file list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md.
+STEP Z file list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_08_SCHEMA.md.
 Commit message: docs(p08-t01): read-first re-measure before any Phase 08 apply
 ```
 
@@ -461,8 +468,8 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | Task | Status | Evidence pointer |
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
-| T01 | | |
-| T02 | BLOCKED on §4.4 | |
+| T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
+| T02 | option B and 3f chosen 2026-09-26; scripts not written | §4.4 human decision |
 | T03 | | |
 | T04 | | |
 | T05 | | |
