@@ -2,14 +2,36 @@
 
 Audited text: `docs/03-database/rehearsal/staging-text/M1.sql`–`M6.sql` after C1 (checkout shell). Branch tip at audit start: `b3e6f04`. Sources: `BETK_V2_SCHEMA_DELTA_PLAN.md` (plan), `BETK_ERD.md` (ERD), and read-only staging SELECTs on 2026-09-27 (`execute_sql`, `list_migrations`). Ledger still 31 versions, last `20260723140552`.
 
-Verdicts: **MATCH** (kit equals the cited text), **BROADER** (kit allows more), **NARROWER** (kit allows less), **AUTHORED** (not a copy of a fenced block or a cell; basis stated), **MISMATCH** (contradicts explicit ERD or plan text). A FINDING is a BROADER security row with no later closer, or a design choice. Findings are not patched.
+Verdicts: **MATCH** (kit equals the cited text), **BROADER** (kit allows more), **NARROWER** (kit allows less), **AUTHORED** (not a copy of a fenced block or a cell; basis stated), **MISMATCH** (contradicts explicit ERD or plan text). A FINDING is a BROADER security row with no later closer, or a design choice. T02-FIX did not patch findings. T02-FIX2 applied E1–E3.
 
-**Fixes:** none. No `file:line` before → after. Zero design changes.
+**Decisions (human, 2026-09-26), verbatim:**
 
-**Findings**
+E1 master_orders.
+- A column GRANT never narrows a table-level privilege. The live pg_default_acl gives authenticated arwd, so M7's GRANT UPDATE (proof_path, transfer_reference) alone leaves every column writable.
+- M2 adds, after the master_orders policies: REVOKE ALL ON betk.master_orders FROM anon, authenticated;
+- M7 (T06) grants exactly plan §1.6's column lists.
+- Pack §2 gains a binding rule: "Column-scoped tables revoke the table-level privilege before any column GRANT (live orders pattern). A GRANT is never cited as the closer of a BROADER table privilege."
 
-1. **F1 `returns_update`.** ERD §8: UPDATE is “seller accept/reject, admin refund”, three-layer YES. Kit `M2.sql:148-151` is permissive UPDATE for `store_id = my_store_id()` OR `is_admin()`, every column. A seller can set `status` to `refunded` and can change `buyer_id`, `seller_order_id`, and `reason`. Plan §6 M7 names no returns column grant. Plan §6 M8 / §1.7 names no returns transition trigger. No closer. Not narrowed.
-2. **F2 `store_categories_select`.** ERD §8: SELECT is “public read of ids, own, admin”. Kit `M2.sql:232-235` is `TO anon, authenticated USING (true)`, so anon reads `approved_at` and rows whose `approved_at` is null. Plan §6 puts this table’s policies in M2 and does not name a later replacement. No closer. Not narrowed.
+E2 F1 returns.
+- returns_update becomes admin-only in Phase 08: USING (betk.is_admin()) WITH CHECK (betk.is_admin()).
+- The seller accept/reject path (policy + status-transition trigger + column scope, ERD §8) lands in Phase 15, before the first returns write.
+- Mint one REG for it at mint time (re-read the register header first). Owner: Phase 15. Before: Phase 15's first returns write. Text: "returns seller UPDATE deferred from Phase 08: ERD §8 'seller accept/reject' needs a status-transition trigger and column scope so a seller can never set refunded".
+
+E3 F2 store_categories.
+- store_categories_select USING becomes: approved_at IS NOT NULL OR <the same own-store predicate the kit's store_categories_delete uses> OR betk.is_admin().
+- Keep the policy's roles. AUDIT verdict: NARROWER than ERD "public read of ids"; Phase 09 (first consumer) confirms.
+- approved_at on approved rows stays readable, accepted as non-sensitive.
+
+**Fixes (T02-FIX2, E1–E3).** Three replacements in `staging-text/M2.sql`. No other M1–M6 text changed.
+
+- `M2.sql:117` `REVOKE INSERT, UPDATE, DELETE ON betk.master_orders FROM anon` → `REVOKE ALL ON betk.master_orders FROM anon, authenticated` (E1).
+- `M2.sql:150-151` `USING` / `WITH CHECK` `store_id = betk.my_store_id() OR betk.is_admin()` → `betk.is_admin()` (E2).
+- `M2.sql:235` `USING (true)` → `USING (approved_at IS NOT NULL OR store_id = betk.my_store_id() OR betk.is_admin())` (E3). Roles stay `TO anon, authenticated`.
+
+**Findings:** none open.
+
+1. **F1 `returns_update` — resolved by E2.** ERD §8 UPDATE is “seller accept/reject, admin refund”, three-layer YES. Kit `M2.sql:148-151` is now permissive UPDATE, PUBLIC, `USING (betk.is_admin())` and `WITH CHECK (betk.is_admin())`. A seller cannot set `status` to `refunded`. That is **NARROWER** than the ERD cell. The seller accept/reject path (policy + status-transition trigger + column scope, ERD §8) lands in Phase 15, before the first returns write. **REG-100.**
+2. **F2 `store_categories_select` — resolved by E3.** ERD §8 SELECT is “public read of ids, own, admin”. Kit `M2.sql:232-235` stays `TO anon, authenticated`. `USING` is `approved_at IS NOT NULL OR store_id = betk.my_store_id() OR betk.is_admin()` (the own-store predicate is the one `store_categories_delete` uses, `M2.sql:248`). Unapproved rows are not a public read. Verdict: **NARROWER** than ERD “public read of ids”. Phase 09 (first consumer) confirms. `approved_at` on approved rows stays readable, accepted as non-sensitive.
 
 ## Counts by verdict
 
@@ -17,15 +39,15 @@ Verdicts: **MATCH** (kit equals the cited text), **BROADER** (kit allows more), 
 |---|---:|---:|---:|---:|---:|---:|
 | a Columns | 88 | 0 | 0 | 0 | 0 | 0 |
 | a Constraints and keys | 23 | 0 | 0 | 1 | 0 | 0 |
-| b Policies | 23 | 3 | 0 | 0 | 0 | 2 (F1, F2) |
-| c Grants and revokes | 10 | 2 | 0 | 0 | 0 | 0 |
+| b Policies | 23 | 1 | 2 | 0 | 0 | 0 |
+| c Grants and revokes | 11 | 0 | 1 | 0 | 0 | 0 |
 | d `enforce_payment_update` | 1 | 0 | 0 | 0 | 0 | 0 |
 | e Cron | 1 | 0 | 0 | 0 | 0 | 0 |
 | f M5 statements | 10 | 0 | 0 | 4 | 0 | 0 |
 | g M1 | 7 | 0 | 0 | 1 | 0 | 0 |
 | h Other authored | 0 | 0 | 0 | 6 | 0 | 0 |
 
-BROADER rows that name a closer: `master_orders_update` (b), `master_orders` anon SELECT and authenticated table UPDATE (c). They are not findings.
+The one BROADER row is `master_orders_update` (b). Its closer is M2’s `REVOKE ALL`, then M7’s column grants. A GRANT is not the closer of that table privilege. Not a finding. No BROADER row is closed by a GRANT alone.
 
 `smallint` is `int2`. `timestamptz` is `timestamp with time zone`. A missing `ON DELETE` clause is NO ACTION (ERD §6, “NO ACTION means no ON DELETE clause”). Policy `TO` omitted means PUBLIC. Permissive is the default.
 
@@ -212,15 +234,15 @@ Each row is one `CREATE POLICY`. Command, permissive/restrictive, and roles are 
 | `master_orders_select` | `M2.sql:92-94` | ERD §8 “buyer self or admin. Seller none.” | MATCH | Permissive SELECT, PUBLIC |
 | `master_orders_insert` | `M2.sql:96-98` | ERD §8 INSERT “buyer, plus restrictive phone gate” | MATCH | Permissive INSERT, PUBLIC, buyer only. Column list of the INSERT grant is M7 (part c) |
 | `master_orders_phone_gate` | `M2.sql:100-110` | ERD §8; plan §1.5; live `orders_phone_gate` | MATCH | RESTRICTIVE INSERT, PUBLIC. Predicate is the live gate (`users.phone_number IS NOT NULL`) with `(select auth.uid())` |
-| `master_orders_update` | `M2.sql:112-115` | ERD §8 “buyer proof columns only, or admin” | BROADER | Resolved below. Closers: M7 column grant, M8 trigger |
+| `master_orders_update` | `M2.sql:112-115` | ERD §8 “buyer proof columns only, or admin” | BROADER | Resolved below. Closer: M2 `REVOKE ALL` (`M2.sql:117`), then M7 grants exactly plan §1.6’s column lists. M8 trigger still stamps the once/deadline rules |
 | `returns_select` | `M2.sql:136-142` | ERD §8 “buyer self, store, admin” | MATCH | Permissive SELECT, PUBLIC |
 | `returns_insert` | `M2.sql:144-146` | ERD §8 INSERT “buyer” | MATCH | Permissive INSERT, PUBLIC, `buyer_id = (select auth.uid())`. The cell does not require an order-ownership check; the kit does not add one |
-| `returns_update` | `M2.sql:148-151` | ERD §8 “seller accept/reject, admin refund” | BROADER | **F1.** No closer |
+| `returns_update` | `M2.sql:148-151` | ERD §8 “seller accept/reject, admin refund” | NARROWER | **F1 resolved by E2.** Admin only. Seller path is REG-100, Phase 15, before the first returns write |
 | `return_evidence_select` | `M2.sql:166-179` | ERD §8 “return parties or admin” | MATCH | Permissive SELECT, PUBLIC. Admin, or the return’s buyer, or the return’s store |
 | `return_evidence_insert` | `M2.sql:181-190` | ERD §8 INSERT “buyer” | MATCH | Permissive INSERT, PUBLIC. Buyer of that return. No UPDATE or DELETE policy (cells are none) |
 | `agreement_acceptances_select` | `M2.sql:211-213` | ERD §8 “self or admin” | MATCH | Permissive SELECT, PUBLIC |
 | `agreement_acceptances_insert` | `M2.sql:215-217` | ERD §8 INSERT “self” | MATCH | Permissive INSERT, PUBLIC. No UPDATE or DELETE policy |
-| `store_categories_select` | `M2.sql:232-235` | ERD §8 “public read of ids, own, admin” | BROADER | **F2.** No closer |
+| `store_categories_select` | `M2.sql:232-235` | ERD §8 “public read of ids, own, admin” | NARROWER | **F2 resolved by E3.** Roles unchanged. Unapproved rows are not public. Phase 09 confirms. `approved_at` on approved rows stays readable |
 | `store_categories_insert` | `M2.sql:237-239` | ERD §8 INSERT “own or admin” | MATCH | Permissive INSERT, PUBLIC |
 | `store_categories_update` | `M2.sql:241-244` | ERD §8 UPDATE “admin (`approved_at`)” | MATCH | Permissive UPDATE, PUBLIC, `is_admin()` only. The only non-key column is `approved_at`. Not column-granted; not security-relevant beyond admin |
 | `store_categories_delete` | `M2.sql:246-248` | ERD §8 DELETE “own or admin” | MATCH | Permissive DELETE, PUBLIC |
@@ -238,32 +260,33 @@ Empty ERD DELETE/UPDATE cells with no policy in the kit: `master_orders` DELETE,
 
 ERD §8 says the buyer may update proof columns only, or admin may update. The kit’s policy (`M2.sql:112-115`) is permissive UPDATE, PUBLIC, USING and WITH CHECK `buyer_id = (select auth.uid()) OR is_admin()`. It does not name columns. Row scope matches “buyer or admin”. Column scope is every column the role can write.
 
-What closes it:
+What closes it (E1, 2026-09-26):
 
-- **M7** `master_orders` grants (plan §6 M7; plan §1.6): `GRANT UPDATE (proof_path, transfer_reference)` only. That is the column GRANT. Until that statement, measured `pg_default_acl` on `betk` gives `authenticated` table `arwd`, and M2 does not revoke `authenticated` UPDATE, so the buyer who passes this policy can UPDATE every column.
+- **M2** `REVOKE ALL ON betk.master_orders FROM anon, authenticated` (`M2.sql:117`), after the `master_orders` policies. A column GRANT never narrows a table-level privilege. Measured `pg_default_acl` on `betk` gives `authenticated` `arwd`, so M7’s `GRANT UPDATE (proof_path, transfer_reference)` alone would leave every column writable. The table privilege is revoked here.
+- **M7** (T06) grants exactly plan §1.6’s column lists: `GRANT SELECT` of every column `TO authenticated`, `GRANT INSERT` of the checkout columns `TO authenticated`, `GRANT UPDATE (proof_path, transfer_reference)` only. `anon` stays with no SELECT and no UPDATE. Those grants are the column lists. They are not the closer of the table privilege.
 - **M8** `enforce_master_proof_update` (plan §6 M8; plan §1.7): BEFORE UPDATE, buyer sets the two proof columns once, before `payment_deadline`, while children are `pending` and proof is null, and stamps `proof_uploaded_at`.
 
-Staging is **fail-open on columns from the M2 commit until M7’s column grant**. From M7 until M8 the column list is the two proof columns, and the once/deadline/children-pending rules are not enforced yet. Both closers are named. Not a finding. Not narrowed in this kit.
+From the M2 commit until M7, `authenticated` has no privilege on `master_orders`. From M7 until M8 the column list is plan §1.6, and the once/deadline/children-pending rules are not enforced yet. Not a finding. The policy expression is still broader than “proof columns only”; the table privilege is not.
 
 ## c. Grants and revokes
 
 Measured `pg_default_acl` for schema `betk`, role `postgres`, objtype `r`: `anon=arwd/postgres`, `authenticated=arwd/postgres`, `service_role=arwdDxtm/postgres`. No `betk` row for functions. Function default EXECUTE exists on `public` only (`anon`, `authenticated`, `service_role` = `X`). That matches plan §6 M6.
 
-M2’s grant change past that ACL is `REVOKE INSERT, UPDATE, DELETE … FROM anon` on each new table (plan §6 fail-closed sentence: policies, then any grant beyond the default ACL). There is no `GRANT` in M2–M6. M3, M4, and M5 contain no grant statement.
+M2’s grant change past that ACL is `REVOKE INSERT, UPDATE, DELETE … FROM anon` on each new table except `master_orders` (plan §6 fail-closed sentence: policies, then any grant beyond the default ACL). `master_orders` is `REVOKE ALL … FROM anon, authenticated` (E1, `M2.sql:117`). There is no `GRANT` in M2–M6. M3, M4, and M5 contain no grant statement.
 
 | Object | Kit | Source | Verdict | Note |
 |---|---|---|---|---|
 | `REVOKE` I/U/D `cart_items` FROM `anon` | `M2.sql:64` | plan §6 M2; measured ACL | MATCH | Anon keeps SELECT. RLS predicate denies anon rows |
-| `REVOKE` I/U/D `master_orders` FROM `anon` | `M2.sql:117` | plan §6 M2 | MATCH | Writes match “anon gets no write” (plan §1.6) |
+| `REVOKE ALL` `master_orders` FROM `anon`, `authenticated` | `M2.sql:117` | E1; plan §1.6 | MATCH | Table privilege revoked after the policies. Anon writes and anon SELECT are gone. Authenticated `arwd` is gone |
 | `REVOKE` I/U/D `returns` FROM `anon` | `M2.sql:153` | plan §6 M2 | MATCH | |
 | `REVOKE` I/U/D `return_evidence` FROM `anon` | `M2.sql:192` | plan §6 M2 | MATCH | |
 | `REVOKE` I/U/D `agreement_acceptances` FROM `anon` | `M2.sql:219` | plan §6 M2 | MATCH | |
-| `REVOKE` I/U/D `store_categories` FROM `anon` | `M2.sql:250` | plan §6 M2 | MATCH | Anon SELECT stays, and the SELECT policy is `TO anon` (F2 is the predicate, not this revoke) |
+| `REVOKE` I/U/D `store_categories` FROM `anon` | `M2.sql:250` | plan §6 M2 | MATCH | Anon SELECT stays. The SELECT predicate is E3 (F2 resolved). This revoke is not that predicate |
 | `REVOKE` I/U/D `courier_rates` FROM `anon` | `M2.sql:291` | plan §6 M2 | MATCH | SELECT policy is `TO authenticated`, so anon SELECT privilege returns no rows |
 | `REVOKE` I/U/D `store_pickup_addresses` FROM `anon` | `M2.sql:319` | plan §6 M2 | MATCH | |
-| `authenticated` keeps table `arwd` on the 8 tables | M2, no further GRANT | measured ACL; plan §6 M2 | MATCH | M2 does not add a grant. Final column grants are M7 |
-| `master_orders` anon SELECT remains | `M2.sql:117` does not revoke SELECT | plan §1.6 “anon gets no SELECT and no UPDATE” | BROADER | Closer: plan §6 M7 “`master_orders` grants”. Until then the SELECT policy denies anon (`auth.uid()` null, not admin) |
-| `master_orders` `authenticated` table UPDATE remains | default ACL, not revoked | plan §1.6 column UPDATE | BROADER | Same window as `master_orders_update`. Closer: M7 `GRANT UPDATE (proof_path, transfer_reference)` only |
+| `authenticated` keeps table `arwd` on 7 of the 8 tables | M2, no further GRANT | measured ACL; plan §6 M2 | MATCH | `master_orders` is the exception (`M2.sql:117`). M2 adds no GRANT. Other tables’ column grants are M7 |
+| `master_orders` anon SELECT | `M2.sql:117` `REVOKE ALL` | plan §1.6 “anon gets no SELECT and no UPDATE” | MATCH | Closed in M2. M7 does not grant `anon` |
+| `master_orders` `authenticated` table privileges | `M2.sql:117` `REVOKE ALL` | plan §1.6 column lists | NARROWER | No `authenticated` privilege until M7. Closer of the old table-privilege window: M2’s `REVOKE ALL`, then M7 grants exactly plan §1.6’s column lists. The column GRANT is not the closer of the table privilege |
 | `REVOKE EXECUTE` on `checkout_from_cart(uuid)` | `M6.sql:92` | plan §6 M6 | MATCH | FROM `PUBLIC`, `anon`, and `authenticated`. No GRANT in M6. `betk` has no function default ACL; PostgreSQL still grants EXECUTE to PUBLIC on CREATE FUNCTION, and this revoke removes it in the same migration |
 
 Live `orders` privileges (measured `column_privileges`): `authenticated` UPDATE is only `status` and `cancellation_reason`; `anon` UPDATE is table-level (every existing column). M3’s new columns are not in the authenticated column grant. Plan §1.6 adds `escalated_at`, `escalation_reason`, and `escalation_note` in the grant migration, which is M7. M3 does not grant them. Anon’s table-level UPDATE includes columns added later; there is still no anon-satisfying UPDATE policy (plan §1.6: anon table UPDATE stays; do not add a public UPDATE policy).
@@ -353,3 +376,5 @@ All `execute_sql` SELECT, plus `list_migrations`. No `apply_migration`, no branc
 - `pg_constraint` `order_status_history_order_id_fkey` (`confdeltype` `a`, `confrelid` = `betk.orders`)
 - `pg_rules`: `no_delete_mod_log`, `no_update_mod_log`, `no_delete_order_history`, `no_update_order_history`, each `DO INSTEAD NOTHING`
 - `list_migrations`: 31 versions, last `20260723140552`
+
+T02-FIX2 re-read (2026-09-27), same namespace, SELECT and `list_migrations` only. `pg_default_acl` for `betk` tables is still `{anon=arwd/postgres,authenticated=arwd/postgres,service_role=arwdDxtm/postgres}`. `pg_get_expr` of a live `USING (betk.is_admin())` policy (`cat_admin`) is exactly `betk.is_admin()`. Ledger still 31, last `20260723140552`. No `apply_migration`.

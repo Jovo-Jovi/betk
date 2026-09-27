@@ -524,7 +524,60 @@ END
 $rehearsal_checkout$;
 
 INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-SELECT 41, 'all_pass', 'true', bool_and(pass)::text, bool_and(pass)
+SELECT 42, 'master_orders_anon_select', 'false',
+  has_table_privilege('anon', 'betk.master_orders', 'SELECT')::text,
+  has_table_privilege('anon', 'betk.master_orders', 'SELECT') = false
+UNION ALL
+SELECT 43, 'master_orders_authenticated_update', 'false',
+  has_table_privilege('authenticated', 'betk.master_orders', 'UPDATE')::text,
+  has_table_privilege('authenticated', 'betk.master_orders', 'UPDATE') = false
+UNION ALL
+SELECT 44, 'master_orders_authenticated_insert', 'false',
+  has_table_privilege('authenticated', 'betk.master_orders', 'INSERT')::text,
+  has_table_privilege('authenticated', 'betk.master_orders', 'INSERT') = false
+UNION ALL
+SELECT 45, 'returns_update_qual', 'betk.is_admin()',
+  COALESCE((
+    SELECT pg_get_expr(p.polqual, p.polrelid)
+    FROM pg_policy AS p
+    JOIN pg_class AS c ON c.oid = p.polrelid
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'betk'
+      AND c.relname = 'returns'
+      AND p.polname = 'returns_update'
+  ), 'missing'),
+  COALESCE((
+    SELECT pg_get_expr(p.polqual, p.polrelid) = 'betk.is_admin()'
+    FROM pg_policy AS p
+    JOIN pg_class AS c ON c.oid = p.polrelid
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'betk'
+      AND c.relname = 'returns'
+      AND p.polname = 'returns_update'
+  ), false)
+UNION ALL
+SELECT 46, 'store_categories_select_approved', 'contains',
+  COALESCE((
+    SELECT pg_get_expr(p.polqual, p.polrelid)
+    FROM pg_policy AS p
+    JOIN pg_class AS c ON c.oid = p.polrelid
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'betk'
+      AND c.relname = 'store_categories'
+      AND p.polname = 'store_categories_select'
+  ), 'missing'),
+  COALESCE((
+    SELECT strpos(pg_get_expr(p.polqual, p.polrelid), 'approved_at IS NOT NULL') > 0
+    FROM pg_policy AS p
+    JOIN pg_class AS c ON c.oid = p.polrelid
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'betk'
+      AND c.relname = 'store_categories'
+      AND p.polname = 'store_categories_select'
+  ), false);
+
+INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
+SELECT 47, 'all_pass', 'true', bool_and(pass)::text, bool_and(pass)
 FROM rehearsal_assert;
 
 SELECT name, expected, actual, pass

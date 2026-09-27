@@ -90,6 +90,7 @@ All read-only: `list_migrations`, `get_advisors` security, `get_advisors` perfor
 - **SQL source.** SQL source = the staging-text files, authored from plan §6 objects and fenced blocks, audited in AUDIT.md. This pack does not contain that SQL.
 - **Preconditions.** Each migration re-measures its plan §6 Preconditions. STOP on any mismatch. Do not apply.
 - **M2 fail-closed ordering.** Plan §6 “Fail-closed intermediates”. Inside the one M2 transaction, per table: create the table, then enable row level security, then create the policies, then any grant beyond the default ACL. Do not commit a new table with RLS off. `pg_default_acl` on `betk` grants `anon` and `authenticated` table DML at create time (plan §6).
+- **Column-scoped tables revoke the table-level privilege before any column GRANT (live orders pattern). A GRANT is never cited as the closer of a BROADER table privilege.**
 - **Point of no return M5.** Plan §7.3 and the M5 bullet in §6. The five history inserts, and `SET NOT NULL` on `master_order_id`, are forward-fix only. The M5 prompt stops before the first history insert until the human types `GO M5`.
 - **No `select *` and no `RETURNING *` on `seller_orders` after M7.** Plan §9 and §8.1. Generated `Row` types still list the hidden columns (REG-92). The grant makes the star form raise `42501`.
 - **RLS tests change with M6.** Plan §2.3 and §9. `tests/integration/order.rls.test.ts`, `orders.stockDecrement.test.ts`, `rls.smoke.test.ts`, `discovery.listing.test.ts`, and `discovery.queries.test.ts` change in the same branch as M6. Comment barrels named in §2.3 change in that same branch. They do not execute.
@@ -112,6 +113,8 @@ No reservations. Numbers are taken at mint time. P08-T00 re-read the header (REG
 | REG-93..REG-99 | Minted in T00 for empty keys with no owning REG. §5. | Plan §8.2.5 |
 
 Next free after this mint: **REG-100**. Next free OD: **OD-22**. Next free ADR: **ADR-026**.
+
+P08-T02-FIX2 re-read (2026-09-27), before the mint: header was REG-01..REG-99, next free **REG-100**, no REG-100 row. Took **REG-100** (seller returns UPDATE deferred; owner Phase 15; before Phase 15’s first returns write). Next free **REG-101**. OD-22 and ADR-026 unchanged.
 
 `price_band_min_egp` and `price_band_max_egp` were not minted. REG-62’s text already covers “price band set”.
 
@@ -185,6 +188,22 @@ Options:
 
 **C2 (human, 2026-09-26), verbatim:** C2 T04 applies staging-text/M4.sql byte-for-byte, same rule as T03 and T05.
 
+**E1 (human, 2026-09-26), verbatim:** E1 master_orders.
+- A column GRANT never narrows a table-level privilege. The live pg_default_acl gives authenticated arwd, so M7's GRANT UPDATE (proof_path, transfer_reference) alone leaves every column writable.
+- M2 adds, after the master_orders policies: REVOKE ALL ON betk.master_orders FROM anon, authenticated;
+- M7 (T06) grants exactly plan §1.6's column lists.
+- Pack §2 gains a binding rule: "Column-scoped tables revoke the table-level privilege before any column GRANT (live orders pattern). A GRANT is never cited as the closer of a BROADER table privilege."
+
+**E2 (human, 2026-09-26), verbatim:** E2 F1 returns.
+- returns_update becomes admin-only in Phase 08: USING (betk.is_admin()) WITH CHECK (betk.is_admin()).
+- The seller accept/reject path (policy + status-transition trigger + column scope, ERD §8) lands in Phase 15, before the first returns write.
+- Mint one REG for it at mint time (re-read the register header first). Owner: Phase 15. Before: Phase 15's first returns write. Text: "returns seller UPDATE deferred from Phase 08: ERD §8 'seller accept/reject' needs a status-transition trigger and column scope so a seller can never set refunded".
+
+**E3 (human, 2026-09-26), verbatim:** E3 F2 store_categories.
+- store_categories_select USING becomes: approved_at IS NOT NULL OR <the same own-store predicate the kit's store_categories_delete uses> OR betk.is_admin().
+- Keep the policy's roles. AUDIT verdict: NARROWER than ERD "public read of ids"; Phase 09 (first consumer) confirms.
+- approved_at on approved rows stays readable, accepted as non-sensitive.
+
 **Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
@@ -205,12 +224,12 @@ Files:
 - `docs/03-database/rehearsal/run/07_M6.sql`
 - `docs/03-database/rehearsal/run/08_asserts.sql`
 
-SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only. Superseded (T02, before C1): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32`.
+SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only. Superseded (T02-FIX, before E1–E3): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca`. Superseded (T02, before C1): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32`.
 
 | File | SHA256 |
 |---|---|
 | `M1.sql` | `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c` |
-| `M2.sql` | `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995` |
+| `M2.sql` | `7f9a12af41b6e65aa4fe091f09383dea04415f3891c17c7b5b2a8a1824b60809` |
 | `M3.sql` | `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037` |
 | `M4.sql` | `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8` |
 | `M5.sql` | `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7` |
@@ -547,7 +566,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. Next: human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B, C1, C2 |
+| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. Next: human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B, C1, C2, E1, E2, E3 |
 | T03 | | |
 | T04 | | |
 | T05 | | |

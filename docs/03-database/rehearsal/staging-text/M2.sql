@@ -114,7 +114,7 @@ CREATE POLICY master_orders_update ON betk.master_orders
   USING (buyer_id = (select auth.uid()) OR betk.is_admin())
   WITH CHECK (buyer_id = (select auth.uid()) OR betk.is_admin());
 
-REVOKE INSERT, UPDATE, DELETE ON betk.master_orders FROM anon;
+REVOKE ALL ON betk.master_orders FROM anon, authenticated;
 
 CREATE TABLE betk.returns (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -147,8 +147,8 @@ CREATE POLICY returns_insert ON betk.returns
 
 CREATE POLICY returns_update ON betk.returns
   FOR UPDATE
-  USING (store_id = betk.my_store_id() OR betk.is_admin())
-  WITH CHECK (store_id = betk.my_store_id() OR betk.is_admin());
+  USING (betk.is_admin())
+  WITH CHECK (betk.is_admin());
 
 REVOKE INSERT, UPDATE, DELETE ON betk.returns FROM anon;
 
@@ -232,7 +232,7 @@ ALTER TABLE betk.store_categories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY store_categories_select ON betk.store_categories
   FOR SELECT
   TO anon, authenticated
-  USING (true);
+  USING (approved_at IS NOT NULL OR store_id = betk.my_store_id() OR betk.is_admin());
 
 CREATE POLICY store_categories_insert ON betk.store_categories
   FOR INSERT
