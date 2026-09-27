@@ -4,7 +4,7 @@
 
 The files under `run/` raise before they change anything when the sentinel is missing, and `00` raises when the database is not an empty copy of the 31-migration staging history. They do not know which dashboard project is selected. Read the branch name in the SQL editor before every run.
 
-`staging-text/M1.sql` … `M6.sql` are the texts T03 and T05 apply on staging (D-B). Do not run those files on the rehearsal branch. Run `run/00` through `run/08`.
+`staging-text/M1.sql` … `M6.sql` are the texts T03, T04, and T05 apply on staging, byte-for-byte (D-B, C2). Do not run those files on the rehearsal branch. Run `run/00` through `run/08`. The audit is `AUDIT.md`.
 
 ## Runbook
 
@@ -40,8 +40,8 @@ D1 targets are orders `…0001`, `…0002`, `…0003` (pending) and `…0005`, `
 
 ## Flags for review
 
-- `checkout_from_cart(uuid)` is not a fenced DRAFT block. The text checks out every cart line for `auth.uid()`, prices from `listing.price` or `inquiries.quoted_price`, fails closed on a null weight or a missing rate, uses a half-open weight band, leaves `display_ref` and the child `betk_ref` NULL, sets shipment `courier` to the literal `courier`, and inlines the stock update. Agreement keys are not consulted. An INVOKER cannot pass listings RLS for that update; M8 is the DEFINER rework. A zero balance can fail `payments.amount > 0`. Static SQL against the function’s temporary table can cache a plan that fails on a later call in the same session. The rehearsal does not call the function.
+- `checkout_from_cart(uuid)` in M6 is the C1 shell. The body is `RAISE EXCEPTION 'BETK_CHECKOUT_NOT_READY'`. `08` calls it and expects that exception. The T02 body, with its flags, is `drafts/checkout_from_cart.draft.sql` (not applied). T05b authors the real body. M8 replaces the shell with `CREATE OR REPLACE`.
 - `order_status` label `ready` is added `AFTER 'preparing'` so the order matches ERD §5. A default `ADD VALUE` would append after `returned`.
 - Exception names `BETK_N27_ITEMS_NONEMPTY` and `BETK_N27_TARGET_STATUS` are not in the plan’s fenced SQL. The plan says to abort on a non-zero item count and on a target whose status is not the measured one.
-- D-B names T03 and T05 only. T04 applies M4. `staging-text/M4.sql` is in this kit. T04’s prompt was not given the byte-for-byte line.
+- C2: T04 applies `staging-text/M4.sql` byte-for-byte, same rule as T03 and T05.
 - The seed inserts `confirmed` and `cancelled`. `trg_enforce_order_transition` is BEFORE UPDATE only, so the insert does not fire it. `inquiry_id` is set by a later UPDATE that does not change status or cancel metadata. No trigger is disabled in `04`.

@@ -87,7 +87,7 @@ All read-only: `list_migrations`, `get_advisors` security, `get_advisors` perfor
 ## 2. Binding rules
 
 - **Per-migration procedure.** Plan §6 header line: MCP `apply_migration`, then rename the local file to the returned version, then ledger 1:1, then backfill `BETK_DATABASE_SCHEMA.sql`, then advisors before and after against §0.9. Typegen is the CI job (REG-32), not a hand edit.
-- **SQL source.** The plan’s approved DRAFT SQL, referenced by section. This pack does not contain that SQL.
+- **SQL source.** SQL source = the staging-text files, authored from plan §6 objects and fenced blocks, audited in AUDIT.md. This pack does not contain that SQL.
 - **Preconditions.** Each migration re-measures its plan §6 Preconditions. STOP on any mismatch. Do not apply.
 - **M2 fail-closed ordering.** Plan §6 “Fail-closed intermediates”. Inside the one M2 transaction, per table: create the table, then enable row level security, then create the policies, then any grant beyond the default ACL. Do not commit a new table with RLS off. `pg_default_acl` on `betk` grants `anon` and `authenticated` table DML at create time (plan §6).
 - **Point of no return M5.** Plan §7.3 and the M5 bullet in §6. The five history inserts, and `SET NOT NULL` on `master_order_id`, are forward-fix only. The M5 prompt stops before the first history insert until the human types `GO M5`.
@@ -175,13 +175,25 @@ Options:
 
 **D-B (human, 2026-09-26), verbatim:** D-B Rehearsal binding: T03 and T05 apply the staging texts T02 writes, byte-for-byte, verified by sha256.
 
-**Rehearsal binding (D-B).** T03 and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. FLAG: D-B names T03 and T05 only. T04 applies M4, and `M4.sql` is in the kit, but T04's prompt was not given that line.
+**SQL source correction (T02-FIX).** The plan holds 11 fenced SQL blocks. Only four are DDL or data (§1.2 listings ALTER, btree_gist, §4.3 N27 abort, §4.9 trigger toggle); the rest are queries. M2, M3, most of M5, and M6 were authored from plan §6 objects and the ERD. Authored SQL is audited before D-B binds it by sha256. Audit: `docs/03-database/rehearsal/AUDIT.md`. SQL source = the staging-text files, authored from plan §6 objects and fenced blocks, audited in AUDIT.md.
+
+**C1 (human, 2026-09-26), verbatim:** C1 checkout_from_cart.
+- M6 creates a fail-closed shell with the final signature: betk.checkout_from_cart(p_delivery_address_id uuid) RETURNS uuid, LANGUAGE plpgsql, SECURITY INVOKER, SET search_path TO 'betk','public'.
+- Body = RAISE EXCEPTION 'BETK_CHECKOUT_NOT_READY'. The REVOKE EXECUTE stays in M6.
+- The real body is authored in task T05b before T06, reviewed in the planning chat, and lands in M8 via CREATE OR REPLACE (plan §6 M8 allows replacing the body).
+- T02's body moves to docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql. First line: "-- DRAFT INPUT — NOT APPLIED — known defects listed below". Then T02's checkout flags, as comments.
+
+**C2 (human, 2026-09-26), verbatim:** C2 T04 applies staging-text/M4.sql byte-for-byte, same rule as T03 and T05.
+
+**Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
 
 Files:
 
 - `docs/03-database/rehearsal/README.md`
+- `docs/03-database/rehearsal/AUDIT.md`
+- `docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql`
 - `docs/03-database/rehearsal/staging-text/M1.sql` … `M6.sql`
 - `docs/03-database/rehearsal/run/00_guard_and_sentinel.sql`
 - `docs/03-database/rehearsal/run/01_M1.sql`
@@ -193,7 +205,7 @@ Files:
 - `docs/03-database/rehearsal/run/07_M6.sql`
 - `docs/03-database/rehearsal/run/08_asserts.sql`
 
-SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only:
+SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only. Superseded (T02, before C1): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32`.
 
 | File | SHA256 |
 |---|---|
@@ -202,7 +214,7 @@ SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only:
 | `M3.sql` | `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037` |
 | `M4.sql` | `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8` |
 | `M5.sql` | `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7` |
-| `M6.sql` | `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32` |
+| `M6.sql` | `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca` |
 
 **Project id.** Under option B the human runs the SQL editor on the dashboard branch. The agent does not call `apply_migration` or `execute_sql` for the rehearsal. `BRANCH_PROJECT_REF` stays a variable for option A, if that tool argument ever exists. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
 
@@ -252,6 +264,7 @@ A source row maps to exactly one T below. Where that row also names an earlier m
 | T03 | M1, M2, M3 | M1 M2 M3 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T04 | M4, CF-1 | M4 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T05 | M5 (GO M5) and M6, including §2.3 test and comment edits | M5 M6 | Grok 4.7 | Max | `feature/phase-08-schema` |
+| T05b | checkout_from_cart body. Prompt issued by the planning chat | none (lands in M8) | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T06 | M7 and M8 | M7 M8 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T07 | REG-92 and guards E, F, G | none | Grok 4.7 | High | `feature/phase-08-schema` |
 | T08 | Exit evidence, nine checks | none | Grok 4.7 | Max | `feature/phase-08-schema` |
@@ -287,7 +300,9 @@ A source row maps to exactly one T below. Where that row also names an earlier m
 
 T02 is the rehearsal. It is not a Phase 08 task row and not a §9 row. It sits before T03, which is the first staging apply.
 
-CF-2’s create-and-revoke is M6, applied in T05. T06 does not create the function again. T06 applies M7, whose last statement is the GRANT, and re-reads the function body. The row’s single owner is T06.
+CF-2’s create-and-revoke is M6, applied in T05. M6’s body is the C1 shell (`RAISE EXCEPTION 'BETK_CHECKOUT_NOT_READY'`). T05b authors the real body. M8 lands it with `CREATE OR REPLACE` (plan §6 M8). T06 does not create the function again. T06 applies M7, whose last statement is the GRANT, and re-reads the function body. The row’s single owner is T06.
+
+T05b — checkout_from_cart body (Max). Prompt issued by the planning chat. Scope: author the body from `docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql` against ADR-022, CF-2, D4, R-O02, R-O17, R-O21; stock goes through the M8 function per plan §4.2, not an inline listings UPDATE; REG-88: read the pin; never choose it; lands in M8.
 
 The RLS row’s new-table policies are M2, applied in T03 under the §9 M1–M3 row. T06 applies the M7 policies and re-verifies the eight new tables. The RLS row’s single owner is T06.
 
@@ -402,6 +417,7 @@ Commit message: feat(p08-t03): apply M1-M3 additive schema delta
 ### T04
 
 ```text
+Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T04 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
@@ -430,7 +446,7 @@ M5 STOP. Re-measure plan §6 M5 preconditions and paste them: M4 applied, histor
 After GO M5:
 1. Apply M5 from plan §4.3, §4.9, and §6 M5. Disable only trg_enforce_order_transition around the five updates and five inserts. Not DISABLE TRIGGER ALL. Not session_replication_role.
 2. Verify §4.8 and §4.9. Original seven md5s unchanged. Exactly five new history rows.
-3. Apply M6 from plan §6 M6 and §2. One transaction: rename, rewrite enforce_payment_update, reschedule the cron command, drop create_order_from_inquiry, create checkout_from_cart, revoke EXECUTE from PUBLIC, anon, and authenticated. No GRANT in M6.
+3. Apply M6 from the staging text, byte-for-byte. One transaction: rename, rewrite enforce_payment_update, reschedule the cron command, drop create_order_from_inquiry, create checkout_from_cart, revoke EXECUTE from PUBLIC, anon, and authenticated. No GRANT in M6. The checkout body in that file is the C1 shell (`BETK_CHECKOUT_NOT_READY`). Do not replace it in T05. T05b authors the body; M8 applies CREATE OR REPLACE.
 4. In this same branch, edit the test files and comment barrels named in plan §2.3. Do not edit onboarding src/. Do not hand-edit types.ts.
 5. Verify the M6 checks in plan §6, including that the function body does not select or return the hidden columns and that authenticated has no EXECUTE.
 
@@ -438,6 +454,18 @@ Evidence: the precondition paste, the human’s GO M5, §4.8 and §4.9 results, 
 Done-when: seller_orders exists, orders does not, the retired RPC is gone, EXECUTE is still revoked.
 STEP Z file list: the renamed M5 and M6 files, BETK_DATABASE_SCHEMA.sql, the §2.3 test and comment files, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md.
 Commit message: feat(p08-t05): N27 masters, rename seller_orders, revoke checkout execute
+```
+
+### T05b
+
+```text
+T05b — checkout_from_cart body (Max). Prompt issued by the planning chat.
+
+Scope:
+- author the body from docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql against ADR-022, CF-2, D4, R-O02, R-O17, R-O21;
+- stock goes through the M8 function per plan §4.2, not an inline listings UPDATE;
+- REG-88: read the pin; never choose it;
+- lands in M8.
 ```
 
 ### T06
@@ -452,7 +480,7 @@ Do not re-apply M6. Re-read checkout_from_cart and confirm EXECUTE is still revo
 Steps:
 1. Re-measure M7 preconditions (plan §6 M7). STOP on mismatch. Apply M7 from plan §1.5, §1.6, §1.8, and §6 M7. Column list for the SELECT grant comes from information_schema at apply time, minus delivery_fee and total_amount. Last statement: GRANT EXECUTE to authenticated. Not to anon. Not to PUBLIC.
 2. Verify plan §6 M7, including zero policies on sessions and otp_tokens, one modlog_admin_insert, and the six formerly zero-policy tables now policed. Re-verify the eight M2 tables still have policies. Advisor delta: rls-no-policy 8 → 2. Initplan does not rise.
-3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply M8 from plan §1.7 and §6 M8. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
+3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply M8 from plan §1.7 and §6 M8. M8’s `checkout_from_cart` statement is `CREATE OR REPLACE` with the body T05b wrote. The M6 shell is not the final body. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
 4. Verify Phase 08 exit items 6, 8, and 9 as far as the functions allow before T08’s full paste.
 
 Evidence: column_privileges, routine_privileges, policy counts, advisor before/after, pg_proc checks named in plan §6 M8.
@@ -519,7 +547,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | kit written 2026-09-26 (option B); human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B |
+| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. Next: human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B, C1, C2 |
 | T03 | | |
 | T04 | | |
 | T05 | | |

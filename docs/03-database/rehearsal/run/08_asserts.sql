@@ -426,8 +426,105 @@ EXCEPTION
 END
 $rehearsal_delete$;
 
+-- Plan §6 M6 verify. Rename keeps the history FK's relation OID, so
+-- confrelid = seller_orders and confdeltype 'a' (NO ACTION) is that proof.
 INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-SELECT 32, 'all_pass', 'true', bool_and(pass)::text, bool_and(pass)
+SELECT 33, 'm6_to_regclass', 'orders_null|seller_orders_present',
+  CASE WHEN to_regclass('betk.orders') IS NULL THEN 'orders_null' ELSE 'orders_present' END
+    || '|' ||
+  CASE WHEN to_regclass('betk.seller_orders') IS NOT NULL THEN 'seller_orders_present' ELSE 'seller_orders_absent' END,
+  to_regclass('betk.orders') IS NULL
+    AND to_regclass('betk.seller_orders') IS NOT NULL
+UNION ALL
+SELECT 34, 'create_order_from_inquiry_absent', 'null',
+  COALESCE(
+    to_regprocedure('betk.create_order_from_inquiry(uuid,uuid,betk.delivery_preference,betk.payment_method)')::text,
+    'null'
+  ),
+  to_regprocedure('betk.create_order_from_inquiry(uuid,uuid,betk.delivery_preference,betk.payment_method)') IS NULL
+UNION ALL
+SELECT 35, 'no_betk_orders_in_defs', 'absent',
+  CASE
+    WHEN strpos(pg_get_functiondef('betk.enforce_payment_update()'::regprocedure), 'betk.orders') = 0
+     AND strpos(pg_get_functiondef('betk.checkout_from_cart(uuid)'::regprocedure), 'betk.orders') = 0
+    THEN 'absent'
+    ELSE 'present'
+  END,
+  strpos(pg_get_functiondef('betk.enforce_payment_update()'::regprocedure), 'betk.orders') = 0
+    AND strpos(pg_get_functiondef('betk.checkout_from_cart(uuid)'::regprocedure), 'betk.orders') = 0
+UNION ALL
+SELECT 36, 'checkout_execute_revoked', 'false|false',
+  has_function_privilege('anon', 'betk.checkout_from_cart(uuid)', 'EXECUTE')::text
+    || '|' ||
+  has_function_privilege('authenticated', 'betk.checkout_from_cart(uuid)', 'EXECUTE')::text,
+  NOT has_function_privilege('anon', 'betk.checkout_from_cart(uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'betk.checkout_from_cart(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 37, 'daily_platform_snapshot_command', 'seller_orders|5 22 * * *',
+  COALESCE((
+    SELECT CASE
+      WHEN strpos(j.command, 'betk.orders') = 0 AND strpos(j.command, 'betk.seller_orders') > 0
+      THEN 'seller_orders'
+      ELSE 'orders_still_named'
+    END || '|' || j.schedule
+    FROM cron.job AS j
+    WHERE j.jobname = 'daily-platform-snapshot'
+  ), 'missing'),
+  COALESCE((
+    SELECT strpos(j.command, 'betk.orders') = 0
+      AND strpos(j.command, 'betk.seller_orders') > 0
+      AND j.schedule = '5 22 * * *'
+    FROM cron.job AS j
+    WHERE j.jobname = 'daily-platform-snapshot'
+  ), false)
+UNION ALL
+SELECT 38, 'history_fk_same_oid_no_action', 'same_oid|a',
+  COALESCE((
+    SELECT CASE WHEN c.confrelid = 'betk.seller_orders'::regclass THEN 'same_oid' ELSE 'other_oid' END
+      || '|' || c.confdeltype
+    FROM pg_constraint AS c
+    WHERE c.conname = 'order_status_history_order_id_fkey'
+  ), 'missing'),
+  COALESCE((
+    SELECT c.confrelid = 'betk.seller_orders'::regclass
+      AND c.confdeltype = 'a'
+    FROM pg_constraint AS c
+    WHERE c.conname = 'order_status_history_order_id_fkey'
+  ), false)
+UNION ALL
+SELECT 39, 'four_rules_instead_nothing', '4',
+  count(*)::text,
+  count(*) = 4
+FROM pg_rules
+WHERE schemaname = 'betk'
+  AND rulename IN (
+    'no_delete_mod_log',
+    'no_update_mod_log',
+    'no_delete_order_history',
+    'no_update_order_history'
+  )
+  AND definition LIKE '%DO INSTEAD NOTHING%';
+
+DO $rehearsal_checkout$
+BEGIN
+  PERFORM betk.checkout_from_cart('00000000-0000-0000-0000-000000000000'::uuid);
+  INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
+  VALUES (40, 'checkout_from_cart_not_ready', 'BETK_CHECKOUT_NOT_READY', 'no_exception', false);
+EXCEPTION
+  WHEN OTHERS THEN
+    INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
+    VALUES (
+      40,
+      'checkout_from_cart_not_ready',
+      'BETK_CHECKOUT_NOT_READY',
+      SQLERRM,
+      SQLERRM = 'BETK_CHECKOUT_NOT_READY'
+    );
+END
+$rehearsal_checkout$;
+
+INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
+SELECT 41, 'all_pass', 'true', bool_and(pass)::text, bool_and(pass)
 FROM rehearsal_assert;
 
 SELECT name, expected, actual, pass
