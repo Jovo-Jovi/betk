@@ -2,17 +2,19 @@
 
 **These guards are the only protection if the SQL editor is on the wrong database.**
 
-The files under `run/` raise before they change anything when the sentinel is missing, and `00` raises when the database is not an empty copy of the 31-migration staging history. They do not know which dashboard project is selected. Read the branch name in the SQL editor before every run.
+The files under `run/` raise before they change anything when the sentinel is missing, and `00` raises when the database is not an empty copy of the 31-migration staging history. They do not know which dashboard project is selected. Read the project name in the SQL editor before every run.
 
-`staging-text/M1.sql` … `M6.sql` are the texts T03, T04, and T05 apply on staging, byte-for-byte (D-B, C2). Do not run those files on the rehearsal branch. Run `run/00` through `run/08`. The audit is `AUDIT.md`.
+`staging-text/M1.sql` … `M6.sql` are the texts T03, T04, and T05 apply on staging, byte-for-byte (D-B, C2). Do not run those files on staging. Run `run/00` through `run/08` on the scratch project. The audit is `AUDIT.md`.
 
 ## Runbook
 
-1. In the dashboard, create a branch from the main project (not a GitHub preview). It is billed hourly while it exists (pack §4.1).
-2. Open the SQL editor ON THE BRANCH. Check the branch name before every run.
+Free plan: steps 1, 2, and 5 are `FREE_PLAN_RUNBOOK.md` Part B. Not a branch.
+
+1. Part B: create the free scratch project and record its name only.
+2. Part B: `npx supabase db push --db-url $env:SCRATCH_DB_URL` from a checkout whose `supabase/` matches `eaab2c1`. No `supabase link`. Never use `$env:STAGING_DB_URL`.
 3. Run `00` → `08` in order, one file per run. Paste each output or error. On any guard error: stop, and check which database is selected.
 4. Copy the `08` assert table.
-5. Delete the branch. Paste proof it is gone.
+5. Part B: delete the scratch project. Paste scratch project deletion proof.
 6. Stop at M6. M7–M8 are not run (3f).
 
 Order: `00_guard_and_sentinel.sql`, `01_M1.sql`, `02_M2.sql`, `03_M3.sql`, `04_seed_shape.sql`, `05_M4.sql`, `06_M5.sql`, `07_M6.sql`, `08_asserts.sql`.

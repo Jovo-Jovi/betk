@@ -75,10 +75,10 @@ Performance, `observed_at` **2026-09-26T10:21:10.030Z**: unindexed FK 37, auth R
 
 ### Gates still pending
 
-- **Backup.** T03 STEP 0. A human pastes a restorable point into `SESSION_CONTEXT.md` before M1. T00 did not check the plan tier (plan §7.1).
-- **Rehearsal cost approval.** The human approves cost when T02 asks. T00 did not create a branch.
-- **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the rehearsal branch.
-- **Rehearsal execution.** Option B (2026-09-26). The human creates the rehearsal branch in the dashboard and runs the SQL. T02 wrote the kit under `docs/03-database/rehearsal/`. Next is human review of that kit, then the human runs it, then T02-VERIFY. Cost is the usage when the human creates that branch.
+- **Backup.** T03 STEP 0 is B1 (pack §4.5). No passing test restore, no M1. `FREE_PLAN_RUNBOOK.md` Part C is STOP until a restore design is chosen.
+- **Rehearsal cost approval.** Superseded by B-FREE. No branch is created. The rehearsal target is a temporary free scratch project.
+- **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the scratch project.
+- **Rehearsal execution.** B-FREE (2026-09-27). The human runs `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md` Part B, then T02-VERIFY. Part C is immediately before T03.
 
 ### MCP calls in T00
 
@@ -204,6 +204,10 @@ Options:
 - Keep the policy's roles. AUDIT verdict: NARROWER than ERD "public read of ids"; Phase 09 (first consumer) confirms.
 - approved_at on approved rows stays readable, accepted as non-sensitive.
 
+**B-FREE (human, 2026-09-27), verbatim:** B-FREE The organization stays on the Free plan. Branching is unavailable (create_branch → PaymentRequiredException, 2026-09-27; nothing created, nothing billed). The rehearsal runs on a temporary free scratch project instead of a branch. The kit at eaab2c1 is unchanged.
+
+**B1 (human, 2026-09-27), verbatim:** B1 Backup gate (plan §7.1) on Free. Free projects have no dashboard-restorable backup (Supabase docs). The restorable point is a pg_dump of staging taken immediately before T03, proven by a test restore into a fresh scratch project whose row counts match a manifest taken from staging at dump time. No passing test restore → no M1.
+
 **Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
@@ -245,11 +249,15 @@ SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only. S
 - One result per §7.2 bullet, plus the §4.8 and §4.9 checks, against the seed.
 - `delete_branch` result, then `list_branches` showing the rehearsal branch gone.
 
+Under B-FREE, scratch project deletion proof replaces that branch-deletion line. T02-VERIFY uses “scratch project deletion proof”.
+
 **3f recommendation.** Rehearse M4–M6 only, which is plan §7.2. Do not also run M7–M8 on the rehearsal branch. M7–M8 have no §7.2 assertions. Their DDL-parse proof is the GitHub Preview check on the phase PR (§4.3). The human can override by typing that M7–M8 should run on the branch with no new assertions. Until that sentence is typed, T02 stops at M6.
 
 ### 4.5 Backup gate
 
-Plan §7.1. The M1 task’s STEP 0 requires the human’s pasted restorable point (dashboard backup or PITR timestamp) recorded in `SESSION_CONTEXT.md`. No restorable point, no M1. T00 does not check the plan tier and does not record a timestamp.
+B1 (human, 2026-09-27), verbatim, is the T03 gate: B1 Backup gate (plan §7.1) on Free. Free projects have no dashboard-restorable backup (Supabase docs). The restorable point is a pg_dump of staging taken immediately before T03, proven by a test restore into a fresh scratch project whose row counts match a manifest taken from staging at dump time. No passing test restore → no M1.
+
+T03 STEP 0 requires the Part C paste from `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md`: dump timestamp, file size, the manifest match table, and the scratch-deletion proof. If any of those is absent, STOP. Do not apply M1. Part C step 2 is STOP + FLAG (no clean data-only restore as `postgres`). That paste does not exist until a human picks one of those options and a test restore matches. Cite for “no dashboard-restorable backup”: [Database Backups](https://supabase.com/docs/guides/platform/backups) (daily backups and PITR are Pro, Team, and Enterprise; free tier projects are told to export with the CLI).
 
 ## 5. `admin_settings` pin owners
 
@@ -405,7 +413,7 @@ Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then check 
 
 The agent does not run the rehearsal SQL. Do not call apply_migration, create_branch, or delete_branch. Staging reads are SELECT via execute_sql, list_migrations, and get_advisors only.
 
-Check the pasted 00–08 outputs against the kit. PASS requires all three: the 08 table has all_pass = true; the human pasted proof the rehearsal branch is deleted; staging is unchanged (list_migrations still the 31 versions ending 20260723140552, and betk.orders still has 7 rows).
+Check the pasted 00–08 outputs against the kit. PASS requires all three: the 08 table has all_pass = true; the human pasted scratch project deletion proof; staging is unchanged (list_migrations still the 31 versions ending 20260723140552, and betk.orders still has 7 rows).
 
 Record the pasted evidence in SESSION_CONTEXT. STOP if any of the three is missing or false.
 STEP Z file list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md.
@@ -420,7 +428,7 @@ MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T03 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
 
-STEP 0. Read SESSION_CONTEXT for the human’s pasted restorable point (dashboard backup or PITR timestamp). If it is absent, STOP. Do not apply M1. Do not check the plan tier yourself.
+STEP 0. Read SESSION_CONTEXT for the human’s Part C paste from docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md: dump timestamp, file size, the manifest match table, and the scratch-deletion proof. If any of those four is absent, STOP. Do not apply M1. Do not check the plan tier yourself. B1: no passing test restore, no M1. Part C step 2 is STOP + FLAG until a human picks a restore option; that is an absent paste.
 
 Steps, in order, each as its own migration, SQL from the plan section named, never retyped into this pack:
 1. Re-measure M1 preconditions (plan §6 M1, §0 enum list). STOP on mismatch. Advisors before. Apply M1. Rename the local file to the returned version. Ledger 1:1. Backfill BETK_DATABASE_SCHEMA.sql. Advisors after. Delta: none (plan §6 M1).
@@ -566,7 +574,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. Next: human review, then the human runs 00–08, then T02-VERIFY | §4.4 D-A, D-B, C1, C2, E1, E2, E3 |
+| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. T02-FREE 2026-09-28: Free-plan runbook (B-FREE, B1). Part C restore is STOP + FLAG. Next: human runs Part B, then T02-VERIFY. Part C immediately before T03, after a restore option is chosen | §4.4 D-A, D-B, C1, C2, E1, E2, E3, B-FREE, B1 |
 | T03 | | |
 | T04 | | |
 | T05 | | |
