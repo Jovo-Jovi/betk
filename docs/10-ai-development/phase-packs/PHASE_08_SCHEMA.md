@@ -75,7 +75,7 @@ Performance, `observed_at` **2026-09-26T10:21:10.030Z**: unindexed FK 37, auth R
 
 ### Gates still pending
 
-- **Backup.** T03 STEP 0 is B1 (pack §4.5). No passing test restore, no M1. `FREE_PLAN_RUNBOOK.md` Part C is STOP until a restore design is chosen.
+- **Backup.** T03 STEP 0 is B1, amended by B1-a (pack §4.5). No passing test restore, no M1. The pass line is `all_equal = true` on the content manifest. `FREE_PLAN_RUNBOOK.md` Part C is C-R3.
 - **Rehearsal cost approval.** Superseded by B-FREE. No branch is created. The rehearsal target is a temporary free scratch project.
 - **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the scratch project.
 - **Rehearsal execution.** B-FREE (2026-09-27). The human runs `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md` Part B, then T02-VERIFY. Part C is immediately before T03.
@@ -208,6 +208,12 @@ Options:
 
 **B1 (human, 2026-09-27), verbatim:** B1 Backup gate (plan §7.1) on Free. Free projects have no dashboard-restorable backup (Supabase docs). The restorable point is a pg_dump of staging taken immediately before T03, proven by a test restore into a fresh scratch project whose row counts match a manifest taken from staging at dump time. No passing test restore → no M1.
 
+**C-R3 (human, 2026-09-29), verbatim:** C-R3 Restore method. Staging is only read: a data-only pg_dump of betk and betk_analytics. On the TARGET only (the scratch project in the test; a new project in a real recovery), acting as table owner: disable the six named INSERT triggers T02-FREE measured; load in one transaction in dependency order (inquiries before orders — the data has no populated cycle); re-enable the six. No FK is altered. No superuser. No staging change.
+
+**B1-a (human, 2026-09-29), verbatim:** B1-a (amends B1) The manifest is content, not counts: per table, row count AND md5 of all rows ordered by primary key, with TimeZone = 'UTC'. Taken on staging at dump time and on the target after restore. A count-only match does not pass: the commission snapshot and converted-order triggers would silently rewrite restored money and link columns.
+
+**B1-b (human, 2026-09-29), verbatim:** B1-b Accepted limitations: auth users (5 test accounts) and storage files (5 objects) are not in the dump. A real recovery recreates the test accounts and re-uploads the test files.
+
 **Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
@@ -257,7 +263,13 @@ Under B-FREE, scratch project deletion proof replaces that branch-deletion line.
 
 B1 (human, 2026-09-27), verbatim, is the T03 gate: B1 Backup gate (plan §7.1) on Free. Free projects have no dashboard-restorable backup (Supabase docs). The restorable point is a pg_dump of staging taken immediately before T03, proven by a test restore into a fresh scratch project whose row counts match a manifest taken from staging at dump time. No passing test restore → no M1.
 
-T03 STEP 0 requires the Part C paste from `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md`: dump timestamp, file size, the manifest match table, and the scratch-deletion proof. If any of those is absent, STOP. Do not apply M1. Part C step 2 is STOP + FLAG (no clean data-only restore as `postgres`). That paste does not exist until a human picks one of those options and a test restore matches. Cite for “no dashboard-restorable backup”: [Database Backups](https://supabase.com/docs/guides/platform/backups) (daily backups and PITR are Pro, Team, and Enterprise; free tier projects are told to export with the CLI).
+**C-R3 (human, 2026-09-29), verbatim:** C-R3 Restore method. Staging is only read: a data-only pg_dump of betk and betk_analytics. On the TARGET only (the scratch project in the test; a new project in a real recovery), acting as table owner: disable the six named INSERT triggers T02-FREE measured; load in one transaction in dependency order (inquiries before orders — the data has no populated cycle); re-enable the six. No FK is altered. No superuser. No staging change.
+
+**B1-a (human, 2026-09-29), verbatim:** B1-a (amends B1) The manifest is content, not counts: per table, row count AND md5 of all rows ordered by primary key, with TimeZone = 'UTC'. Taken on staging at dump time and on the target after restore. A count-only match does not pass: the commission snapshot and converted-order triggers would silently rewrite restored money and link columns.
+
+**B1-b (human, 2026-09-29), verbatim:** B1-b Accepted limitations: auth users (5 test accounts) and storage files (5 objects) are not in the dump. A real recovery recreates the test accounts and re-uploads the test files.
+
+T03 STEP 0 requires the Part C paste from `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md`: dump timestamp, file size, both manifests side by side, the line `all_equal = true`, and the scratch-deletion proof. If any of those is absent, or if `all_equal` is not true, STOP. Do not apply M1. A count-only match does not pass (B1-a). Cite for “no dashboard-restorable backup”: [Database Backups](https://supabase.com/docs/guides/platform/backups) (daily backups and PITR are Pro, Team, and Enterprise; free tier projects are told to export with the CLI `db dump`). `search_docs` on 2026-09-29 still says that. Part C uses the 17.11 `pg_dump` named in the runbook, not a different client.
 
 ## 5. `admin_settings` pin owners
 
@@ -428,7 +440,7 @@ MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T03 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
 
-STEP 0. Read SESSION_CONTEXT for the human’s Part C paste from docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md: dump timestamp, file size, the manifest match table, and the scratch-deletion proof. If any of those four is absent, STOP. Do not apply M1. Do not check the plan tier yourself. B1: no passing test restore, no M1. Part C step 2 is STOP + FLAG until a human picks a restore option; that is an absent paste.
+STEP 0. Read SESSION_CONTEXT for the human’s Part C paste from docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md: dump timestamp, file size, both manifests side by side, the line `all_equal = true`, and the scratch-deletion proof. If any of those is absent, or if `all_equal` is not true, STOP. Do not apply M1. Do not check the plan tier yourself. B1: no passing test restore, no M1. B1-a: a count-only match does not pass. Every row_count and every content_md5 must be equal.
 
 Steps, in order, each as its own migration, SQL from the plan section named, never retyped into this pack:
 1. Re-measure M1 preconditions (plan §6 M1, §0 enum list). STOP on mismatch. Advisors before. Apply M1. Rename the local file to the returned version. Ledger 1:1. Backfill BETK_DATABASE_SCHEMA.sql. Advisors after. Delta: none (plan §6 M1).
@@ -574,7 +586,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. T02-FREE 2026-09-28: Free-plan runbook (B-FREE, B1). Part C restore is STOP + FLAG. Next: human runs Part B, then T02-VERIFY. Part C immediately before T03, after a restore option is chosen | §4.4 D-A, D-B, C1, C2, E1, E2, E3, B-FREE, B1 |
+| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. T02-FREE 2026-09-28: Free-plan runbook (B-FREE, B1). T02-FREE-FIX 2026-09-29: Part C is C-R3; manifest is B1-a. Next: human runs Part B, then T02-VERIFY. Part C immediately before T03 | §4.4 D-A, D-B, C1, C2, E1, E2, E3, B-FREE, B1, C-R3, B1-a, B1-b |
 | T03 | | |
 | T04 | | |
 | T05 | | |
