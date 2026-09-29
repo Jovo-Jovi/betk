@@ -29,6 +29,12 @@ export interface ConsoleSidebarProps {
   onSelect?: (id: string) => void;
   /** Path to the ب mark asset. Default "/logo/beh.png". */
   logoSrc?: string;
+  /**
+   * CD-DELTA-6 (REG-60, §8i): logo activation — same role as AppTopbar's
+   * onLogoClick. When set, mark + wordmark become one button the page points
+   * at home. Absent → current static logo.
+   */
+  onLogoClick?: () => void;
   /** Off-canvas open state (≤768px; ignored on desktop). */
   open?: boolean;
   /** Backdrop tap / close on mobile. */
@@ -36,7 +42,7 @@ export interface ConsoleSidebarProps {
   className?: string;
 }
 
-export function ConsoleSidebar({ subtitle, sections = [], activeId, onSelect, logoSrc = "/logo/beh.png", open = false, onClose, className }: ConsoleSidebarProps) {
+export function ConsoleSidebar({ subtitle, sections = [], activeId, onSelect, logoSrc = "/logo/beh.png", onLogoClick, open = false, onClose, className }: ConsoleSidebarProps) {
   return (
     <>
       {open && <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={onClose} aria-hidden />}
@@ -47,9 +53,16 @@ export function ConsoleSidebar({ subtitle, sections = [], activeId, onSelect, lo
         className,
       )}>
         <div className="flex min-h-[var(--topbar-height)] items-center gap-2.5 border-b border-border px-4">
-          <img src={logoSrc} alt="" className="size-8 rounded-full object-cover" />
+          {onLogoClick ? (
+            <button type="button" onClick={onLogoClick} aria-label="BETK" className="-mx-1 inline-flex items-center gap-2.5 rounded-md px-1 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <img src={logoSrc} alt="" className="size-8 rounded-full object-cover" />
+              <span className="font-display text-base font-extrabold leading-tight text-primary">BETK</span>
+            </button>
+          ) : (
+            <img src={logoSrc} alt="" className="size-8 rounded-full object-cover" />
+          )}
           <div className="flex flex-col leading-tight">
-            <span className="font-display text-base font-extrabold text-primary">BETK</span>
+            {!onLogoClick && <span className="font-display text-base font-extrabold text-primary">BETK</span>}
             {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
           </div>
         </div>

@@ -23,6 +23,12 @@ export interface ListingCardProps {
   price?: number | null;
   priceType?: PriceType;
   storeName?: string;
+  /**
+   * CD-DELTA-6 (REG-72, §8a): public store route built by the page from
+   * stores.slug. When set, storeName is a link — its own keyboard stop,
+   * separate from the card's listing activation. Absent → current text behaviour.
+   */
+  storeHref?: string;
   rating?: number;
   reviews?: number;
   boosted?: boolean;
@@ -37,18 +43,25 @@ export interface ListingCardProps {
   stockQty?: number | null;
   isMadeToOrder?: boolean;
   isService?: boolean;
+  /**
+   * CD-DELTA-6 (§8k): the card's own destination (listing route). When set,
+   * the title renders as a real link whose hit area stretches over the card;
+   * the store-name link and the wishlist button stay separate stops above it
+   * (no nested links). Absent → current behaviour. onClick is unchanged.
+   */
+  href?: string;
   onClick?: () => void;
   className?: string;
 }
 
 export function ListingCard({
-  titleAr, image, price, priceType = "fixed", storeName, rating, reviews,
-  boosted, boostLabel = "مميّز", saved, onToggleSave, wishlistAddLabel = "أضف للمفضلة", wishlistRemoveLabel = "إزالة من المفضلة", stockQty, isMadeToOrder, isService, onClick, className,
+  titleAr, image, price, priceType = "fixed", storeName, storeHref, rating, reviews,
+  boosted, boostLabel = "مميّز", saved, onToggleSave, wishlistAddLabel = "أضف للمفضلة", wishlistRemoveLabel = "إزالة من المفضلة", stockQty, isMadeToOrder, isService, href, onClick, className,
 }: ListingCardProps) {
   return (
     <div
       onClick={onClick}
-      className={cn("group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md", className)}
+      className={cn("group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md", href && "focus-within:ring-2 focus-within:ring-ring", className)}
     >
       <div className="relative">
         <div className="flex aspect-square items-center justify-center bg-secondary">
@@ -61,15 +74,21 @@ export function ListingCard({
             <Zap className="size-3" fill="currentColor" /> {boostLabel}
           </span>
         )}
-        <span className="absolute end-2 top-2">
+        <span className="absolute end-2 top-2 z-10">
           <WishlistButton active={saved} onToggle={onToggleSave} overlay size="sm" addLabel={wishlistAddLabel} removeLabel={wishlistRemoveLabel} />
         </span>
       </div>
       <div className="flex flex-col gap-2 p-3">
-        <h3 className="line-clamp-2 font-display text-[0.9375rem] font-semibold leading-snug text-foreground">{titleAr}</h3>
+        <h3 className="line-clamp-2 font-display text-[0.9375rem] font-semibold leading-snug text-foreground">
+          {href
+            ? <a href={href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">{titleAr}</a>
+            : titleAr}
+        </h3>
         <PriceBlock price={price} priceType={priceType} size="md" />
         <div className="flex items-center justify-between gap-2">
-          {storeName && <span className="truncate text-xs text-muted-foreground">{storeName}</span>}
+          {storeName && (storeHref
+            ? <a href={storeHref} onClick={(e) => e.stopPropagation()} className="relative z-10 truncate rounded-sm text-xs text-muted-foreground underline decoration-muted-foreground/50 underline-offset-2 hover:text-primary hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{storeName}</a>
+            : <span className="truncate text-xs text-muted-foreground">{storeName}</span>)}
           {typeof rating === "number" && <StarRating value={rating} size={13} count={reviews} />}
         </div>
         <StockBadge stockQty={stockQty} isMadeToOrder={isMadeToOrder} isService={isService} />
