@@ -15,6 +15,8 @@ import type { SellerLevel } from "@/constants/enums";
  */
 export interface StoreCardProps {
   name: string;
+  /** CD-DELTA-6 (REG-72, §8a): public store route (stores.slug). When set, the name is a link. Absent → current text behaviour. */
+  storeHref?: string;
   avatar?: string;
   cover?: string;
   level?: SellerLevel;
@@ -30,7 +32,7 @@ export interface StoreCardProps {
   className?: string;
 }
 
-export function StoreCard({ name, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, className }: StoreCardProps) {
+export function StoreCard({ name, storeHref, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, className }: StoreCardProps) {
   return (
     <div className={cn("flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm", className)}>
       <div
@@ -44,7 +46,9 @@ export function StoreCard({ name, avatar, cover, level, verified, rating, review
         </Avatar>
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-base font-bold text-foreground">{name}</span>
+            {storeHref
+              ? <a href={storeHref} className="rounded-sm font-display text-base font-bold text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{name}</a>
+              : <span className="font-display text-base font-bold text-foreground">{name}</span>}
             {verified && <VerifiedBadge showLabel={false} size={16} />}
             {level && <LevelBadge level={level} showLabel={false} />}
           </div>

@@ -108,3 +108,12 @@ export type { TabsProps, TabItem } from "./Tabs";
 // RouteProgress — token-only global route-transition bar (REG-38b, adopted).
 export { RouteProgress } from "./RouteProgress";
 export type { RouteProgressProps } from "./RouteProgress";
+
+// ── CD-DELTA-6 Wave 1 (Phase-09 kit gate; decisions 2026-09-25) ───
+// DataTable wraps the vanilla ui/table base — official CLI add, byte-vanilla (§8d).
+export { ShareButton } from "./ShareButton";
+export type { ShareButtonProps } from "./ShareButton";
+export { DataTable } from "./DataTable";
+export type { DataTableProps, DataTableColumn, DataTableSort } from "./DataTable";
+export { ProofViewer } from "./ProofViewer";
+export type { ProofViewerProps } from "./ProofViewer";

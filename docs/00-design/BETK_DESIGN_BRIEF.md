@@ -213,11 +213,13 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **In collection strip:** `min-width 220px`, `max-width 260px`, `scroll-snap-align:start`.
 - **States:** default; **hover** = `--shadow-md` + `translateY(-4px)` + border `hsl(primary/.2)` (enhancement); **skeleton** = image block + 2 text lines + footer line shimmer; **empty** = parent grid shows EmptyState; **error** = parent shows ErrorRetryCard. Composes PriceBlock, WishlistButton, StatusBadge(boost), StockBadge.
 - **RTL/LTR:** image full-width (neutral); footer flips price/action ends automatically. Canonical RTL.
+- **Store identity and card destination (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-72, §8a):** Optional `storeHref` on ListingCard, SellerMiniCard and StoreCard. When set, the store name is a link to the public store route built from `stores.slug`, with a persistent underline (not a hover-only cue), a visible focus ring, and on ListingCard its own keyboard stop that does not trigger the card's listing activation. Absent: the name stays text, current behaviour. The link's accessible name is the visible store name (decision l). ListingCard also takes optional `href` (decision k): the card's own destination, rendered as a real link on the title whose hit area stretches over the card, with a focus-within ring on the card. The store-name link and the wishlist button sit above it as separate stops; no nested links. Existing `onClick` unchanged; absent `href` → current behaviour. No other card change.
 
 ### 5.4 StoreCard (`.store-card`)
 - **Anatomy:** flex row, `gap --space-3`, padding `--space-4`, `bg-card/80` + `backdrop-blur: var(--card-blur)` (same glass composition as ListingCard, §2.1), `1px --border`, radius **lg**, `--shadow-sm`. `.store-avatar` 56×56 circle, `--muted`, `flex-shrink:0`, `object-fit:cover`; text column (name font-display, meta muted, LevelBadge/VerifiedBadge/RatingSummary).
 - **States:** default; **hover** `--shadow-md` + `translateY(-2px)`; **skeleton** = circle + 2 lines; empty/error at parent.
 - **RTL/LTR:** avatar leads at inline-start (right in RTL, left in LTR) via source order + `gap`. Canonical RTL.
+- **Store identity (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-72, §8a):** Optional `storeHref`. When set, the store name is a link to the public store route built from `stores.slug`, with a persistent underline (not a hover-only cue) and a visible focus ring. Absent: the name stays text, current behaviour. The link's accessible name is the visible store name (decision l). Same rule on ListingCard (§5.3) and SellerMiniCard (§5.38).
 
 ### 5.5 Badges — StatusBadge (`.badge` + enum classes)
 - **Anatomy:** `inline-flex` center, `gap --space-1`, font-body **600** `--text-xs`, padding **`.2rem .6rem`**, radius **full**, `line-height 1.4`, `white-space:nowrap`. Centralized enum→token map (single source: `constants/statusColors.ts`).
@@ -259,6 +261,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - Full-width `border-collapse`, `--text-sm`. `thead` bg `--muted`; `th` padding `--space-3 --space-4`, **`text-align:start`**, **600** `--text-xs` muted UPPERCASE `letter-spacing .03em`, bottom hairline. `td` padding `--space-3 --space-4`, bottom hairline, `vertical-align:middle`. Row hover `hsl(muted/.5)`.
 - **States:** default; **skeleton** = SkeletonTable (N row skeletons matching columns); **empty** = single full-width cell with EmptyState (admin queues use a *positive* "Queue is clear"); **error** = ErrorRetryCard in place of tbody.
 - **RTL/LTR:** `text-align:start` makes columns mirror; numeric cells use `.text-mono`/LTR islands. Canonical RTL.
+- **Component (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), §8d/§8j):** The §5.11 table ships as shared `DataTable` wrapping the vanilla shadcn `ui/table` (official CLI add). Controlled sort (`sort` + `onSortChange`) and pagination (`pageIndex`/`pageCount` + `onPageChange`); no internal state, no fetching. Header on `--muted`, 600 `--text-xs` muted uppercase per §5.11; rows on `--card`. Pager is previous/next arrows (mirrored per direction) with a page-supplied status string between them (§5.33). Loading = skeleton rows matching the column count; empty = one row with the page's empty string (a positive "queue is clear" string for admin queues); error = error string + retry in place of rows. Columns flagged `ltr` render as LTR islands. Optional `rowHref` (decision n): when it returns a URL for a row, that row's first cell is a real link, one keyboard stop per row; no whole-row click handler, no nested interactive elements, no hover-only affordance; absent → plain cells. Mobile: one table in an inline-axis scroll region; no stacked second layout. No column allow-list; page review enforces N28.
 
 ### 5.12 Tabs (`.tabs`, `.tab`, `.tab-content`) & Filter tabs (`.filter-tabs`, `.filter-tab`)
 - **Tabs:** flex, `border-bottom 2px --border`, horizontally scrollable. `.tab` padding `--space-3 --space-4`, **600** `--text-sm`, muted, `border-bottom 2px transparent`, `margin-bottom -2px`; `.active` → `--primary` text + `--primary` underline. `.tab-content` hidden unless `.active`.
@@ -273,6 +276,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **`.topbar-lang-btn` pending state (addendum — sanctioned CD-DELTA-4, PERF-01):** optional `langPending` disables the button, sets `aria-busy`, and applies a token-only pending treatment (`opacity-60` + `cursor-progress`), with **zero visual change when unset** — lets the app surface the locale-switch pending affordance on the button itself (previously applied one level above the topbar). Existing props/JSX byte-preserved.
 - **Mobile (≤768px):** `.search-bar` hidden (search moves to bottom-nav / dedicated page).
 - **RTL/LTR:** **logo at inline-start (right in RTL), account/actions cluster at inline-end (left in RTL)** — mirrors automatically. Canonical RTL.
+- **SearchBar dark contrast (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-58):** Dark theme: the search pill sits on `--background` (recessed against the `--card` topbar) with a boundary composed from `--muted-foreground` at 60%; text `--foreground`, placeholder `--muted-foreground`. Native search-cancel glyph suppressed; focus-within ring on `--ring`. Light theme unchanged.
 
 ### 5.14 MobileBottomNav (`.bottom-nav`) — ≤768px only
 - `fixed bottom:0`, height **60px**, bg `--card`, top hairline. Items flex-column, 10px 600 label + 22px icon, muted; `.active` → `--primary`. `body.has-bottom-nav` adds bottom padding. 5 items (Home · Search · Wishlist · Inbox · Account). Static per-route active state.
@@ -282,6 +286,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **Anatomy:** width **`--sidebar-width` (260px)**, bg `--card`, `border-inline-end 1px --border`, `fixed inset-inline-start:0 top/bottom:0 z-40`, scroll-y. Header min-height `--topbar-height`, logo + subtitle. `.sidebar-section-title` `--text-xs` **700** muted UPPERCASE. `.sidebar-link` flex `gap --space-3`, padding `--space-2 --space-3`, radius **md**, `--text-sm` 500; hover bg `--muted`; **`.active`** → `hsl(primary/.1)` bg + `--primary` + 600; 20px icon @ .7 opacity (1 when active); `.sidebar-badge` count pill at `margin-inline-start:auto`. `.sidebar-main` offset `margin-inline-start --sidebar-width`.
 - **Mobile (≤1024px):** off-canvas — `transform: translateX(100%)` (RTL) / **`[dir="ltr"] → translateX(-100%)`** (explicit LTR rule); `.open` slides in; `.sidebar-overlay` scrim `z-39`; `.menu-toggle` shows; main offset removed.
 - **States:** default/active-link; badge count; collapsed(mobile). Canonical RTL, explicit LTR transform.
+- **Logo activation (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-60, §8i):** Optional `onLogoClick`, same role as AppTopbar's. When set, the ب mark + wordmark are one button the page points at home. Absent: the static logo is unchanged.
 
 ### 5.16 Console topbar (`.console-topbar`)
 - `sticky top:0 z-30`, height `--topbar-height`, `--card`, bottom hairline, `padding-inline --space-5`, `.page-title` font-display 700 `--text-lg`.
@@ -352,6 +357,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 
 ### 5.33 Pagination (`.pagination`, `.pagination-btn`)
 - Flex center `gap --space-1`. Button 36×36, `1px --border`, radius **md**, `--text-sm` 500, `--card`, **font-mono** numerals; hover border `--primary`; `.active` → `--primary` bg + `--primary-foreground`. States: default/active/disabled(ends). RTL: prev/next chevrons mirror; page numbers stay LTR-readable.
+- **DataTable pager (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), §8d/§8j):** Shared `DataTable` pagination is controlled (`pageIndex`/`pageCount` + `onPageChange`); no internal state. Pager is previous/next arrows (mirrored per direction) with a page-supplied status string between them. Full table contract is §5.11.
 
 ### 5.34 Breadcrumb (`.breadcrumb`)
 - Flex center `gap --space-2`, `--text-sm` muted, wrap. Links muted → `--primary` on hover; `.separator` @ .4 opacity (chevron mirrors by direction); `.current` `--foreground` 600. RTL: separators point inline-end. Canonical RTL.
@@ -375,13 +381,19 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 - **Avatars** `.avatar-sm/md/lg` (32/48/64 circle, `--muted`).
 - **`.icon-counter`** count pill at `inset-inline-end -4px`, `--destructive` bg, white, `2px --card` ring.
 - **`.upload-zone`** (ImageUploader) `2px dashed --border`, radius **lg**, padding `--space-8`, centered muted; hover → `--primary` border + `hsl(primary/.04)` bg. Handles WebP convert + ordering + signed-URL preview; states: idle/drag/uploading(progress)/error(per-file).
-- **`.seller-mini`** (SellerMiniCard) flex row `gap --space-3`, padding `--space-3`, `--muted` bg, radius **md**.
+- **`.seller-mini`** (SellerMiniCard) flex row `gap --space-3`, padding `--space-3`, `--muted` bg, radius **md**. **Store identity (addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-72, §8a):** optional `storeHref`. When set, the name is a link to the public store route built from `stores.slug`, with a persistent underline and a visible focus ring. Absent: the name stays text. The link's accessible name is the visible store name (decision l). Same rule on ListingCard (§5.3) and StoreCard (§5.4).
 - **`.quick-actions`/`.quick-action`** dashboard grid (`auto-fit minmax(140px,1fr)`), tile `--card`+border, 40×40 `hsl(primary/.1)` icon circle, hover `--primary` border + `--shadow-md`.
 - **`.notif-item`/`.inquiry-item`** list rows (flex `gap --space-3`, padding `--space-3 --space-4`, bottom hairline); `.unread` → `hsl(primary/.04)` (+ inquiry gets `border-inline-start 3px --primary`); 40/48px icon/thumb.
 - **`.order-card`** history row (flex `gap --space-4`, padding `--space-4`, `--card`+border, radius **lg**, hover `--shadow-md`, 64×64 thumb).
 - **`.store-header`/`.store-cover`/`.store-profile-avatar`** storefront header (cover 200px gradient, 96×96 avatar with `4px --card` ring overlapping cover by -40px, `padding-inline --space-5`).
 - **`.chart-placeholder`** analytics stub (200px `--muted` box) — real charts are a later concern; keep language-neutral.
 - **`.sr-only`** visually-hidden a11y text (required on icon-only controls; the reference uses `aria-label` throughout).
+
+### 5.39 ShareButton
+- **Addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), REG-51, §8b.** One pill control on P04/P05. Device share sheet when available; otherwise the same control copies the public URL (label from a string prop), with a manual-copy LTR URL field only if the clipboard is also unavailable. Never enumerates apps; shares the public `href` only.
+
+### 5.40 ProofViewer
+- **Addendum — sanctioned CD-DELTA-6 (Wave 1, reviewed 2026-09-29), §8f.** Admin-only read-only frame for a page-minted signed URL. png / jpeg / webp render object-contain (whole file visible, no hover zoom); other types show the unsupported string. The type is read from the URL pathname only, never the query string; no `mimeType` prop (decision m). The loading state resets synchronously when the URL changes, so a cached image never stays hidden behind the skeleton. No upload affordance.
 
 ---
 

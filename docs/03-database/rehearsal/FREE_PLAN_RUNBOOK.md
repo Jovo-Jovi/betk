@@ -42,6 +42,8 @@ pg_restore --version
 
 ## Part B — rehearsal
 
+superseded by B-CI / B2
+
 Free-project allowance: two active free projects. Paused projects do not count. Cite: [Billing FAQ](https://supabase.com/docs/guides/platform/billing-faq) (“How many free projects can I have?”). Staging already uses one. If the dashboard will not create another free project, stop. Do not upgrade the organization. Do not create a branch.
 
 1. In the dashboard, create a free scratch project, only if that allowance has room. Record its **name** only. Do not record a ref, a host, or a connection string in the repo, the chat, or Cursor.
@@ -82,6 +84,8 @@ FROM supabase_migrations.schema_migrations;
 5. Delete the scratch project in the dashboard. Keep the name and proof it is gone (the org project list no longer shows that name). Do not keep a connection string. Do not keep the project to reuse for Part C.
 
 ## Part C — backup and test restore, immediately before T03
+
+superseded by B-CI / B2
 
 Do not start Part C until T02-VERIFY has passed. Part B’s scratch project must already be deleted. This part creates a different scratch project. Do not reuse a connection string.
 

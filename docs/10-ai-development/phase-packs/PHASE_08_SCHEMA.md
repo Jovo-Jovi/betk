@@ -75,10 +75,10 @@ Performance, `observed_at` **2026-09-26T10:21:10.030Z**: unindexed FK 37, auth R
 
 ### Gates still pending
 
-- **Backup.** T03 STEP 0 is B1, amended by B1-a (pack §4.5). No passing test restore, no M1. The pass line is `all_equal = true` on the content manifest. `FREE_PLAN_RUNBOOK.md` Part C is C-R3.
-- **Rehearsal cost approval.** Superseded by B-FREE. No branch is created. The rehearsal target is a temporary free scratch project.
-- **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the scratch project.
-- **Rehearsal execution.** B-FREE (2026-09-27). The human runs `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md` Part B, then T02-VERIFY. Part C is immediately before T03.
+- **Backup.** Superseded for staging by B2 (pack §4.5). Production still requires a restorable backup before the first v2 migration (REG-101).
+- **Rehearsal cost approval.** Superseded by B-FREE, then by B-CI. No branch is created. No scratch project. No secret.
+- **3f.** Decided 2026-09-26. Rehearse M4–M6 only (plan §7.2). M7–M8 are not run on the rehearsal database.
+- **Rehearsal execution.** B-CI (2026-09-29). GitHub Actions runs `docs/03-database/rehearsal/run/00` through `08` on a local Supabase stack. `FREE_PLAN_RUNBOOK.md` Parts B and C are superseded by B-CI / B2.
 
 ### MCP calls in T00
 
@@ -115,6 +115,8 @@ No reservations. Numbers are taken at mint time. P08-T00 re-read the header (REG
 Next free after this mint: **REG-100**. Next free OD: **OD-22**. Next free ADR: **ADR-026**.
 
 P08-T02-FIX2 re-read (2026-09-27), before the mint: header was REG-01..REG-99, next free **REG-100**, no REG-100 row. Took **REG-100** (seller returns UPDATE deferred; owner Phase 15; before Phase 15’s first returns write). Next free **REG-101**. OD-22 and ADR-026 unchanged.
+
+P08-T02-CI re-read (2026-09-30), before the mint: header was REG-01..REG-100, next free **REG-101**, no REG-101 row. No existing REG requires a restorable backup before a v2 migration is applied to a production database. Took **REG-101** (Owner: Human; Before: first production migration). Next free **REG-102**. OD-22 and ADR-026 unchanged.
 
 `price_band_min_egp` and `price_band_max_egp` were not minted. REG-62’s text already covers “price band set”.
 
@@ -214,6 +216,13 @@ Options:
 
 **B1-b (human, 2026-09-29), verbatim:** B1-b Accepted limitations: auth users (5 test accounts) and storage files (5 objects) are not in the dump. A real recovery recreates the test accounts and re-uploads the test files.
 
+**B-CI (human, 2026-09-29), verbatim:** B-CI The N27 rehearsal runs in GitHub Actions on a local Supabase stack (`supabase start`), built from the 31 migrations at 40f5b9c. It replaces the scratch project (Part B). No human step, no cost, no secret, synthetic data only.
+
+**B2 (human, 2026-09-29), verbatim:** B2 (replaces B1 and C-R3 for staging) Staging has no restorable-point gate.
+Grounds: staging holds only v1 test data; every migration applies atomically; M4–M6 are rehearsed on a real Supabase stack (B-CI).
+Instead, T03 STEP 0 has Cursor export every betk and betk_analytics row via read-only MCP SELECT (row_to_json per table, ordered by primary key) plus the B1-a content manifest, to C:\Users\Marco\Desktop\betk-inbox\staging-snapshots\<UTC timestamp>\ (outside the repo). It is labelled "reference snapshot — not restore-tested".
+Production: a restorable backup is mandatory before any v2 migration is applied to a production database. Re-read the register header; if no existing REG covers this, mint one (Owner: Human; Before: first production migration).
+
 **Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
@@ -268,6 +277,17 @@ B1 (human, 2026-09-27), verbatim, is the T03 gate: B1 Backup gate (plan §7.1) o
 **B1-a (human, 2026-09-29), verbatim:** B1-a (amends B1) The manifest is content, not counts: per table, row count AND md5 of all rows ordered by primary key, with TimeZone = 'UTC'. Taken on staging at dump time and on the target after restore. A count-only match does not pass: the commission snapshot and converted-order triggers would silently rewrite restored money and link columns.
 
 **B1-b (human, 2026-09-29), verbatim:** B1-b Accepted limitations: auth users (5 test accounts) and storage files (5 objects) are not in the dump. A real recovery recreates the test accounts and re-uploads the test files.
+
+**B-CI (human, 2026-09-29), verbatim:** B-CI The N27 rehearsal runs in GitHub Actions on a local Supabase stack (`supabase start`), built from the 31 migrations at 40f5b9c. It replaces the scratch project (Part B). No human step, no cost, no secret, synthetic data only.
+
+**B2 (human, 2026-09-29), verbatim:** B2 (replaces B1 and C-R3 for staging) Staging has no restorable-point gate.
+Grounds: staging holds only v1 test data; every migration applies atomically; M4–M6 are rehearsed on a real Supabase stack (B-CI).
+Instead, T03 STEP 0 has Cursor export every betk and betk_analytics row via read-only MCP SELECT (row_to_json per table, ordered by primary key) plus the B1-a content manifest, to C:\Users\Marco\Desktop\betk-inbox\staging-snapshots\<UTC timestamp>\ (outside the repo). It is labelled "reference snapshot — not restore-tested".
+Production: a restorable backup is mandatory before any v2 migration is applied to a production database. Re-read the register header; if no existing REG covers this, mint one (Owner: Human; Before: first production migration).
+
+P08-T02-CI re-read (2026-09-30), before the mint: header was REG-01..REG-100, next free **REG-101**, no REG-101 row. No existing REG requires a restorable backup before a v2 migration is applied to a production database. Took **REG-101**. Owner: Human. Before: first production migration. Next free **REG-102**. OD-22 and ADR-026 unchanged.
+
+The paragraph below is superseded by B2. `FREE_PLAN_RUNBOOK.md` Parts B and C are superseded by B-CI / B2.
 
 T03 STEP 0 requires the Part C paste from `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md`: dump timestamp, file size, both manifests side by side, the line `all_equal = true`, and the scratch-deletion proof. If any of those is absent, or if `all_equal` is not true, STOP. Do not apply M1. A count-only match does not pass (B1-a). Cite for “no dashboard-restorable backup”: [Database Backups](https://supabase.com/docs/guides/platform/backups) (daily backups and PITR are Pro, Team, and Enterprise; free tier projects are told to export with the CLI `db dump`). `search_docs` on 2026-09-29 still says that. Part C uses the 17.11 `pg_dump` named in the runbook, not a different client.
 
@@ -586,7 +606,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | kit written 2026-09-26 (option B). T02-FIX 2026-09-27: C1 shell, C2 on T04, AUDIT.md, kit re-issued. T02-FIX2 2026-09-27: E1 table revoke, F1/F2 resolved (REG-100), kit re-issued. T02-FREE 2026-09-28: Free-plan runbook (B-FREE, B1). T02-FREE-FIX 2026-09-29: Part C is C-R3; manifest is B1-a. Next: human runs Part B, then T02-VERIFY. Part C immediately before T03 | §4.4 D-A, D-B, C1, C2, E1, E2, E3, B-FREE, B1, C-R3, B1-a, B1-b |
+| T02 | B-CI workflow committed 2026-09-30. Parts B and C superseded by B-CI / B2. REG-101 minted (production restorable backup; Owner: Human; Before: first production migration). PASS waits on the GitHub Actions run. | §4.4 B-CI; §4.5 B2; `.github/workflows/n27-rehearsal.yml` |
 | T03 | | |
 | T04 | | |
 | T05 | | |
