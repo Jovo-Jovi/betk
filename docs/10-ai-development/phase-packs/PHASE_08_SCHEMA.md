@@ -223,7 +223,7 @@ Grounds: staging holds only v1 test data; every migration applies atomically; M4
 Instead, T03 STEP 0 has Cursor export every betk and betk_analytics row via read-only MCP SELECT (row_to_json per table, ordered by primary key) plus the B1-a content manifest, to C:\Users\Marco\Desktop\betk-inbox\staging-snapshots\<UTC timestamp>\ (outside the repo). It is labelled "reference snapshot — not restore-tested".
 Production: a restorable backup is mandatory before any v2 migration is applied to a production database. Re-read the register header; if no existing REG covers this, mint one (Owner: Human; Before: first production migration).
 
-**Rehearsal binding (D-B, extended by C2).** T03, T04, and T05 apply `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. The local migration file's content is that exact text. Verify sha256 against the table below and against `SESSION_CONTEXT.md` before apply. STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
+**Rehearsal binding (D-B, extended by C2, LF-bound by T02-CI).** T03, T04, and T05 apply the LF text of `docs/03-database/rehearsal/staging-text/Mn.sql` byte-for-byte via `apply_migration`. Verify git hash-object and the SHA256 of the LF file equal the recorded values; apply that LF text byte-for-byte; STOP on mismatch. C2 gives T04 the same byte-for-byte line T03 and T05 already had. The earlier FLAG (D-B named T03 and T05 only) is closed by that line.
 
 The kit is not under `supabase/migrations/` and not on `[db.seed] sql_paths`. The ledger and the preview runner do not apply it.
 
@@ -243,16 +243,16 @@ Files:
 - `docs/03-database/rehearsal/run/07_M6.sql`
 - `docs/03-database/rehearsal/run/08_asserts.sql`
 
-SHA256 (`Get-FileHash -Algorithm SHA256`, hex lowercased), staging texts only. Superseded (T02-FIX, before E1–E3): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca`. Superseded (T02, before C1): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32`.
+LF binding (`git hash-object` · SHA256 of the LF file). superseded — Windows CRLF working copies: M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `7f9a12af41b6e65aa4fe091f09383dea04415f3891c17c7b5b2a8a1824b60809`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca`. Superseded (T02-FIX, before E1–E3): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca`. Superseded (T02, before C1): M1 `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c`; M2 `287a824160d1da4c6ee942d38c7c1c08e1d9c382e0cc7b4f3a1e9765b4126995`; M3 `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037`; M4 `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8`; M5 `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7`; M6 `455429f386c21f5054195c5011ffc4581f5215f8590b40ac011c78dd8b48ff32`.
 
-| File | SHA256 |
-|---|---|
-| `M1.sql` | `0593a9dedd107abd1f189823eac9153c9d2c792c2b1c88c40a3e7c600db4be2c` |
-| `M2.sql` | `7f9a12af41b6e65aa4fe091f09383dea04415f3891c17c7b5b2a8a1824b60809` |
-| `M3.sql` | `47feecf1aec24ef925f2da756bef7df0171a31bb29db32bbf88cecabc50e1037` |
-| `M4.sql` | `4b3d26eed2fe71789e977d250fe6afe12b0eddbaa2b0e2ef76a8b2887d764db8` |
-| `M5.sql` | `7d97368a7e2578c4af725df0bff5f0718e25a63595c144c659f8f8ff306d25c7` |
-| `M6.sql` | `cca6ad47130e0ca27e431750abce77035e690d05e9ad4e39a9d158ec6f1de6ca` |
+| File | blob id | LF SHA256 |
+|---|---|---|
+| `M1.sql` | `0795b6ca0eba04ba657747d6baaee2323e905ef9` | `55b2a77d8cb27f877be00f0fb2178d82a1d34751fe3521c4f923bb12e6e3ca77` |
+| `M2.sql` | `1e46fd2d41c4d4a64aea5d79989ef6c742a9c6d1` | `005abb1b1b04e39bff476523b103e0643a14c59407649d127f584e29880b6c5d` |
+| `M3.sql` | `7e46d3148fa7200538b00321fbd2f7b8d501b427` | `cd8f744694716b49129be7636233b90a709658afab2cd52b28bd11cb47579daa` |
+| `M4.sql` | `c494e810474d396616c2f764de18f63fe8b6ca70` | `42458751ff56b147402ae301dbedbfd339c98e02508e3b1076f5465e31133e2c` |
+| `M5.sql` | `3bc968d6daaaa455bcf792663bdd95af150ea778` | `caa1174099e2c951aa99557af4728978c1d6bef9b836e268917e93804844e14e` |
+| `M6.sql` | `7e7148d20b22aef778e55261adb28445b17bf8f5` | `6726ff67d5503a402857cd560ddc1db80f6d6f480e46ab968609fd79b60487d9` |
 
 **Project id.** Under option B the human runs the SQL editor on the dashboard branch. The agent does not call `apply_migration` or `execute_sql` for the rehearsal. `BRANCH_PROJECT_REF` stays a variable for option A, if that tool argument ever exists. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
 
@@ -287,9 +287,9 @@ Production: a restorable backup is mandatory before any v2 migration is applied 
 
 P08-T02-CI re-read (2026-09-30), before the mint: header was REG-01..REG-100, next free **REG-101**, no REG-101 row. No existing REG requires a restorable backup before a v2 migration is applied to a production database. Took **REG-101**. Owner: Human. Before: first production migration. Next free **REG-102**. OD-22 and ADR-026 unchanged.
 
-The paragraph below is superseded by B2. `FREE_PLAN_RUNBOOK.md` Parts B and C are superseded by B-CI / B2.
+`FREE_PLAN_RUNBOOK.md` Parts B and C are superseded by B-CI / B2. The Part C requirement is removed.
 
-T03 STEP 0 requires the Part C paste from `docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md`: dump timestamp, file size, both manifests side by side, the line `all_equal = true`, and the scratch-deletion proof. If any of those is absent, or if `all_equal` is not true, STOP. Do not apply M1. A count-only match does not pass (B1-a). Cite for “no dashboard-restorable backup”: [Database Backups](https://supabase.com/docs/guides/platform/backups) (daily backups and PITR are Pro, Team, and Enterprise; free tier projects are told to export with the CLI `db dump`). `search_docs` on 2026-09-29 still says that. Part C uses the 17.11 `pg_dump` named in the runbook, not a different client.
+T03 STEP 0 is B2. Cursor exports every `betk` and `betk_analytics` row via read-only MCP SELECT (`row_to_json` per table, ordered by primary key) plus the B1-a content manifest, to `C:\Users\Marco\Desktop\betk-inbox\staging-snapshots\<UTC timestamp>\` (outside the repo). The export is labelled "reference snapshot — not restore-tested". That export and the content manifest are pasted into T03's report. LAND PR `cd-delta-6-land-w1` is merged into `main` (PR #70, merge commit `967ab3e`, 2026-09-30T09:28:48Z). If the export or the manifest is absent, STOP. Do not apply M1. There is no Part C paste and no test-restore gate.
 
 ## 5. `admin_settings` pin owners
 
@@ -455,12 +455,12 @@ Commit message: docs(p08-t02-verify): record the N27 rehearsal evidence
 ### T03
 
 ```text
-Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
+verify git hash-object and the SHA256 of the LF file equal the recorded values; apply that LF text byte-for-byte; STOP on mismatch
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T03 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
 
-STEP 0. Read SESSION_CONTEXT for the human’s Part C paste from docs/03-database/rehearsal/FREE_PLAN_RUNBOOK.md: dump timestamp, file size, both manifests side by side, the line `all_equal = true`, and the scratch-deletion proof. If any of those is absent, or if `all_equal` is not true, STOP. Do not apply M1. Do not check the plan tier yourself. B1: no passing test restore, no M1. B1-a: a count-only match does not pass. Every row_count and every content_md5 must be equal.
+STEP 0. B2. Export every betk and betk_analytics row via read-only MCP SELECT (row_to_json per table, ordered by primary key) plus the B1-a content manifest, to C:\Users\Marco\Desktop\betk-inbox\staging-snapshots\<UTC timestamp>\ (outside the repo). Label it "reference snapshot — not restore-tested". Paste that export and the content manifest into this task's report. Confirm LAND PR cd-delta-6-land-w1 is merged into main (PR #70, merge commit 967ab3e). If the export or the manifest is absent, STOP. Do not apply M1. Do not check the plan tier yourself. There is no Part C requirement.
 
 Steps, in order, each as its own migration, SQL from the plan section named, never retyped into this pack:
 1. Re-measure M1 preconditions (plan §6 M1, §0 enum list). STOP on mismatch. Advisors before. Apply M1. Rename the local file to the returned version. Ledger 1:1. Backfill BETK_DATABASE_SCHEMA.sql. Advisors after. Delta: none (plan §6 M1).
@@ -476,7 +476,7 @@ Commit message: feat(p08-t03): apply M1-M3 additive schema delta
 ### T04
 
 ```text
-Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
+verify git hash-object and the SHA256 of the LF file equal the recorded values; apply that LF text byte-for-byte; STOP on mismatch
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T04 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
@@ -495,7 +495,7 @@ Commit message: feat(p08-t04): detach stock-on-confirm before N27
 ### T05
 
 ```text
-Apply docs/03-database/rehearsal/staging-text/Mn.sql byte-for-byte via apply_migration; first verify its sha256 equals the SESSION_CONTEXT value; STOP on mismatch; the local migration file's content is that exact text.
+verify git hash-object and the SHA256 of the LF file equal the recorded values; apply that LF text byte-for-byte; STOP on mismatch
 MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 08 T05 from docs/10-ai-development/phase-packs/PHASE_08_SCHEMA.md.
 Branch: feature/phase-08-schema.
@@ -606,7 +606,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 |---|---|---|
 | T00 | written 2026-09-26 | this file; REG-77 closed; REG-93..REG-99 minted |
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
-| T02 | B-CI workflow committed 2026-09-30. Parts B and C superseded by B-CI / B2. REG-101 minted (production restorable backup; Owner: Human; Before: first production migration). PASS waits on the GitHub Actions run. | §4.4 B-CI; §4.5 B2; `.github/workflows/n27-rehearsal.yml` |
+| T02 | PASS 2026-10-01. Green run [36783956135](https://github.com/Jovo-Jovi/betk/actions/runs/36783956135): 45 rows, every pass `t`, `all_pass` actual `true\|44`. Identical to prior all-pass run [36782349099](https://github.com/Jovo-Jovi/betk/actions/runs/36782349099). | §4.4 LF binding; §4.5 B2; `.github/workflows/n27-rehearsal.yml` |
 | T03 | | |
 | T04 | | |
 | T05 | | |
