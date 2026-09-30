@@ -187,20 +187,20 @@ jobs:
           print(f"parsed_rows={len(rows)}")
           print(f"footer={footer}")
           failed = False
-          if len(rows) != 47 or footer != "(47 rows)":
-              print(f"FAIL expected exactly 47 rows, got {len(rows)} footer {footer!r}")
+          if len(rows) != 45 or footer != "(45 rows)":
+              print(f"FAIL expected exactly 45 rows, got {len(rows)} footer {footer!r}")
               failed = True
           for index, row in enumerate(rows, start=1):
               if row.get("pass") not in ("t", "true"):
                   print(f"FAIL row {index} {row.get('name')} pass={row.get('pass')!r}")
                   failed = True
           last = rows[-1] if rows else {}
-          if len(rows) != 47 or last.get("name") != "all_pass" or last.get("pass") not in ("t", "true"):
-              print("FAIL row 47 all_pass = true")
+          if len(rows) != 45 or last.get("name") != "all_pass" or last.get("pass") not in ("t", "true"):
+              print("FAIL row 45 all_pass = true")
               failed = True
           if failed:
               sys.exit(1)
-          print("08 PASS: 47 rows, every pass = true, row 47 all_pass = true")
+          print("08 PASS: 45 rows, every pass = true, row 45 all_pass = true")
           PY
 
       - name: Write the step summary

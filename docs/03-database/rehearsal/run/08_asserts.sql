@@ -429,21 +429,21 @@ $rehearsal_delete$;
 -- Plan §6 M6 verify. Rename keeps the history FK's relation OID, so
 -- confrelid = seller_orders and confdeltype 'a' (NO ACTION) is that proof.
 INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-SELECT 33, 'm6_to_regclass', 'orders_null|seller_orders_present',
+SELECT 32, 'm6_to_regclass', 'orders_null|seller_orders_present',
   CASE WHEN to_regclass('betk.orders') IS NULL THEN 'orders_null' ELSE 'orders_present' END
     || '|' ||
   CASE WHEN to_regclass('betk.seller_orders') IS NOT NULL THEN 'seller_orders_present' ELSE 'seller_orders_absent' END,
   to_regclass('betk.orders') IS NULL
     AND to_regclass('betk.seller_orders') IS NOT NULL
 UNION ALL
-SELECT 34, 'create_order_from_inquiry_absent', 'null',
+SELECT 33, 'create_order_from_inquiry_absent', 'null',
   COALESCE(
     to_regprocedure('betk.create_order_from_inquiry(uuid,uuid,betk.delivery_preference,betk.payment_method)')::text,
     'null'
   ),
   to_regprocedure('betk.create_order_from_inquiry(uuid,uuid,betk.delivery_preference,betk.payment_method)') IS NULL
 UNION ALL
-SELECT 35, 'no_betk_orders_in_defs', 'absent',
+SELECT 34, 'no_betk_orders_in_defs', 'absent',
   CASE
     WHEN strpos(pg_get_functiondef('betk.enforce_payment_update()'::regprocedure), 'betk.orders') = 0
      AND strpos(pg_get_functiondef('betk.checkout_from_cart(uuid)'::regprocedure), 'betk.orders') = 0
@@ -453,14 +453,14 @@ SELECT 35, 'no_betk_orders_in_defs', 'absent',
   strpos(pg_get_functiondef('betk.enforce_payment_update()'::regprocedure), 'betk.orders') = 0
     AND strpos(pg_get_functiondef('betk.checkout_from_cart(uuid)'::regprocedure), 'betk.orders') = 0
 UNION ALL
-SELECT 36, 'checkout_execute_revoked', 'false|false',
+SELECT 35, 'checkout_execute_revoked', 'false|false',
   has_function_privilege('anon', 'betk.checkout_from_cart(uuid)', 'EXECUTE')::text
     || '|' ||
   has_function_privilege('authenticated', 'betk.checkout_from_cart(uuid)', 'EXECUTE')::text,
   NOT has_function_privilege('anon', 'betk.checkout_from_cart(uuid)', 'EXECUTE')
     AND NOT has_function_privilege('authenticated', 'betk.checkout_from_cart(uuid)', 'EXECUTE')
 UNION ALL
-SELECT 37, 'daily_platform_snapshot_command', 'seller_orders|5 22 * * *',
+SELECT 36, 'daily_platform_snapshot_command', 'seller_orders|5 22 * * *',
   COALESCE((
     SELECT CASE
       WHEN strpos(j.command, 'betk.orders') = 0 AND strpos(j.command, 'betk.seller_orders') > 0
@@ -478,10 +478,10 @@ SELECT 37, 'daily_platform_snapshot_command', 'seller_orders|5 22 * * *',
     WHERE j.jobname = 'daily-platform-snapshot'
   ), false)
 UNION ALL
-SELECT 38, 'history_fk_same_oid_no_action', 'same_oid|a',
+SELECT 37, 'history_fk_same_oid_no_action', 'same_oid|a',
   COALESCE((
     SELECT CASE WHEN c.confrelid = 'betk.seller_orders'::regclass THEN 'same_oid' ELSE 'other_oid' END
-      || '|' || c.confdeltype
+      || '|' || c.confdeltype::text
     FROM pg_constraint AS c
     WHERE c.conname = 'order_status_history_order_id_fkey'
   ), 'missing'),
@@ -492,7 +492,7 @@ SELECT 38, 'history_fk_same_oid_no_action', 'same_oid|a',
     WHERE c.conname = 'order_status_history_order_id_fkey'
   ), false)
 UNION ALL
-SELECT 39, 'four_rules_instead_nothing', '4',
+SELECT 38, 'four_rules_instead_nothing', '4',
   count(*)::text,
   count(*) = 4
 FROM pg_rules
@@ -509,12 +509,12 @@ DO $rehearsal_checkout$
 BEGIN
   PERFORM betk.checkout_from_cart('00000000-0000-0000-0000-000000000000'::uuid);
   INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-  VALUES (40, 'checkout_from_cart_not_ready', 'BETK_CHECKOUT_NOT_READY', 'no_exception', false);
+  VALUES (39, 'checkout_from_cart_not_ready', 'BETK_CHECKOUT_NOT_READY', 'no_exception', false);
 EXCEPTION
   WHEN OTHERS THEN
     INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
     VALUES (
-      40,
+      39,
       'checkout_from_cart_not_ready',
       'BETK_CHECKOUT_NOT_READY',
       SQLERRM,
@@ -524,19 +524,19 @@ END
 $rehearsal_checkout$;
 
 INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-SELECT 42, 'master_orders_anon_select', 'false',
+SELECT 40, 'master_orders_anon_select', 'false',
   has_table_privilege('anon', 'betk.master_orders', 'SELECT')::text,
   has_table_privilege('anon', 'betk.master_orders', 'SELECT') = false
 UNION ALL
-SELECT 43, 'master_orders_authenticated_update', 'false',
+SELECT 41, 'master_orders_authenticated_update', 'false',
   has_table_privilege('authenticated', 'betk.master_orders', 'UPDATE')::text,
   has_table_privilege('authenticated', 'betk.master_orders', 'UPDATE') = false
 UNION ALL
-SELECT 44, 'master_orders_authenticated_insert', 'false',
+SELECT 42, 'master_orders_authenticated_insert', 'false',
   has_table_privilege('authenticated', 'betk.master_orders', 'INSERT')::text,
   has_table_privilege('authenticated', 'betk.master_orders', 'INSERT') = false
 UNION ALL
-SELECT 45, 'returns_update_qual', 'betk.is_admin()',
+SELECT 43, 'returns_update_qual', 'betk.is_admin()',
   COALESCE((
     SELECT pg_get_expr(p.polqual, p.polrelid)
     FROM pg_policy AS p
@@ -556,7 +556,7 @@ SELECT 45, 'returns_update_qual', 'betk.is_admin()',
       AND p.polname = 'returns_update'
   ), false)
 UNION ALL
-SELECT 46, 'store_categories_select_approved', 'contains',
+SELECT 44, 'store_categories_select_approved', 'contains',
   COALESCE((
     SELECT pg_get_expr(p.polqual, p.polrelid)
     FROM pg_policy AS p
@@ -577,7 +577,9 @@ SELECT 46, 'store_categories_select_approved', 'contains',
   ), false);
 
 INSERT INTO rehearsal_assert (ord, name, expected, actual, pass)
-SELECT 47, 'all_pass', 'true', bool_and(pass)::text, bool_and(pass)
+SELECT 45, 'all_pass', 'true|44',
+  bool_and(pass)::text || '|' || count(*)::text,
+  bool_and(pass) AND count(*) = 44
 FROM rehearsal_assert;
 
 SELECT name, expected, actual, pass
