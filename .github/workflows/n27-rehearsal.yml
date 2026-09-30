@@ -24,7 +24,9 @@
 #     08 also passes -P format=csv so the result table can be counted
 # - supabase stop --no-backup
 #     --no-backup deletes the local data volumes after the job
-# - Runner Docker is already on ubuntu-latest. No Docker setup action.
+# - Job-local config copy only (never committed): [db.seed] enabled = false
+#   because seed.sql is absent; [auth.hook.send_sms] and [auth.external.google]
+#   enabled = false because those blocks read secrets and this job has none.
 
 name: N27 rehearsal
 
@@ -68,30 +70,36 @@ jobs:
       - name: Disable seed in a job-local config copy
         run: |
           set -euo pipefail
-          # seed.sql is absent. [db.seed] enabled = true and sql_paths includes
-          # ./seed.sql. `supabase start` seeds after migrations. Edit only the
-          # runner copy. The repo file is not committed from this job.
+          # seed.sql is absent, and [db.seed] is enabled. The Send SMS hook and
+          # Google provider are enabled and read secrets from the environment.
+          # This job has no secrets. Both switches are turned off in the runner
+          # copy only. The repo file is not committed from this job.
           mkdir -p "$RUNNER_TEMP"
           cp supabase/config.toml "$RUNNER_TEMP/config.toml.repo"
           python3 << 'PY'
           from pathlib import Path
           path = Path("supabase/config.toml")
           text = path.read_text(encoding="utf-8")
-          old = (
-              "[db.seed]\n"
-              "# If enabled, seeds the database after migrations during a db reset.\n"
-              "enabled = true\n"
-          )
-          new = (
-              "[db.seed]\n"
-              "# Job-local copy only. seed.sql is absent. Never committed.\n"
-              "enabled = false\n"
-          )
-          if old not in text:
-              raise SystemExit("db.seed block not found; refusing to start")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          replacements = {
+              (
+                  "[db.seed]\n"
+                  "# If enabled, seeds the database after migrations during a db reset.\n"
+                  "enabled = true\n"
+              ): (
+                  "[db.seed]\n"
+                  "# Job-local copy only. seed.sql is absent. Never committed.\n"
+                  "enabled = false\n"
+              ),
+              "[auth.hook.send_sms]\nenabled = true\n": "[auth.hook.send_sms]\nenabled = false\n",
+              "[auth.external.google]\nenabled = true\n": "[auth.external.google]\nenabled = false\n",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"config block not found: {old.splitlines()[0]}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
           PY
-          grep -n -A 4 '^\[db.seed\]' supabase/config.toml
+          grep -n -A 2 -E '^\[(db.seed|auth.hook.send_sms|auth.external.google)\]' supabase/config.toml
 
       - name: Start local Supabase
         run: |
