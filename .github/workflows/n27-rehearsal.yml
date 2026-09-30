@@ -164,43 +164,53 @@ jobs:
           set -euo pipefail
           python3 - "$RUNNER_TEMP/n27/08.log" << 'PY'
           import csv
-          import io
           import sys
           from pathlib import Path
 
           raw = Path(sys.argv[1]).read_text(encoding="utf-8")
           header = "name,expected,actual,pass"
-          start = raw.rfind(header)
-          if start < 0:
+          lines = raw.splitlines()
+          try:
+              start = lines.index(header)
+          except ValueError:
               sys.exit("08 produced no result header")
-          lines = raw[start:].splitlines()
-          footer_at = None
-          for index, line in enumerate(lines):
-              if line.startswith("(") and line.endswith("rows)"):
-                  footer_at = index
+          rows = []
+          for parsed in csv.reader(lines[start + 1 :]):
+              if len(parsed) != 4:
                   break
-          if footer_at is None:
-              sys.exit("08 produced no row-count footer")
-          footer = lines[footer_at].strip()
-          csv_lines = [line for line in lines[:footer_at] if line.strip()]
-          rows = list(csv.DictReader(io.StringIO("\n".join(csv_lines))))
+              rows.append(parsed)
           print(f"parsed_rows={len(rows)}")
-          print(f"footer={footer}")
-          failed = False
-          if len(rows) != 45 or footer != "(45 rows)":
-              print(f"FAIL expected exactly 45 rows, got {len(rows)} footer {footer!r}")
-              failed = True
-          for index, row in enumerate(rows, start=1):
-              if row.get("pass") not in ("t", "true"):
-                  print(f"FAIL row {index} {row.get('name')} pass={row.get('pass')!r}")
-                  failed = True
-          last = rows[-1] if rows else {}
-          if len(rows) != 45 or last.get("name") != "all_pass" or last.get("pass") not in ("t", "true"):
-              print("FAIL row 45 all_pass = true")
-              failed = True
-          if failed:
+          first_fail = None
+          for index, parsed in enumerate(rows, start=1):
+              name, expected, actual, passed = parsed
+              row_fail = passed != "t"
+              if index == len(rows) and (
+                  name != "all_pass" or actual != "true|44" or passed != "t"
+              ):
+                  row_fail = True
+              if row_fail and first_fail is None:
+                  first_fail = (index, name, expected, actual, passed)
+          if first_fail is not None:
+              index, name, expected, actual, passed = first_fail
+              print(
+                  f"first_fail row={index} name={name} expected={expected} "
+                  f"actual={actual} pass={passed}"
+              )
+          last = rows[-1] if rows else ("", "", "", "")
+          if (
+              len(rows) != 45
+              or any(parsed[3] != "t" for parsed in rows)
+              or last[0] != "all_pass"
+              or last[2] != "true|44"
+              or last[3] != "t"
+          ):
+              print(
+                  f"FAIL expected 45 rows, every pass=t, "
+                  f"last all_pass actual=true|44 pass=t; "
+                  f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
+              )
               sys.exit(1)
-          print("08 PASS: 45 rows, every pass = true, row 45 all_pass = true")
+          print("08 PASS: 45 rows, every pass = t, last row all_pass actual=true|44 pass=t")
           PY
 
       - name: Write the step summary
