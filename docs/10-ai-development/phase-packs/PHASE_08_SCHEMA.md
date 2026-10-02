@@ -608,7 +608,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | T01 | done 2026-09-26 | `SESSION_CONTEXT.md` §0 re-measure; branch `feature/phase-08-schema` at `40f5b9c`; no migration file |
 | T02 | PASS 2026-10-01. Green run [36783956135](https://github.com/Jovo-Jovi/betk/actions/runs/36783956135): 45 rows, every pass `t`, `all_pass` actual `true\|44`. Identical to prior all-pass run [36782349099](https://github.com/Jovo-Jovi/betk/actions/runs/36782349099). | §4.4 LF binding; §4.5 B2; `.github/workflows/n27-rehearsal.yml` |
 | T03 | | |
-| T04 | | |
+| T04 | done 2026-10-02 | `SESSION_CONTEXT.md` P08-T04; `20261002073418_v2_08_detach_stock_on_confirm` |
 | T05 | | |
 | T06 | | |
 | T07 | | |

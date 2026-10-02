@@ -2297,3 +2297,12 @@ INSERT INTO betk.admin_settings (key, value) VALUES
   ('agreement_seller_agreement_version', ''),
   ('agreement_return_policy_version', ''),
   ('agreement_privacy_version', '');
+
+-- 20261002073418_v2_08_detach_stock_on_confirm (M4; backfilled here for source parity).
+-- >>> STAGING-BOUND LITERALS (rehearsal substitutes this block only)
+-- <<< STAGING-BOUND LITERALS
+
+-- M4 v2_08_detach_stock_on_confirm. Plan §6 M4, §4.2.
+-- The function remains until M8. This drops the trigger only.
+
+DROP TRIGGER trg_decrement_stock_on_confirm ON betk.orders;
