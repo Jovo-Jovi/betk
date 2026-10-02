@@ -254,6 +254,19 @@ LF binding (`git hash-object` · SHA256 of the LF file). superseded — Windows 
 | `M5.sql` | `3bc968d6daaaa455bcf792663bdd95af150ea778` | `caa1174099e2c951aa99557af4728978c1d6bef9b836e268917e93804844e14e` |
 | `M6.sql` | `7e7148d20b22aef778e55261adb28445b17bf8f5` | `6726ff67d5503a402857cd560ddc1db80f6d6f480e46ab968609fd79b60487d9` |
 
+**R1 (human, 2026-10-02), verbatim:** R1 M7 and M8 are authored, audited and CI-tested before any staging apply.
+- T05b writes docs/03-database/rehearsal/staging-text/M7.sql and M8.sql. M8 includes the final checkout_from_cart via CREATE OR REPLACE.
+- T06 only applies them byte-for-byte (blob binding, as D-B). Pack T06 steps 1 and 3 change from "apply from plan §…" to "apply staging-text/M7.sql / M8.sql".
+
+**R2 (human, 2026-10-02), verbatim:** R2 Test-only values: the CI database may set admin_settings pins (payment_window_minutes, price band, agreement versions, …) to values labelled "CI TEST VALUE". Never on staging. Staging keys stay empty (CF-12).
+
+T06 applies `M7.sql` and `M8.sql` the same way T03–T05 apply M1–M6: verify `git hash-object` and the SHA256 of the LF file equal the recorded values; apply that LF text byte-for-byte; STOP on mismatch. Audit: `docs/03-database/rehearsal/AUDIT-M78.md`.
+
+| File | blob id | LF SHA256 |
+|---|---|---|
+| `M7.sql` | `9b402b8dfd91edfeff09fab549debe79f97aa023` | `ec739e063705da9a064df62585afe5e5f0d4c0cdd0f1436bcaeca63df4a9b5c1` |
+| `M8.sql` | `ac1f370baf1b6910db8c4606b0349805a07bf76c` | `6650d40d6eed3b4e76d3396f9c3ddf5440ab7ee26f942b499b9f3b23433ab242` |
+
 **Project id.** Under option B the human runs the SQL editor on the dashboard branch. The agent does not call `apply_migration` or `execute_sql` for the rehearsal. `BRANCH_PROJECT_REF` stays a variable for option A, if that tool argument ever exists. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
 
 **Evidence the rehearsal pastes, when it is unblocked.**
@@ -323,7 +336,7 @@ A source row maps to exactly one T below. Where that row also names an earlier m
 | T03 | M1, M2, M3 | M1 M2 M3 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T04 | M4, CF-1 | M4 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T05 | M5 (GO M5) and M6, including §2.3 test and comment edits | M5 M6 | Grok 4.7 | Max | `feature/phase-08-schema` |
-| T05b | checkout_from_cart body. Prompt issued by the planning chat | none (lands in M8) | Grok 4.7 | Max | `feature/phase-08-schema` |
+| T05b | Author, audit, and CI-prove M7 and M8, including the checkout body. Staging apply is T06 | none on staging | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T06 | M7 and M8 | M7 M8 | Grok 4.7 | Max | `feature/phase-08-schema` |
 | T07 | REG-92 and guards E, F, G | none | Grok 4.7 | High | `feature/phase-08-schema` |
 | T08 | Exit evidence, nine checks | none | Grok 4.7 | Max | `feature/phase-08-schema` |
@@ -359,9 +372,9 @@ A source row maps to exactly one T below. Where that row also names an earlier m
 
 T02 is the rehearsal. It is not a Phase 08 task row and not a §9 row. It sits before T03, which is the first staging apply.
 
-CF-2’s create-and-revoke is M6, applied in T05. M6’s body is the C1 shell (`RAISE EXCEPTION 'BETK_CHECKOUT_NOT_READY'`). T05b authors the real body. M8 lands it with `CREATE OR REPLACE` (plan §6 M8). T06 does not create the function again. T06 applies M7, whose last statement is the GRANT, and re-reads the function body. The row’s single owner is T06.
+CF-2’s create-and-revoke is M6, applied in T05. M6’s body is the C1 shell (`RAISE EXCEPTION 'BETK_CHECKOUT_NOT_READY'`). T05b authored the real body in `staging-text/M8.sql` (`CREATE OR REPLACE`). T06 does not create the function again. T06 applies `staging-text/M7.sql` byte-for-byte, whose last statement is the GRANT, then `staging-text/M8.sql` byte-for-byte, and re-reads the function body. The row’s single owner is T06.
 
-T05b — checkout_from_cart body (Max). Prompt issued by the planning chat. Scope: author the body from `docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql` against ADR-022, CF-2, D4, R-O02, R-O17, R-O21; stock goes through the M8 function per plan §4.2, not an inline listings UPDATE; REG-88: read the pin; never choose it; lands in M8.
+T05b (done 2026-10-02) authored `staging-text/M7.sql` and `M8.sql`, audited them in `AUDIT-M78.md`, and proved them on a local stack (run 37057129740). Staging was not written.
 
 The RLS row’s new-table policies are M2, applied in T03 under the §9 M1–M3 row. T06 applies the M7 policies and re-verifies the eight new tables. The RLS row’s single owner is T06.
 
@@ -518,13 +531,17 @@ Commit message: feat(p08-t05): N27 masters, rename seller_orders, revoke checkou
 ### T05b
 
 ```text
-T05b — checkout_from_cart body (Max). Prompt issued by the planning chat.
+Already executed on 2026-10-02. Do not re-author M7 or M8.
+MODEL: Grok 4.7 · THINKING: Max
 
-Scope:
-- author the body from docs/03-database/rehearsal/drafts/checkout_from_cart.draft.sql against ADR-022, CF-2, D4, R-O02, R-O17, R-O21;
-- stock goes through the M8 function per plan §4.2, not an inline listings UPDATE;
-- REG-88: read the pin; never choose it;
-- lands in M8.
+R1 (verbatim): R1 M7 and M8 are authored, audited and CI-tested before any staging apply.
+- T05b writes docs/03-database/rehearsal/staging-text/M7.sql and M8.sql. M8 includes the final checkout_from_cart via CREATE OR REPLACE.
+- T06 only applies them byte-for-byte (blob binding, as D-B). Pack T06 steps 1 and 3 change from "apply from plan §…" to "apply staging-text/M7.sql / M8.sql".
+
+R2 (verbatim): R2 Test-only values: the CI database may set admin_settings pins (payment_window_minutes, price band, agreement versions, …) to values labelled "CI TEST VALUE". Never on staging. Staging keys stay empty (CF-12).
+
+Evidence: AUDIT-M78.md; green run 37057129740; LF binding in §4.4.
+Done-when: M7 and M8 are bound. Staging is still at M6.
 ```
 
 ### T06
@@ -536,11 +553,21 @@ Branch: feature/phase-08-schema.
 
 Do not re-apply M6. Re-read checkout_from_cart and confirm EXECUTE is still revoked and the body does not select or return the hidden columns. That re-read completes the CF-2 row. The GRANT is M7’s last statement.
 
+R1 (verbatim): R1 M7 and M8 are authored, audited and CI-tested before any staging apply.
+- T05b writes docs/03-database/rehearsal/staging-text/M7.sql and M8.sql. M8 includes the final checkout_from_cart via CREATE OR REPLACE.
+- T06 only applies them byte-for-byte (blob binding, as D-B). Pack T06 steps 1 and 3 change from "apply from plan §…" to "apply staging-text/M7.sql / M8.sql".
+
+R2 (verbatim): R2 Test-only values: the CI database may set admin_settings pins (payment_window_minutes, price band, agreement versions, …) to values labelled "CI TEST VALUE". Never on staging. Staging keys stay empty (CF-12).
+
 Steps:
-1. Re-measure M7 preconditions (plan §6 M7). STOP on mismatch. Apply M7 from plan §1.5, §1.6, §1.8, and §6 M7. Column list for the SELECT grant comes from information_schema at apply time, minus delivery_fee and total_amount. Last statement: GRANT EXECUTE to authenticated. Not to anon. Not to PUBLIC.
-2. Verify plan §6 M7, including zero policies on sessions and otp_tokens, one modlog_admin_insert, and the six formerly zero-policy tables now policed. Re-verify the eight M2 tables still have policies. Advisor delta: rls-no-policy 8 → 2. Initplan does not rise.
-3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply M8 from plan §1.7 and §6 M8. M8’s `checkout_from_cart` statement is `CREATE OR REPLACE` with the body T05b wrote. The M6 shell is not the final body. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
+1. Re-measure M7 preconditions (plan §6 M7). STOP on mismatch. Apply docs/03-database/rehearsal/staging-text/M7.sql byte-for-byte. Verify git hash-object and the SHA256 of the LF file equal the §4.4 values (blob `9b402b8dfd91edfeff09fab549debe79f97aa023`, LF SHA256 `ec739e063705da9a064df62585afe5e5f0d4c0cdd0f1436bcaeca63df4a9b5c1`). STOP on mismatch. Do not re-author. The file’s last statement is GRANT EXECUTE to authenticated. Not to anon. Not to PUBLIC.
+2. Verify plan §6 M7, including zero policies on sessions and otp_tokens, one modlog_admin_insert, and the six formerly zero-policy tables now policed. Re-verify the eight M2 tables still have policies. Advisor delta: rls-no-policy 8 → 2. Initplan does not rise. E-style: column_privileges for the seller_orders SELECT list and the master_orders INSERT and UPDATE lists.
+3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply docs/03-database/rehearsal/staging-text/M8.sql byte-for-byte. Verify git hash-object and the SHA256 of the LF file equal the §4.4 values (blob `ac1f370baf1b6910db8c4606b0349805a07bf76c`, LF SHA256 `6650d40d6eed3b4e76d3396f9c3ddf5440ab7ee26f942b499b9f3b23433ab242`). STOP on mismatch. Do not edit the body. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
 4. Verify Phase 08 exit items 6, 8, and 9 as far as the functions allow before T08’s full paste.
+
+Carry-forwards, after the apply, not in T05b:
+- master_orders phone-gate case in tests/integration/rls.smoke.test.ts after M7 (plan §2.3). T05 left the positive phone-gate on seller_orders because M2 REVOKE ALL blocks authenticated INSERT until M7.
+- checkout-path stock cases in tests/integration/orders.stockDecrement.test.ts after M8. T05 changed those expects so stock stays unchanged because the confirm trigger is gone.
 
 Evidence: column_privileges, routine_privileges, policy counts, advisor before/after, pg_proc checks named in plan §6 M8.
 Done-when: M7 and M8 are on the ledger and authenticated can execute checkout_from_cart.
@@ -610,6 +637,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | T03 | | |
 | T04 | done 2026-10-02 | `SESSION_CONTEXT.md` P08-T04; `20261002073418_v2_08_detach_stock_on_confirm` |
 | T05 | | |
+| T05b | done 2026-10-02. Staging not written. Green run [37057129740](https://github.com/Jovo-Jovi/betk/actions/runs/37057129740): 59 rows, every pass `t`, `all_pass` actual `true\|58`. | `AUDIT-M78.md`; §4.4 M7/M8 LF binding |
 | T06 | | |
 | T07 | | |
 | T08 | | |
