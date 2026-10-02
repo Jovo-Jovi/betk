@@ -118,6 +118,8 @@ P08-T02-FIX2 re-read (2026-09-27), before the mint: header was REG-01..REG-99, n
 
 P08-T02-CI re-read (2026-09-30), before the mint: header was REG-01..REG-100, next free **REG-101**, no REG-101 row. No existing REG requires a restorable backup before a v2 migration is applied to a production database. Took **REG-101** (Owner: Human; Before: first production migration). Next free **REG-102**. OD-22 and ADR-026 unchanged.
 
+P08-T05b-FIX re-read (2026-10-02), before the mint: header was REG-01..REG-101, next free **REG-102**, no REG-102 row. Took **REG-102** (payout-blocking statuses; Owner: Human; Before: Phase 19), **REG-103** (refunded_subtotal writer; Owner: Phase 15; Before: the first refund write), **REG-104** (prep_deadline when no item has prep days; Owner: Human; Before: Phase 13). Next free **REG-105**. OD-22 and ADR-026 unchanged.
+
 `price_band_min_egp` and `price_band_max_egp` were not minted. REG-62’s text already covers “price band set”.
 
 ## 4. Rehearsal mechanism and backup gate
@@ -265,7 +267,23 @@ T06 applies `M7.sql` and `M8.sql` the same way T03–T05 apply M1–M6: verify `
 | File | blob id | LF SHA256 |
 |---|---|---|
 | `M7.sql` | `9b402b8dfd91edfeff09fab549debe79f97aa023` | `ec739e063705da9a064df62585afe5e5f0d4c0cdd0f1436bcaeca63df4a9b5c1` |
-| `M8.sql` | `ac1f370baf1b6910db8c4606b0349805a07bf76c` | `6650d40d6eed3b4e76d3396f9c3ddf5440ab7ee26f942b499b9f3b23433ab242` |
+| `M8.sql` | `06f1189353f4479bad8bd8bed5379adf66f71afb` | `51adf18b832078a66d0df2ce9628fd5be5daef038162e246610e239060abd1c6` |
+
+superseded (T05b, before G1 and G3): M8 blob `ac1f370baf1b6910db8c4606b0349805a07bf76c`, LF SHA256 `6650d40d6eed3b4e76d3396f9c3ddf5440ab7ee26f942b499b9f3b23433ab242`. M7 did not change.
+
+**Decisions (human, 2026-10-02), verbatim:**
+
+G1 F-ESC — fix. In M8, a seller_orders UPDATE that changes escalated_at, escalation_reason or escalation_note raises BETK_ESCALATION_ACTOR unless NEW.store_id = betk.my_store_id() or betk.is_admin(), even when status is unchanged. escalation_resolved_at stays admin-only (cite how). AUDIT row → MATCH, with the fix cited.
+
+G2 F-AGREE — accepted. A four-key allow-list of non-sensitive version labels; buyers must see the version they accept (R-G02). AUDIT verdict: BROADER — ACCEPTED (human, G2).
+
+G3 F-BLOCK — fix, fail-closed. enforce_payout_cap also refuses while the seller order has any dispute or return in a non-terminal status. Take the terminal sets from the live enum labels (SELECT; cite them). Treat every status not explicitly closed, resolved, rejected, refunded or cancelled as blocking. Mint a REG at mint time: "payout-blocking dispute/return statuses — product pin; M8 currently blocks every non-terminal status". Owner: Human. Before: the phase that builds payouts (cite BETK_PHASES).
+
+G4 F-REFUND — accepted as latent (no refund flow exists before the returns/disputes phase). Mint a REG: "refunded_subtotal writer = admin-only SECURITY DEFINER function with an is_admin() check, never a column grant to authenticated; must exist before the first refund write". Owner: the phase that builds refunds (cite). Before: the first refund write.
+
+G5 FLAGs. Accepted as provisional (record each with its owner phase): REG-88, SUBMIT, COURIER (until ADR-024 chooses), PREDELIVERY, RETURN-ACTOR, QUOTE-HOURS. FLAG-PREP-NULL → mint a REG: "prep_deadline when no item has prep days — product pin; M8 leaves it NULL, so the SLA ladder does not run". Owner: Human. Before: the phase that builds the prep-SLA ladder (cite).
+
+T05b-FIX took **REG-102** (G3; Owner: Human; Before: Phase 19), **REG-103** (G4; Owner: Phase 15; Before: the first refund write), **REG-104** (FLAG-PREP-NULL; Owner: Human; Before: Phase 13). Next free **REG-105**. `escalation_resolved_at` stays off the authenticated UPDATE grant (`M7.sql:56-62`). Live terminal intersection (SELECT 2026-10-02): dispute `resolved`, `closed`; return `rejected`, `refunded`. Provisional flag owners: REG-88 Phase 09 (Phase 11 reads it), SUBMIT Phase 09, COURIER Phase 14 until ADR-024 chooses, PREDELIVERY Phase 14, RETURN-ACTOR Phase 15, QUOTE-HOURS Phase 10.
 
 **Project id.** Under option B the human runs the SQL editor on the dashboard branch. The agent does not call `apply_migration` or `execute_sql` for the rehearsal. `BRANCH_PROJECT_REF` stays a variable for option A, if that tool argument ever exists. No rehearsal call targets the staging ref. The scoped server’s ref is not written here and is not that variable.
 
@@ -562,7 +580,7 @@ R2 (verbatim): R2 Test-only values: the CI database may set admin_settings pins 
 Steps:
 1. Re-measure M7 preconditions (plan §6 M7). STOP on mismatch. Apply docs/03-database/rehearsal/staging-text/M7.sql byte-for-byte. Verify git hash-object and the SHA256 of the LF file equal the §4.4 values (blob `9b402b8dfd91edfeff09fab549debe79f97aa023`, LF SHA256 `ec739e063705da9a064df62585afe5e5f0d4c0cdd0f1436bcaeca63df4a9b5c1`). STOP on mismatch. Do not re-author. The file’s last statement is GRANT EXECUTE to authenticated. Not to anon. Not to PUBLIC.
 2. Verify plan §6 M7, including zero policies on sessions and otp_tokens, one modlog_admin_insert, and the six formerly zero-policy tables now policed. Re-verify the eight M2 tables still have policies. Advisor delta: rls-no-policy 8 → 2. Initplan does not rise. E-style: column_privileges for the seller_orders SELECT list and the master_orders INSERT and UPDATE lists.
-3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply docs/03-database/rehearsal/staging-text/M8.sql byte-for-byte. Verify git hash-object and the SHA256 of the LF file equal the §4.4 values (blob `ac1f370baf1b6910db8c4606b0349805a07bf76c`, LF SHA256 `6650d40d6eed3b4e76d3396f9c3ddf5440ab7ee26f942b499b9f3b23433ab242`). STOP on mismatch. Do not edit the body. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
+3. Re-measure M8 preconditions (plan §6 M8). STOP on mismatch. Apply docs/03-database/rehearsal/staging-text/M8.sql byte-for-byte. Verify git hash-object and the SHA256 of the LF file equal the §4.4 values (blob `06f1189353f4479bad8bd8bed5379adf66f71afb`, LF SHA256 `51adf18b832078a66d0df2ce9628fd5be5daef038162e246610e239060abd1c6`). STOP on mismatch. Do not edit the body. CF-3 is both write paths. CF-4 drops the inquiry converted-order writer and keeps the column. Do not recreate create_order_from_inquiry.
 4. Verify Phase 08 exit items 6, 8, and 9 as far as the functions allow before T08’s full paste.
 
 Carry-forwards, after the apply, not in T05b:
@@ -638,6 +656,7 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | T04 | done 2026-10-02 | `SESSION_CONTEXT.md` P08-T04; `20261002073418_v2_08_detach_stock_on_confirm` |
 | T05 | | |
 | T05b | done 2026-10-02. Staging not written. Green run [37057129740](https://github.com/Jovo-Jovi/betk/actions/runs/37057129740): 59 rows, every pass `t`, `all_pass` actual `true\|58`. | `AUDIT-M78.md`; §4.4 M7/M8 LF binding |
+| T05b-FIX | done 2026-10-02. Staging not written. N27 [37060438890](https://github.com/Jovo-Jovi/betk/actions/runs/37060438890): 45 rows, `true\|44`. p08-m78 [37061620442](https://github.com/Jovo-Jovi/betk/actions/runs/37061620442): 67 rows, `true\|66`. Took REG-102..REG-104. | §4.4 decisions and the superseded M8 line |
 | T06 | | |
 | T07 | | |
 | T08 | | |
