@@ -978,11 +978,11 @@ BEGIN
     u.store_id,
     NULL,
     p_delivery_address_id,
-    'delivery',
+    'delivery'::betk.delivery_preference,
     u.fee,
     u.subtotal,
     u.child_total,
-    'pending',
+    'pending'::betk.order_status,
     v_master_id,
     NULL,
     NULL,
@@ -1019,11 +1019,11 @@ BEGIN
   WHERE c.buyer_id = v_uid;
 
   INSERT INTO betk.payments (order_id, payment_type, amount, method, status)
-  SELECT u.id, 'deposit', u.deposit, 'instapay', 'pending'
+  SELECT u.id, 'deposit'::betk.payment_type, u.deposit, 'instapay'::betk.payment_method, 'pending'::betk.payment_status
   FROM unnest(v_ids, v_deposit) AS u(id, deposit)
   WHERE u.deposit > 0
   UNION ALL
-  SELECT u.id, 'balance', u.balance, 'cod', 'pending'
+  SELECT u.id, 'balance'::betk.payment_type, u.balance, 'cod'::betk.payment_method, 'pending'::betk.payment_status
   FROM unnest(v_ids, v_balance) AS u(id, balance)
   WHERE u.balance > 0;
 
@@ -1036,7 +1036,7 @@ BEGIN
   INSERT INTO betk.order_status_history (
     order_id, from_status, to_status, changed_by, changed_by_type, notes
   )
-  SELECT u.id, NULL, 'pending', v_uid, 'buyer', 'order created'
+  SELECT u.id, NULL::betk.order_status, 'pending'::betk.order_status, v_uid, 'buyer'::betk.cancelled_by_type, 'order created'
   FROM unnest(v_ids) AS u(id);
 
   DELETE FROM betk.cart_items WHERE buyer_id = v_uid;

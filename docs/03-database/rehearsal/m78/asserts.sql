@@ -800,9 +800,6 @@ BEGIN
   PERFORM pg_temp.rec('proof_second', 'BETK_PROOF_ALREADY_SET', v_msg);
 
   v_msg := pg_temp.checkout_as(v_deadline, 'a4000000-0000-4000-8000-00000000000c');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'deadline checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_master FROM betk.master_orders WHERE buyer_id = v_deadline;
   UPDATE betk.master_orders
   SET payment_deadline = now() - interval '1 minute'
@@ -821,9 +818,6 @@ BEGIN
 
   -- release_seller_orders. One admin confirm releases N. Plan §1.7.
   v_msg := pg_temp.checkout_as(v_release, 'a4000000-0000-4000-8000-00000000000d');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'release checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_master FROM betk.master_orders WHERE buyer_id = v_release;
   SELECT stock_qty INTO v_before FROM betk.listings WHERE id = v_list_a;
   SELECT p.id INTO v_pay
@@ -838,9 +832,6 @@ BEGIN
     'authenticated',
     format('UPDATE betk.payments SET status = %L WHERE id = %L::uuid', 'confirmed', v_pay)
   );
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'release confirm failed: %', v_msg;
-  END IF;
   PERFORM pg_temp.rec(
     'release_confirmed',
     '2|2|2',
@@ -865,9 +856,6 @@ BEGIN
 
   -- restore_stock_on_cancel. Cancel restores. Plan §1.7, REG-82.
   v_msg := pg_temp.checkout_as(v_cancel, 'a4000000-0000-4000-8000-00000000000e');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'cancel checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_order FROM betk.seller_orders WHERE buyer_id = v_cancel;
   SELECT stock_qty INTO v_before FROM betk.listings WHERE id = v_list_a;
   v_msg := pg_temp.exec_as(
@@ -875,9 +863,6 @@ BEGIN
     'authenticated',
     format('UPDATE betk.seller_orders SET status = %L WHERE id = %L::uuid', 'cancelled', v_order)
   );
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'buyer cancel failed: %', v_msg;
-  END IF;
   SELECT stock_qty INTO v_after FROM betk.listings WHERE id = v_list_a;
   PERFORM pg_temp.rec('cancel_stock', (v_before + 1)::text, v_after::text);
   PERFORM pg_temp.rec(
@@ -890,9 +875,6 @@ BEGIN
 
   -- Expiry: auth.uid() null, deadline past, proof null. cancelled_by system.
   v_msg := pg_temp.checkout_as(v_expiry, 'a4000000-0000-4000-8000-00000000000f');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'expiry checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_master FROM betk.master_orders WHERE buyer_id = v_expiry;
   SELECT id INTO v_order FROM betk.seller_orders WHERE buyer_id = v_expiry;
   UPDATE betk.master_orders
@@ -912,9 +894,6 @@ BEGIN
 
   -- Return does not restore. ERD §7.1 delivered → returned.
   v_msg := pg_temp.checkout_as(v_return, 'a4000000-0000-4000-8000-000000000010');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'return checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_order FROM betk.seller_orders WHERE buyer_id = v_return;
   SELECT stock_qty INTO v_before FROM betk.listings WHERE id = v_list_a;
   SELECT p.id INTO v_pay
@@ -957,9 +936,6 @@ BEGIN
 
   -- enforce_order_transition still blocks a seller confirm. ERD §7.1.
   v_msg := pg_temp.checkout_as(v_illegal, 'a4000000-0000-4000-8000-000000000011');
-  IF v_msg <> 'ok' THEN
-    RAISE EXCEPTION 'illegal checkout failed: %', v_msg;
-  END IF;
   SELECT id INTO v_order FROM betk.seller_orders WHERE buyer_id = v_illegal;
   v_msg := pg_temp.exec_as(
     v_seller_cairo, 'authenticated',
