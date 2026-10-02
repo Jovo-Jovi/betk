@@ -12,7 +12,9 @@
 #     job runs via `pnpm exec supabase`. This job does not install the app.
 #
 # CLI and tools:
-# - git checkout 40f5b9c -- supabase/migrations
+# - rm -rf supabase/migrations, then git checkout 40f5b9c -- supabase/migrations
+#     checkout alone leaves files added after 40f5b9c (T03–T05, six files).
+#     The job-local directory is replaced so the count stays 31. Not committed.
 # - supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 #     --exclude (-x): containers the rehearsal does not need. The database
 #     container is not in that list, so it still starts. pg_cron is inside it.
@@ -35,7 +37,13 @@ on:
     branches:
       - feature/phase-08-schema
     paths:
-      - "docs/03-database/rehearsal/**"
+      - "docs/03-database/rehearsal/run/**"
+      - "docs/03-database/rehearsal/staging-text/M1.sql"
+      - "docs/03-database/rehearsal/staging-text/M2.sql"
+      - "docs/03-database/rehearsal/staging-text/M3.sql"
+      - "docs/03-database/rehearsal/staging-text/M4.sql"
+      - "docs/03-database/rehearsal/staging-text/M5.sql"
+      - "docs/03-database/rehearsal/staging-text/M6.sql"
       - ".github/workflows/n27-rehearsal.yml"
   workflow_dispatch:
 
@@ -55,6 +63,7 @@ jobs:
       - name: Pin migrations to 40f5b9c
         run: |
           set -euo pipefail
+          rm -rf supabase/migrations
           git checkout 40f5b9c -- supabase/migrations
           n=$(find supabase/migrations -name '*.sql' | wc -l)
           echo "migration_files=$n"
