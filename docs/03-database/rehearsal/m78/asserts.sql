@@ -948,9 +948,15 @@ BEGIN
   );
 
   -- Payout cap. ERD §6.4. Arithmetic only (FLAG-BLOCKING is not filtered).
+  -- master_order_id is NOT NULL after M5.
+  INSERT INTO betk.master_orders (buyer_id, betk_ref, combined_delivery_total)
+  VALUES (v_payout_buyer, 'CI-PAYOUT-M', 0)
+  RETURNING id INTO v_master;
+
   INSERT INTO betk.seller_orders (
     betk_ref, buyer_id, store_id, delivery_method, delivery_fee,
-    subtotal, total_amount, status, balance_confirmed_at, payout_eligible_at
+    subtotal, total_amount, status, balance_confirmed_at, payout_eligible_at,
+    master_order_id
   ) VALUES (
     'CI-PAYOUT-0001',
     v_payout_buyer,
@@ -961,7 +967,8 @@ BEGIN
     200,
     'pending',
     now() - interval '1 day',
-    now() - interval '1 hour'
+    now() - interval '1 hour',
+    v_master
   );
   v_msg := pg_temp.exec_as(
     v_seller_cairo,
