@@ -35,6 +35,44 @@ jobs:
           echo "migration_files=$n"
           test "$n" -eq 37
 
+      - name: Hold M5 and M6 until the rehearsal seed
+        run: |
+          set -euo pipefail
+          # M5 at 4f08616 is the staging-bound copy. Its header says the
+          # rehearsal substitutes that block only, and the block's order
+          # ids are the live ones. A fresh database has no orders, so
+          # supabase start cannot apply that file. M6 renames orders, so
+          # it has to follow the seed and M5. Both files stay the pinned
+          # bytes except M5's marked block, which is replaced from
+          # run/06_M5.sql on the runner only. Nothing here is committed.
+          mkdir -p "$RUNNER_TEMP/held"
+          mv supabase/migrations/20261002081523_v2_08_n27_masters.sql "$RUNNER_TEMP/held/M5.sql"
+          mv supabase/migrations/20261002081631_v2_08_rename_seller_orders.sql "$RUNNER_TEMP/held/M6.sql"
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          held = Path(os.environ["RUNNER_TEMP"]) / "held"
+          pinned = (held / "M5.sql").read_text(encoding="utf-8")
+          rehearsal = Path("docs/03-database/rehearsal/run/06_M5.sql").read_text(encoding="utf-8")
+          start = "-- >>> STAGING-BOUND LITERALS"
+          end_marker = "-- <<< STAGING-BOUND LITERALS"
+
+          def span(text):
+              a = text.index(start)
+              b = text.index(end_marker) + len(end_marker)
+              return a, b
+
+          pa, pb = span(pinned)
+          ra, rb = span(rehearsal)
+          (held / "M5-ci.sql").write_text(
+              pinned[:pa] + rehearsal[ra:rb] + pinned[pb:],
+              encoding="utf-8",
+          )
+          PY
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migrations_at_start=$n"
+          test "$n" -eq 35
+
       - name: Install Supabase CLI 2.106.0
         uses: supabase/setup-cli@v1
         with:
@@ -90,6 +128,17 @@ jobs:
               -c "SET TIME ZONE 'UTC'" \
               -f - < "$file"
           }
+          echo "===== sentinel ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "CREATE SCHEMA IF NOT EXISTS rehearsal; CREATE TABLE IF NOT EXISTS rehearsal.sentinel (note text PRIMARY KEY); INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only') ON CONFLICT DO NOTHING;"
+          apply seed docs/03-database/rehearsal/run/04_seed_shape.sql
+          apply M5 "$RUNNER_TEMP/held/M5-ci.sql"
+          apply M6 "$RUNNER_TEMP/held/M6.sql"
           apply M7 docs/03-database/rehearsal/staging-text/M7.sql
           apply M8 docs/03-database/rehearsal/staging-text/M8.sql
           echo "===== asserts ====="
