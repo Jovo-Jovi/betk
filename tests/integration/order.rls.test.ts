@@ -170,10 +170,10 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   const storeIds = (stores ?? []).map((s) => s.id);
 
   const orderIdSet = new Set<string>();
-  const { data: ob } = await db.from("orders").select("id").in("buyer_id", userIds);
+  const { data: ob } = await db.from("seller_orders" as "orders").select("id").in("buyer_id", userIds);
   for (const o of ob ?? []) orderIdSet.add(o.id);
   if (storeIds.length) {
-    const { data: os } = await db.from("orders").select("id").in("store_id", storeIds);
+    const { data: os } = await db.from("seller_orders" as "orders").select("id").in("store_id", storeIds);
     for (const o of os ?? []) orderIdSet.add(o.id);
   }
   const orderIds = [...orderIdSet];
@@ -187,7 +187,8 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
     await db.from("payments").delete().in("order_id", orderIds);
     // order_status_history is append-only + un-cascaded; a delete no-ops (opt-in
     // residue only). Best-effort: it never throws, just leaves that one order.
-    await db.from("orders").delete().in("id", orderIds);
+    await db.from("seller_orders" as "orders").delete().in("id", orderIds);
+    await db.from("master_orders" as unknown as "orders").delete().in("buyer_id", userIds);
   }
 
   await db.from("inquiries").delete().in("buyer_id", userIds);
@@ -267,7 +268,14 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
         price: 100,
         price_type: "fixed",
         status: "active",
-      })
+        ...{
+          // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+          weight_g: 1,
+          length_mm: 1,
+          width_mm: 1,
+          height_mm: 1,
+        },
+      } as never)
       .select("id")
       .single();
     if (lErr || !listing) throw new Error(`listings seed failed: ${lErr?.message}`);
@@ -293,9 +301,20 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
     await purgeByUserIds(createdAuthIds);
   });
 
-  function orderPayload(ref: string, buyerId: string, inquiryId?: string) {
+  async function orderPayload(ref: string, buyerId: string, inquiryId?: string) {
+    const childRef = `${REF_PREFIX}-${ref}`;
+    const { data: master, error: masterErr } = await svc()
+      .from("master_orders" as unknown as "orders")
+      .insert({
+        buyer_id: buyerId,
+        betk_ref: `${childRef}-M`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id")
+      .single();
+    if (masterErr || !master) throw new Error(`master_orders seed: ${masterErr?.message}`);
     return {
-      betk_ref: `${REF_PREFIX}-${ref}`,
+      betk_ref: childRef,
       buyer_id: buyerId,
       store_id: sellerA.storeId,
       inquiry_id: inquiryId ?? null,
@@ -304,6 +323,7 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
       delivery_fee: 0,
       total_amount: 100,
       status: "pending" as const,
+      master_order_id: master.id,
     };
   }
 
@@ -312,8 +332,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
   // -------------------------------------------------------------------------
   it("REG-09 (+): phone-verified buyer INSERTs OWN order (orders_insert + phone gate COMBINE)", async () => {
     const ins = await buyer.client
-      .from("orders")
-      .insert(orderPayload("main", buyer.id))
+      .from("seller_orders" as "orders")
+      .insert((await orderPayload("main", buyer.id)) as never)
       .select("id, status")
       .single();
     expect(ins.error).toBeNull();
@@ -324,8 +344,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
 
   it("REG-09 (-): phone-NULL user DENIED (the RESTRICTIVE gate finally bites)", async () => {
     const ins = await googleNoPhone.client
-      .from("orders")
-      .insert(orderPayload("nophone", googleNoPhone.id))
+      .from("seller_orders" as "orders")
+      .insert((await orderPayload("nophone", googleNoPhone.id)) as never)
       .select("id");
     expect(ins.error).not.toBeNull();
     expect(ins.data?.length ?? 0).toBe(0);
@@ -333,27 +353,27 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
 
   it("REG-09 (-): cross-user buyer_id DENIED (ownership WITH CHECK)", async () => {
     const ins = await buyer.client
-      .from("orders")
-      .insert(orderPayload("spoof", outsiderBuyer.id)) // not the caller
+      .from("seller_orders" as "orders")
+      .insert((await orderPayload("spoof", outsiderBuyer.id)) as never) // not the caller
       .select("id");
     expect(ins.error).not.toBeNull();
     expect(ins.data?.length ?? 0).toBe(0);
   });
 
   it("ORDERS READ: buyer + owning seller read; outsider seller/buyer + anon → 0", async () => {
-    const byBuyer = await buyer.client.from("orders").select("id").eq("id", orderId);
+    const byBuyer = await buyer.client.from("seller_orders" as "orders").select("id").eq("id", orderId);
     expect(byBuyer.data?.length ?? 0).toBe(1);
 
-    const bySellerA = await sellerA.client.from("orders").select("id").eq("id", orderId);
+    const bySellerA = await sellerA.client.from("seller_orders" as "orders").select("id").eq("id", orderId);
     expect(bySellerA.data?.length ?? 0).toBe(1);
 
-    const bySellerB = await sellerB.client.from("orders").select("id").eq("id", orderId);
+    const bySellerB = await sellerB.client.from("seller_orders" as "orders").select("id").eq("id", orderId);
     expect(bySellerB.data?.length ?? 0).toBe(0);
 
-    const byOutsider = await outsiderBuyer.client.from("orders").select("id").eq("id", orderId);
+    const byOutsider = await outsiderBuyer.client.from("seller_orders" as "orders").select("id").eq("id", orderId);
     expect(byOutsider.data?.length ?? 0).toBe(0);
 
-    const byAnon = await anonClient().from("orders").select("id").eq("id", orderId);
+    const byAnon = await anonClient().from("seller_orders" as "orders").select("id").eq("id", orderId);
     expect(byAnon.data?.length ?? 0).toBe(0);
   });
 
@@ -626,8 +646,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
   // -------------------------------------------------------------------------
   it("TENSION (+): order-from-inquiry sets inquiries.converted_to_order_id via the DEFINER trigger", async () => {
     const ins = await buyer.client
-      .from("orders")
-      .insert(orderPayload("conv", buyer.id, confirmedInquiryId))
+      .from("seller_orders" as "orders")
+      .insert((await orderPayload("conv", buyer.id, confirmedInquiryId)) as never)
       .select("id")
       .single();
     expect(ins.error).toBeNull();
@@ -661,8 +681,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
     expect(firstLink).toBeTruthy();
 
     const ins = await buyer.client
-      .from("orders")
-      .insert(orderPayload("conv2", buyer.id, confirmedInquiryId))
+      .from("seller_orders" as "orders")
+      .insert((await orderPayload("conv2", buyer.id, confirmedInquiryId)) as never)
       .select("id")
       .single();
     expect(ins.error).toBeNull();

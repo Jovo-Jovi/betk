@@ -199,6 +199,11 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
       price_type: "fixed" as const,
       stock_qty: 10,
       status: "active" as const,
+      // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
 
     async function seedListing(fields: Record<string, unknown>): Promise<string> {
@@ -249,10 +254,21 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     ] as never);
 
     // ── a confirmed order + a visible review (with a photo + seller reply) on the full listing's store ──
-    const { data: order, error: orderErr } = await svc()
-      .from("orders")
+    const childRef = `BETK-T05TEST-${RUN}`;
+    const { data: master, error: masterErr } = await svc()
+      .from("master_orders" as unknown as "orders")
       .insert({
-        betk_ref: `BETK-T05TEST-${RUN}`,
+        buyer_id: buyerId,
+        betk_ref: `${childRef}-M`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id")
+      .single();
+    if (masterErr || !master) throw new Error(`[listing.test] master: ${masterErr?.message}`);
+    const { data: order, error: orderErr } = await svc()
+      .from("seller_orders" as "orders")
+      .insert({
+        betk_ref: childRef,
         buyer_id: buyerId,
         store_id: activeStoreId,
         delivery_method: "pickup",
@@ -260,6 +276,7 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
         subtotal: 250,
         total_amount: 250,
         status: "delivered",
+        ...{ master_order_id: (master as { id: string }).id },
       } as never)
       .select("id")
       .single();
@@ -291,7 +308,10 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
   afterAll(async () => {
     if (reviewId) await svc().from("review_photos").delete().eq("review_id", reviewId);
     if (reviewId) await svc().from("reviews").delete().eq("id", reviewId);
-    if (orderId) await svc().from("orders").delete().eq("id", orderId);
+    if (orderId) await svc().from("seller_orders" as "orders").delete().eq("id", orderId);
+    if (buyerId) {
+      await svc().from("master_orders" as unknown as "orders").delete().eq("buyer_id", buyerId);
+    }
     for (const id of Object.values(ids)) {
       if (id) await svc().from("listings").delete().eq("id", id);
     }

@@ -137,6 +137,23 @@ function anonClient(): BetkClient {
 const service = createServiceClient();
 const svc = () => service.schema("betk");
 
+/** M5 made seller_orders.master_order_id NOT NULL. Service role inserts the parent.
+ *  The `as "orders"` cast is the pre-regen types.ts window (REG-32). Runtime table is seller_orders.
+ */
+async function seedMaster(buyerId: string, ref: string): Promise<string> {
+  const { data, error } = await svc()
+    .from("master_orders" as unknown as "orders")
+    .insert({
+      buyer_id: buyerId,
+      betk_ref: ref,
+      combined_delivery_total: 0,
+    } as never)
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`master_orders insert: ${error?.message}`);
+  return data.id;
+}
+
 /**
  * Deletes every fixture owned by the given auth user ids, in FK-safe order,
  * then removes the auth.users rows. Self-derives store/order ids so it works
@@ -156,13 +173,13 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
 
   const orderIdSet = new Set<string>();
   const { data: ordersByBuyer } = await db
-    .from("orders")
+    .from("seller_orders" as "orders")
     .select("id")
     .in("buyer_id", userIds);
   for (const o of ordersByBuyer ?? []) orderIdSet.add(o.id);
   if (storeIds.length) {
     const { data: ordersByStore } = await db
-      .from("orders")
+      .from("seller_orders" as "orders")
       .select("id")
       .in("store_id", storeIds);
     for (const o of ordersByStore ?? []) orderIdSet.add(o.id);
@@ -172,7 +189,8 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   if (orderIds.length) {
     await db.from("order_items").delete().in("order_id", orderIds);
     await db.from("payments").delete().in("order_id", orderIds);
-    await db.from("orders").delete().in("id", orderIds);
+    await db.from("seller_orders" as "orders").delete().in("id", orderIds);
+    await db.from("master_orders" as unknown as "orders").delete().in("buyer_id", userIds);
   }
   if (storeIds.length) {
     await db.from("payouts").delete().in("store_id", storeIds);
@@ -366,10 +384,15 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       price: 100,
       price_type: "fixed" as const,
       stock_qty: 5,
+      // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
     const { data: active, error: aErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `RLS active ${RUN}`, status: "active" })
+      .insert({ ...baseListing, title_ar: `RLS active ${RUN}`, status: "active" } as never)
       .select("id")
       .single();
     if (aErr || !active) throw new Error(`active listing: ${aErr?.message}`);
@@ -377,7 +400,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
 
     const { data: draft, error: dErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `RLS draft ${RUN}`, status: "draft" })
+      .insert({ ...baseListing, title_ar: `RLS draft ${RUN}`, status: "draft" } as never)
       .select("id")
       .single();
     if (dErr || !draft) throw new Error(`draft listing: ${dErr?.message}`);
@@ -390,15 +413,16 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         title_ar: `RLS deleted ${RUN}`,
         status: "active",
         deleted_at: new Date().toISOString(),
-      })
+      } as never)
       .select("id")
       .single();
     if (delErr || !deleted) throw new Error(`deleted listing: ${delErr?.message}`);
     deletedListingId = deleted.id;
 
     // ---- One order owned by Buyer A ----
+    const buyerAMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-AM`);
     const { data: order, error: oErr } = await svc()
-      .from("orders")
+      .from("seller_orders" as "orders")
       .insert({
         betk_ref: `RLS-${RUN}-A`,
         buyer_id: actors.buyerA.id,
@@ -408,7 +432,8 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: buyerAMasterId },
+      } as never)
       .select("id")
       .single();
     if (oErr || !order) throw new Error(`order insert: ${oErr?.message}`);
@@ -488,13 +513,13 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   // -------------------------------------------------------------------------
   it("A2: Buyer B cannot read Buyer A's order (no error leak)", async () => {
     const { data, error } = await actors.buyerB.client
-      .from("orders")
+      .from("seller_orders" as "orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
     // Sanity: the owner CAN read it.
     const { data: ownerRows } = await actors.buyerA.client
-      .from("orders")
+      .from("seller_orders" as "orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
@@ -553,8 +578,9 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   it("A4: phone gate rejects no-phone Google user; phone user passes a gated insert", async () => {
     // 4a (security-critical): Google user G (phone NULL) must be REJECTED on an
     // orders INSERT even with otherwise-correct ownership.
+    const googleMasterId = await seedMaster(actors.googleG.id, `RLS-${RUN}-GM`);
     const { data: gOrder, error: gErr } = await actors.googleG.client
-      .from("orders")
+      .from("seller_orders" as "orders")
       .insert({
         betk_ref: `RLS-${RUN}-G`,
         buyer_id: actors.googleG.id,
@@ -564,7 +590,8 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: googleMasterId },
+      } as never)
       .select("id");
     const gRejected = !!gErr && rowCount(gOrder) === 0;
     record(
@@ -578,7 +605,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     );
     // If somehow inserted, clean it up so teardown stays complete.
     const gOrderId = firstId(gOrder);
-    if (gOrderId) await svc().from("orders").delete().eq("id", gOrderId);
+    if (gOrderId) await svc().from("seller_orders" as "orders").delete().eq("id", gOrderId);
     expect(gRejected).toBe(true);
 
     // 4b (spec: "Buyer A passes"): Buyer A has a verified phone AND owns the row,
@@ -586,8 +613,9 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // the RESTRICTIVE `orders_phone_gate` both pass -> INSERT succeeds. This was a
     // FINDING before Phase 07 / T01 (no permissive INSERT policy existed); REG-09
     // is now CLOSED so this is a hard PASS. Insert is cleaned up immediately.
+    const buyerASecondMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-A2M`);
     const { data: aOrder, error: aErr } = await actors.buyerA.client
-      .from("orders")
+      .from("seller_orders" as "orders")
       .insert({
         betk_ref: `RLS-${RUN}-A2`,
         buyer_id: actors.buyerA.id,
@@ -597,10 +625,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: buyerASecondMasterId },
+      } as never)
       .select("id");
     const aOrderId = firstId(aOrder);
-    if (aOrderId) await svc().from("orders").delete().eq("id", aOrderId);
+    if (aOrderId) await svc().from("seller_orders" as "orders").delete().eq("id", aOrderId);
     record(
       "A4b",
       "orders",
@@ -737,11 +766,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     );
     record(
       "F3",
-      "orders trigger",
+      "seller_orders trigger",
       "decrement_stock_on_confirm",
       "PASS",
-      "RESOLVED — the decrement_stock_on_confirm trigger (R-L05/06) is live " +
-        "(migration 20260716124323, REG-02); AFTER UPDATE OF status WHEN NEW.status='confirmed'.",
+      "M4 dropped trg_decrement_stock_on_confirm before N27. Stock no longer moves on confirm. " +
+        "This case does not update status to confirmed.",
     );
     expect(findings.length).toBeGreaterThan(0);
   });

@@ -16,7 +16,7 @@
  * publicly readable → `listing_unavailable`.
  *
  * GATE: `requireActiveUser` (R-A05), NOT `requireVerifiedPhone` — inquiries are
- * pre-transaction (ERD §1.2 gates only orders/seller_profiles/payouts). RLS
+ * pre-transaction (ERD §1.2 gates only seller_orders/seller_profiles/payouts). RLS
  * `inq_insert` (WITH CHECK buyer_id = auth.uid()) is the authz boundary; no
  * service-role.
  *

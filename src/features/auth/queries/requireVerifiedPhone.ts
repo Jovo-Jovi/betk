@@ -2,7 +2,7 @@
  * requireVerifiedPhone — the canonical transaction-time verified-phone gate.
  *
  * This is the APP-LAYER half of the OD-4 phone gate. The RLS WITH CHECK half
- * (`phone_number IS NOT NULL` on orders/seller_profiles/payouts INSERT) is
+ * (`phone_number IS NOT NULL` on seller_orders/seller_profiles/payouts INSERT) is
  * already live from Phase 01; this helper is the single Server-Action gate that
  * the transaction entry points consume:
  *
