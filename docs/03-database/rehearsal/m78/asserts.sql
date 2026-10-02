@@ -1139,7 +1139,7 @@ BEGIN
   v_msg := pg_temp.exec_as(
     v_seller_giza, 'authenticated',
     format(
-      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 100, %L, %L)',
       v_store_giza, 'instapay', '01011110003'
     )
   );
@@ -1150,7 +1150,7 @@ BEGIN
   v_msg := pg_temp.exec_as(
     v_seller_giza, 'authenticated',
     format(
-      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 100, %L, %L)',
       v_store_giza, 'instapay', '01011110003'
     )
   );
@@ -1159,7 +1159,7 @@ BEGIN
   v_msg := pg_temp.exec_as(
     v_seller_giza, 'authenticated',
     format(
-      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 100, %L, %L)',
       v_store_giza, 'instapay', '01011110003'
     )
   );
