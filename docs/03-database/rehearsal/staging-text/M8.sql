@@ -5,7 +5,7 @@
 -- last. The column and fk_inquiries_order stay. create_order_from_inquiry
 -- is already gone (M6) and is not recreated.
 --
--- FLAGS (spec does not decide; nothing below picks these):
+-- FLAGS (spec does not decide these). G3, below, is the fail-closed rule.
 -- FLAG-REG-88. Agreement keys are read and not branched. Plan §8.2.5:
 -- if the pin includes the document, empty fails closed; if it excludes the
 -- document, checkout does not consult the key. REG-88 is not pinned.
@@ -15,8 +15,14 @@
 -- FLAG-REFUND. D2 says the admin supplies the goods portion and the trigger
 -- must not copy payments.refunded_amount. No second input column exists.
 -- refunded_subtotal is not written.
--- FLAG-BLOCKING. ERD §6.4 "no blocking dispute or return" does not name
--- which statuses block. The payout cap does not filter disputes or returns.
+-- G3 (human, 2026-10-02). The payout cap excludes a seller order that
+-- has a dispute or a return whose status is not closed, resolved,
+-- rejected, refunded, or cancelled. Live labels (SELECT 2026-10-02):
+-- dispute_status submitted, under_review, awaiting_seller, resolved,
+-- closed; return_status requested, accepted, rejected, refunded.
+-- Terminal among those: dispute resolved and closed; return rejected
+-- and refunded. accepted blocks. cancelled is in neither enum. Which
+-- of those should block is a product pin (REG minted with this fix).
 -- FLAG-COURIER. courier_rates has no courier-name column (ERD §6.1).
 -- shipments.courier is set to the matched rate id text. courier_rate_id
 -- stores the same id (ERD §6.2).
@@ -202,6 +208,18 @@ BEGIN
     IF NEW.status IS DISTINCT FROM 'cancelled'::betk.order_status
        OR OLD.status = 'cancelled'::betk.order_status THEN
       RAISE EXCEPTION 'BETK_CANCEL_METADATA_FORBIDDEN';
+    END IF;
+  END IF;
+
+  -- G1 (human, 2026-10-02). The three seller escalation columns, even
+  -- when status is unchanged. escalation_resolved_at is absent from the
+  -- authenticated UPDATE grant (M7), so a seller write of it is 42501.
+  IF NEW.escalated_at IS DISTINCT FROM OLD.escalated_at
+     OR NEW.escalation_reason IS DISTINCT FROM OLD.escalation_reason
+     OR NEW.escalation_note IS DISTINCT FROM OLD.escalation_note THEN
+    IF NEW.store_id IS DISTINCT FROM betk.my_store_id()
+       AND NOT betk.is_admin() THEN
+      RAISE EXCEPTION 'BETK_ESCALATION_ACTOR';
     END IF;
   END IF;
 
@@ -522,8 +540,9 @@ CREATE TRIGGER trg_enforce_store_category_cap
   FOR EACH ROW
   EXECUTE FUNCTION betk.enforce_store_category_cap();
 
--- Payout INSERT cap. ERD §6.4. FLAG-BLOCKING: dispute and return rows
--- are not filtered. rejected payouts are not "requested or processed".
+-- Payout INSERT cap. ERD §6.4. G3: a non-terminal dispute or return
+-- drops that seller order from the sum. rejected payouts are not
+-- "requested or processed".
 CREATE OR REPLACE FUNCTION betk.enforce_payout_cap()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -539,7 +558,23 @@ BEGIN
   FROM betk.seller_orders AS s
   WHERE s.store_id = NEW.store_id
     AND s.balance_confirmed_at IS NOT NULL
-    AND s.payout_eligible_at <= now();
+    AND s.payout_eligible_at <= now()
+    AND NOT EXISTS (
+      SELECT 1
+      FROM betk.disputes AS d
+      WHERE d.order_id = s.id
+        AND d.status::text NOT IN (
+          'closed', 'resolved', 'rejected', 'refunded', 'cancelled'
+        )
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM betk.returns AS r
+      WHERE r.seller_order_id = s.id
+        AND r.status::text NOT IN (
+          'closed', 'resolved', 'rejected', 'refunded', 'cancelled'
+        )
+    );
 
   SELECT COALESCE(sum(p.amount), 0)
     INTO v_used

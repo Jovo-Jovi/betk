@@ -2,7 +2,7 @@
 -- Cases cite plan §1.5–§1.7, §6 M7/M8, §8.2.5, ERD §6–§8, R-O17, ADR-022,
 -- ADR-020 / REG-90, ADR-021, ADR-023. CI pins are labelled CI TEST VALUE
 -- (R2). They are not staging values.
--- CASE_COUNT 58. all_pass checks that count. Do not change an expected
+-- CASE_COUNT 66. all_pass checks that count. Do not change an expected
 -- value to match a wrong actual.
 
 SET TIME ZONE 'UTC';
@@ -342,6 +342,10 @@ DECLARE
   v_c3 uuid;
   v_c4 uuid;
   v_def text;
+  v_seller_giza uuid := 'a1000000-0000-4000-8000-000000000003';
+  v_store_giza uuid := 'a2000000-0000-4000-8000-000000000002';
+  v_esc uuid;
+  v_block uuid;
 BEGIN
   -- Grants. Plan §1.6, §6 M7, ADR-020, REG-90, E1.
   PERFORM pg_temp.rec(
@@ -1033,15 +1037,142 @@ BEGIN
     ELSE v_msg
   END;
   PERFORM pg_temp.rec('anon_checkout_denied', 'permission-denied', v_show);
+
+  -- G1. Buyer cannot write escalation columns when status is unchanged.
+  -- Store owner and admin can. escalation_resolved_at stays off the
+  -- authenticated UPDATE grant (M7), so the seller is denied.
+  INSERT INTO betk.master_orders (buyer_id, betk_ref, combined_delivery_total)
+  VALUES (v_happy, 'CI-ESC-M', 0)
+  RETURNING id INTO v_master;
+  INSERT INTO betk.seller_orders (
+    betk_ref, buyer_id, store_id, delivery_method, delivery_fee,
+    subtotal, total_amount, status, master_order_id
+  ) VALUES (
+    'CI-ESC-0001', v_happy, v_store_cairo, 'delivery', 0,
+    100, 100, 'pending', v_master
+  )
+  RETURNING id INTO v_esc;
+  v_msg := pg_temp.exec_as(
+    v_happy, 'authenticated',
+    format(
+      'UPDATE betk.seller_orders SET escalated_at = now(), escalation_reason = %L::betk.escalation_reason WHERE id = %L::uuid',
+      'cannot_fulfil', v_esc
+    )
+  );
+  SELECT CASE WHEN escalated_at IS NULL THEN 'null' ELSE 'set' END
+    INTO v_show
+  FROM betk.seller_orders
+  WHERE id = v_esc;
+  PERFORM pg_temp.rec(
+    'esc_buyer_actor',
+    'BETK_ESCALATION_ACTOR|null',
+    v_msg || '|' || v_show
+  );
+  v_msg := pg_temp.exec_as(
+    v_seller_cairo, 'authenticated',
+    format(
+      'UPDATE betk.seller_orders SET escalated_at = now(), escalation_reason = %L::betk.escalation_reason WHERE id = %L::uuid',
+      'cannot_fulfil', v_esc
+    )
+  );
+  SELECT escalation_reason::text INTO v_show
+  FROM betk.seller_orders
+  WHERE id = v_esc;
+  PERFORM pg_temp.rec('esc_store_owner', 'ok|cannot_fulfil', v_msg || '|' || v_show);
+  v_msg := pg_temp.exec_as(
+    v_admin, 'authenticated',
+    format(
+      'UPDATE betk.seller_orders SET escalation_note = %L WHERE id = %L::uuid',
+      'ci-admin', v_esc
+    )
+  );
+  SELECT escalation_note INTO v_show
+  FROM betk.seller_orders
+  WHERE id = v_esc;
+  PERFORM pg_temp.rec('esc_admin', 'ok|ci-admin', v_msg || '|' || v_show);
+  v_msg := pg_temp.exec_as(
+    v_seller_cairo, 'authenticated',
+    format(
+      'UPDATE betk.seller_orders SET escalation_resolved_at = now() WHERE id = %L::uuid',
+      v_esc
+    )
+  );
+  v_show := CASE
+    WHEN position('permission denied' IN v_msg) > 0 THEN 'permission-denied'
+    ELSE v_msg
+  END;
+  v_show := v_show || '|' || (
+    SELECT CASE WHEN escalation_resolved_at IS NULL THEN 'null' ELSE 'set' END
+    FROM betk.seller_orders
+    WHERE id = v_esc
+  );
+  PERFORM pg_temp.rec('esc_resolved_seller', 'permission-denied|null', v_show);
+
+  -- G2. The four-key allow-list. A real settings key outside it raises.
+  v_msg := pg_temp.scalar_as(
+    v_happy, 'authenticated',
+    'SELECT betk.checkout_agreement_version(''commission_rate_pct'')'
+  );
+  PERFORM pg_temp.rec(
+    'agreement_key_not_checkout',
+    'BETK_AGREEMENT_KEY_NOT_CHECKOUT',
+    v_msg
+  );
+
+  -- G3. Open dispute blocks. Open return blocks. A terminal pair does not.
+  -- Store is Giza so the Cairo payout rows above stay out of this sum.
+  INSERT INTO betk.master_orders (buyer_id, betk_ref, combined_delivery_total)
+  VALUES (v_payout_buyer, 'CI-BLOCK-M', 0)
+  RETURNING id INTO v_master;
+  INSERT INTO betk.seller_orders (
+    betk_ref, buyer_id, store_id, delivery_method, delivery_fee,
+    subtotal, total_amount, status, balance_confirmed_at, payout_eligible_at,
+    master_order_id
+  ) VALUES (
+    'CI-BLOCK-0001', v_payout_buyer, v_store_giza, 'delivery', 0,
+    200, 200, 'pending', now() - interval '1 day', now() - interval '1 hour',
+    v_master
+  )
+  RETURNING id INTO v_block;
+  INSERT INTO betk.disputes (order_id, buyer_id, store_id, reason, status)
+  VALUES (v_block, v_payout_buyer, v_store_giza, 'not_received', 'submitted');
+  v_msg := pg_temp.exec_as(
+    v_seller_giza, 'authenticated',
+    format(
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      v_store_giza, 'instapay', '01011110003'
+    )
+  );
+  PERFORM pg_temp.rec('payout_open_dispute', 'BETK_PAYOUT_CAP', v_msg);
+  UPDATE betk.disputes SET status = 'resolved' WHERE order_id = v_block;
+  INSERT INTO betk.returns (seller_order_id, buyer_id, store_id, reason, status)
+  VALUES (v_block, v_payout_buyer, v_store_giza, 'ci', 'requested');
+  v_msg := pg_temp.exec_as(
+    v_seller_giza, 'authenticated',
+    format(
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      v_store_giza, 'instapay', '01011110003'
+    )
+  );
+  PERFORM pg_temp.rec('payout_open_return', 'BETK_PAYOUT_CAP', v_msg);
+  UPDATE betk.returns SET status = 'refunded' WHERE seller_order_id = v_block;
+  v_msg := pg_temp.exec_as(
+    v_seller_giza, 'authenticated',
+    format(
+      'INSERT INTO betk.payouts (store_id, amount, method, account_details) VALUES (%L::uuid, 50, %L, %L)',
+      v_store_giza, 'instapay', '01011110003'
+    )
+  );
+  PERFORM pg_temp.rec('payout_terminal_clear', 'ok', v_msg);
 END;
 $cases$;
 
 INSERT INTO m78_results (name, expected, actual, pass)
 SELECT
   'all_pass',
-  'true|58',
+  'true|66',
   bool_and(pass)::text || '|' || count(*)::text,
-  bool_and(pass) AND count(*) = 58
+  bool_and(pass) AND count(*) = 66
 FROM m78_results;
 
 SELECT name, expected, actual, pass

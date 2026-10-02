@@ -177,7 +177,7 @@ jobs:
               name, expected, actual, passed = parsed
               row_fail = passed != "t"
               if index == len(rows) and (
-                  name != "all_pass" or actual != "true|58" or passed != "t"
+                  name != "all_pass" or actual != "true|66" or passed != "t"
               ):
                   row_fail = True
               if row_fail and first_fail is None:
@@ -190,19 +190,19 @@ jobs:
               )
           last = rows[-1] if rows else ("", "", "", "")
           if (
-              len(rows) != 59
+              len(rows) != 67
               or any(parsed[3] != "t" for parsed in rows)
               or last[0] != "all_pass"
-              or last[2] != "true|58"
+              or last[2] != "true|66"
               or last[3] != "t"
           ):
               print(
-                  f"FAIL expected 59 rows, every pass=t, "
-                  f"last all_pass actual=true|58 pass=t; "
+                  f"FAIL expected 67 rows, every pass=t, "
+                  f"last all_pass actual=true|66 pass=t; "
                   f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
               )
               sys.exit(1)
-          print("PASS: 59 rows, every pass = t, last row all_pass actual=true|58 pass=t")
+          print("PASS: 67 rows, every pass = t, last row all_pass actual=true|66 pass=t")
           PY
 
       - name: Stop local Supabase
