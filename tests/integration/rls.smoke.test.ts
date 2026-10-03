@@ -110,6 +110,8 @@ function record(
 // supabase-js infers `never` for some insert/update/delete `.select()` result
 // types; coerce through `unknown` so the harness checks stay type-safe.
 const rowCount = (data: unknown): number => (Array.isArray(data) ? data.length : 0);
+const permissionDenied = (error: { message?: string } | null): boolean =>
+  !!error && /permission denied/i.test(error.message ?? "");
 const firstId = (data: unknown): string | undefined => {
   if (Array.isArray(data) && data[0] && typeof data[0] === "object") {
     const id = (data[0] as { id?: unknown }).id;
@@ -207,6 +209,25 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   }
 }
 
+/** Service-role delete of the REG-92 seed. No-ops when that step never ran. */
+async function cleanupReg92Fixture(): Promise<void> {
+  const db = svc();
+  if (reg92OrderId) {
+    const { error } = await db
+      .from("seller_orders" as "orders")
+      .delete()
+      .eq("id", reg92OrderId);
+    if (!error) reg92OrderId = "";
+  }
+  if (reg92MasterId) {
+    const { error } = await db
+      .from("master_orders" as unknown as "orders")
+      .delete()
+      .eq("id", reg92MasterId);
+    if (!error) reg92MasterId = "";
+  }
+}
+
 /**
  * Removes the A4 payout-cap seed: the payout A4 inserts, then the seller
  * order, then the master. Runs from afterAll even when beforeAll throws
@@ -260,6 +281,10 @@ let buyerAOrderId = "";
 // delete a partial seed when beforeAll throws.
 let payoutCapMasterId = "";
 let payoutCapOrderId = "";
+// REG-92 fixture. Set as soon as each insert returns so afterAll can
+// delete a partial seed when the test throws before its own finally.
+let reg92MasterId = "";
+let reg92OrderId = "";
 
 async function createActor(spec: {
   key: ActorKey;
@@ -501,7 +526,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     try {
       await cleanupPayoutCapFixture();
     } finally {
-      await purgeByUserIds(createdUserIds);
+      try {
+        await cleanupReg92Fixture();
+      } finally {
+        await purgeByUserIds(createdUserIds);
+      }
     }
 
     // ---- Summary ----
@@ -772,6 +801,101 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         : `verified buyer rejected on master_orders INSERT: ${aErr?.message}`,
     );
     expect(aId, "verified buyer must be able to INSERT their own master order").toBeTruthy();
+  });
+
+  // REG-92. Not a typecheck. The phone-verified seller (authenticated) is
+  // denied select * , RETURNING * , and the two hidden money columns.
+  // An explicit allowed column list succeeds. Existing cases above are unchanged.
+  it("REG-92: seller select-star, RETURNING-star, and hidden money columns are denied", async () => {
+    reg92MasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-R92M`);
+    try {
+      const { data: seeded, error: seedErr } = await svc()
+        .from("seller_orders" as "orders")
+        .insert({
+          betk_ref: `RLS-${RUN}-R92`,
+          buyer_id: actors.buyerA.id,
+          store_id: storeId,
+          delivery_method: "delivery",
+          subtotal: 100,
+          delivery_fee: 0,
+          total_amount: 100,
+          status: "pending",
+          ...{ master_order_id: reg92MasterId },
+        } as never)
+        .select("id")
+        .single();
+      if (seedErr || !seeded) {
+        throw new Error(`REG-92 seed: ${seedErr?.message ?? "no id"}`);
+      }
+      reg92OrderId = seeded.id;
+
+      const seller = actors.seller.client;
+      const star = await seller
+        .from("seller_orders" as "orders")
+        .select("*")
+        .eq("id", reg92OrderId);
+      const fee = await seller
+        .from("seller_orders" as "orders")
+        .select("delivery_fee")
+        .eq("id", reg92OrderId);
+      const total = await seller
+        .from("seller_orders" as "orders")
+        .select("total_amount")
+        .eq("id", reg92OrderId);
+      const allowed = await seller
+        .from("seller_orders" as "orders")
+        .select("id, betk_ref, status, subtotal")
+        .eq("id", reg92OrderId);
+      const returning = await seller
+        .from("seller_orders" as "orders")
+        .update({ escalation_note: "reg92" } as never)
+        .eq("id", reg92OrderId)
+        .select();
+
+      const deniedStar = permissionDenied(star.error);
+      const deniedFee = permissionDenied(fee.error);
+      const deniedTotal = permissionDenied(total.error);
+      const deniedReturning = permissionDenied(returning.error);
+      const allowedOk = allowed.error === null && (allowed.data?.length ?? 0) === 1;
+
+      const { data: probe } = await svc()
+        .from("seller_orders" as "orders")
+        .select("*")
+        .eq("id", reg92OrderId)
+        .single();
+      const note =
+        (probe as { escalation_note?: string | null } | null)?.escalation_note ?? null;
+
+      const ok = deniedStar && deniedFee && deniedTotal && deniedReturning && allowedOk && note === null;
+      record(
+        "REG-92",
+        "seller_orders",
+        "column SELECT grant (ADR-020)",
+        ok ? "PASS" : "FAIL",
+        ok
+          ? "select * , RETURNING * , delivery_fee, and total_amount are permission denied; id, betk_ref, status, subtotal succeed"
+          : `star:${star.error?.message ?? "no error"} fee:${fee.error?.message ?? "no error"} total:${total.error?.message ?? "no error"} returning:${returning.error?.message ?? "no error"} allowed:${allowed.error?.message ?? "ok"} note:${note ?? "null"}`,
+      );
+
+      expect(star.error?.message ?? "", "select * must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(fee.error?.message ?? "", "delivery_fee must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(total.error?.message ?? "", "total_amount must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(
+        returning.error?.message ?? "",
+        "update .select() / RETURNING * must be permission denied",
+      ).toMatch(/permission denied/i);
+      expect(allowed.error, "an explicit allowed column list must succeed").toBeNull();
+      expect(allowed.data?.length ?? 0).toBe(1);
+      expect(note, "RETURNING * must roll the escalation_note write back").toBeNull();
+    } finally {
+      await cleanupReg92Fixture();
+    }
   });
 
   // -------------------------------------------------------------------------

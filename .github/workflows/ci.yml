@@ -168,6 +168,18 @@ jobs:
       - name: Guard — i18n catalog parity (AR/EN)
         run: node scripts/check-i18n-parity.mjs
 
+      # Guard E (REG-47): no loading.tsx at or above a notFound() segment
+      - name: Guard E — no loading.tsx above notFound (REG-47)
+        run: node scripts/check-no-loading-above-not-found.mjs
+
+      # Guard F (REG-67): physical page.tsx count against the OD-21 freeze
+      - name: Guard F — physical page.tsx count (REG-67)
+        run: node scripts/check-page-count.mjs
+
+      # REG-92 static half. Not a typecheck and not Types drift.
+      - name: Guard — no select-star on seller_orders (REG-92)
+        run: node scripts/check-seller-orders-select.mjs
+
   # ─── Stage 5: types-drift ─────────────────────────────────────────────────
   # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
   # Fails LOUDLY if either is absent — a silent skip would allow stale types to merge.
