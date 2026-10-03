@@ -42,6 +42,45 @@ jobs:
           echo "migration_files=$n"
           test "$n" -eq 39
 
+      - name: Hold M5 through M8 until the rehearsal seed
+        run: |
+          set -euo pipefail
+          # M5 at aeb6c5b checks the live staging order ids. A fresh database
+          # has no orders, so supabase start cannot apply that file (the
+          # p08-m78 hold). M6 renames orders, and M7 and M8 name seller_orders,
+          # so those three follow the seed and M5. The four files stay the
+          # pinned bytes except M5's marked block, which is replaced from
+          # run/06_M5.sql on the runner only. Nothing here is committed.
+          mkdir -p "$RUNNER_TEMP/held"
+          mv supabase/migrations/20261002081523_v2_08_n27_masters.sql "$RUNNER_TEMP/held/M5.sql"
+          mv supabase/migrations/20261002081631_v2_08_rename_seller_orders.sql "$RUNNER_TEMP/held/M6.sql"
+          mv supabase/migrations/20261003075902_v2_08_grants_and_policies.sql "$RUNNER_TEMP/held/M7.sql"
+          mv supabase/migrations/20261003082041_v2_08_functions.sql "$RUNNER_TEMP/held/M8.sql"
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          held = Path(os.environ["RUNNER_TEMP"]) / "held"
+          pinned = (held / "M5.sql").read_text(encoding="utf-8")
+          rehearsal = Path("docs/03-database/rehearsal/run/06_M5.sql").read_text(encoding="utf-8")
+          start = "-- >>> STAGING-BOUND LITERALS"
+          end_marker = "-- <<< STAGING-BOUND LITERALS"
+
+          def span(text):
+              a = text.index(start)
+              b = text.index(end_marker) + len(end_marker)
+              return a, b
+
+          pa, pb = span(pinned)
+          ra, rb = span(rehearsal)
+          (held / "M5-ci.sql").write_text(
+              pinned[:pa] + rehearsal[ra:rb] + pinned[pb:],
+              encoding="utf-8",
+          )
+          PY
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migrations_at_start=$n"
+          test "$n" -eq 35
+
       - name: Install Supabase CLI 2.106.0
         uses: supabase/setup-cli@v1
         with:
@@ -85,6 +124,31 @@ jobs:
           db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
           test "$(printf '%s\n' "$db" | wc -l)" -eq 1
           echo "DB_CONTAINER=$db" >> "$GITHUB_ENV"
+          apply() {
+            name="$1"
+            file="$2"
+            echo "===== ${name} $(basename "$file") ====="
+            docker exec -i "$db" psql \
+              -U postgres \
+              -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -P pager=off \
+              -c "SET TIME ZONE 'UTC'" \
+              -f - < "$file"
+          }
+          echo "===== sentinel ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "CREATE SCHEMA IF NOT EXISTS rehearsal; CREATE TABLE IF NOT EXISTS rehearsal.sentinel (note text PRIMARY KEY); INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only') ON CONFLICT DO NOTHING;"
+          apply seed docs/03-database/rehearsal/run/04_seed_shape.sql
+          apply M5 "$RUNNER_TEMP/held/M5-ci.sql"
+          apply M6 "$RUNNER_TEMP/held/M6.sql"
+          apply M7 "$RUNNER_TEMP/held/M7.sql"
+          apply M8 "$RUNNER_TEMP/held/M8.sql"
           echo "===== P09M1 ====="
           {
             printf 'BEGIN;\n'
