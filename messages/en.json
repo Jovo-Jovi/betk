@@ -127,6 +127,8 @@
       "cityLabel": "City",
       "cityOptional": "(optional)",
       "cityPlaceholder": "e.g. Nasr City",
+      "acceptLabel": "I accept the current Buyer Terms",
+      "acceptLink": "Buyer Terms",
       "saving": "Saving…",
       "submit": "Complete registration"
     },
@@ -192,6 +194,35 @@
       }
     }
   },
+  "legal": {
+    "common": {
+      "pendingTitle": "Pending legal review",
+      "pendingBody": "This page shows the version label only. The document text is not published yet.",
+      "versionCaption": "Version",
+      "error": "The version label could not be loaded. Please try again.",
+      "retry": "Try again"
+    },
+    "terms": {
+      "title": "Buyer Terms",
+      "metaTitle": "Buyer Terms — BETK",
+      "metaDescription": "The current Buyer Terms version label"
+    },
+    "sellerAgreement": {
+      "title": "Seller agreement",
+      "metaTitle": "Seller agreement — BETK",
+      "metaDescription": "The current seller agreement version label"
+    },
+    "returns": {
+      "title": "Return and refund policy",
+      "metaTitle": "Return and refund policy — BETK",
+      "metaDescription": "The current return and refund policy version label"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "metaTitle": "Privacy — BETK",
+      "metaDescription": "The current privacy version label"
+    }
+  },
   "validation": {
     "invalidInput": "Invalid data",
     "phoneRequired": "Phone number is required",
@@ -204,11 +235,14 @@
     "governorateRequired": "Governorate is required",
     "governorateInvalid": "Select a valid governorate",
     "cityTooLong": "City name must not exceed 100 characters",
+    "buyerTermsRequired": "Accept the current Buyer Terms to continue.",
     "deactivateConfirmRequired": "You must confirm deactivation before continuing."
   },
   "errors": {
     "invalidInput": "Invalid data. Please check your input.",
     "mustLoginFirst": "You must sign in first.",
+    "buyerTermsRequired": "Accept the current Buyer Terms to continue.",
+    "buyerTermsUnavailable": "Buyer Terms are not available yet. Nothing was saved.",
     "profileSaveFailed": "An error occurred while saving your profile. Please try again.",
     "rateLimited": "Please wait one minute before requesting a new code.",
     "sendOtpFailed": "An error occurred while sending the code. Please try again.",

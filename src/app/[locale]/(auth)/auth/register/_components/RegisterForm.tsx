@@ -12,16 +12,20 @@
 
 import { useActionState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { completeProfile, type CompleteProfileResult } from "@/features/auth/actions/completeProfile";
 import { GOVERNORATES } from "@/constants/governorates";
+import { routes } from "@/constants/routes";
 
 interface Props {
   returnUrl: string;
+  /** Current buyer_terms version label. Opaque. Empty when unconfigured. */
+  versionLabel: string;
 }
 
 const initialState: CompleteProfileResult = {};
 
-export function RegisterForm({ returnUrl }: Props) {
+export function RegisterForm({ returnUrl, versionLabel }: Props) {
   const t = useTranslations("auth.register");
   const locale = useLocale();
   const [state, action, isPending] = useActionState(completeProfile, initialState);
@@ -86,6 +90,34 @@ export function RegisterForm({ returnUrl }: Props) {
           placeholder={t("cityPlaceholder")}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
+      </div>
+
+      {/* Buyer terms — native checkbox, same control the account page already uses.
+          The document link is the existing locale-aware Link. §5.10 Checkbox is
+          not a shipped kit component, so this page does not build one. */}
+      <div className="flex items-start gap-2">
+        <input
+          id="acceptBuyerTerms"
+          name="acceptBuyerTerms"
+          type="checkbox"
+          value="accepted"
+          required
+          className="mt-1 size-4 shrink-0"
+        />
+        <label htmlFor="acceptBuyerTerms" className="text-sm">
+          {t("acceptLabel")}{" "}
+          <Link href={routes.legal.terms} className="text-primary underline underline-offset-2">
+            {t("acceptLink")}
+          </Link>
+          {versionLabel ? (
+            <>
+              {" "}
+              <span dir="ltr" className="font-mono text-muted-foreground">
+                ({versionLabel})
+              </span>
+            </>
+          ) : null}
+        </label>
       </div>
 
       {/* Error message */}

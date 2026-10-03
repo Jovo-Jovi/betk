@@ -9,9 +9,11 @@
  * Pack T07: physical page.tsx count against 79. Phase 08 adds no page.tsx.
  * OD-21 freezes the spec inventory at 79 route patterns. B4-FIX2 reconciled
  * the built files: 26 page.tsx files, each mapped to one P-number inside that
- * 79. This guard locks that built count. It fails when the physical count is
- * not 26, and it fails when the count exceeds the 79 freeze. It does not
- * demand a file for every unbuilt spec page.
+ * 79. Phase 09 T05 adds P67–P70 (four page.tsx files) and raises the pin to
+ * 30 in the same commit as the UI_SPEC reconciliation. This guard locks that
+ * built count. It fails when the physical count is not 30, and it fails when
+ * the count exceeds the 79 freeze. It does not demand a file for every
+ * unbuilt spec page.
  *
  * Run: node scripts/check-page-count.mjs
  * Exit 0 = clean; exit 1 = the count diverged.
@@ -27,10 +29,10 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 export const OD21_PAGE_FREEZE = 79;
 
 /**
- * Physical page.tsx files under src/app, re-measured at B7 and unchanged
- * through Phase 08 (this phase adds no page).
+ * Physical page.tsx files under src/app. 26 at B4-FIX2. Phase 09 T05
+ * raises the pin to 30 for P67–P70.
  */
-export const PINNED_PAGE_COUNT = 26;
+export const PINNED_PAGE_COUNT = 30;
 
 /**
  * @param {string} appDir
@@ -77,7 +79,7 @@ export function checkPageCount(appDir, expected = PINNED_PAGE_COUNT) {
   }
   if (files.length !== expected) {
     problems.push(
-      `physical page.tsx count ${files.length} is not the pinned built count ${expected} (OD-21 freeze ${OD21_PAGE_FREEZE}; Phase 08 adds no page.tsx)`,
+      `physical page.tsx count ${files.length} is not the pinned built count ${expected} (OD-21 freeze ${OD21_PAGE_FREEZE})`,
     );
   }
   return { count: files.length, files, problems };
