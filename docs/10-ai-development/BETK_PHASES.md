@@ -96,7 +96,7 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 - **Entry.** Phase 08 exit evidence. **Pins before this phase’s agreements work:** REG-75 (backfill vs forced re-accept) and REG-88 (which of the four documents are in the completion gate — do not hard-code the set). **REG-85:** do not state how `stores.return_policy` relates to `/legal/returns`. P05 and P28 keep showing store policy with that relationship unstated.
 - **Exit gate (evidence).** Integration or HTTP proof, per surface: signup without current Buyer T&C creates no usable account (AC-AGR-1); onboarding submit without a seller-agreement acceptance row is refused (AC-AGR-3); a service listing publish is refused (AC-CAT-1); a listing without weight or dimensions is refused (AC-CAT-2); a fourth store category is refused (AC-CAT-4); food publish without food approval is refused (R-S10); P23 and P27 render no `{delivery, pickup, remote}` toggles and onboarding no longer stores a delivery fee (REG-65; close by deletion under OD-10, baseline §11); P04 share and P01–P05 store-name navigation use the Stage D components (DOM has the control, not only the hydration string).
 - **Owns.** Pages and codes on the `PAGES:` / `CODES:` lines.
-- **Blocked.** Stage D: **ShareButton** (REG-51; P04, P05), **Navigable store identity** (REG-72; P01, P02, P04, P05), **DataTable** (P33), **ProofViewer** (P49). Stage E / legal gate: lawyer-reviewed **Buyer T&C, Seller Agreement, Return & Refund Policy, Privacy Policy** before P67–P70, the signup acceptance, and the seller e-sign show that prose. REG-62’s **price band** blocks **launch** of publish (AC-CAT-3). Building against a sentinel is not launch.
+- **Blocked.** Stage D: **ShareButton** (REG-51; P04, P05), **Navigable store identity** (REG-72; P01, P02, P03, P04, P05), **DataTable** (P33), **ProofViewer** (P49). Stage E / legal gate: lawyer-reviewed **Buyer T&C, Seller Agreement, Return & Refund Policy, Privacy Policy** before P67–P70, the signup acceptance, and the seller e-sign show that prose. REG-62’s **price band** blocks **launch** of publish (AC-CAT-3). Building against a sentinel is not launch.
 
 | Task | Model | Thinking |
 |---|---|---|
@@ -105,11 +105,13 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 | P23 pickup, categories ≤3, seller agreement, food artefacts; P27 is pickup address; delivery-mode toggles removed | Grok 4.7 | Medium |
 | P31, P32, P33 catalogue rules (products, fixed price, shipping attributes, prep cap, approved categories) | Grok 4.7 | Medium |
 | P49 food and seller approval, composing ProofViewer | Grok 4.7 | Medium |
-| P01, P02, P04, P05: guest cannot add to cart; service filter removed; share and store-name link composed | Grok 4.7 | Medium |
+| P01, P02, P04, P05: guest cannot add to cart; service filter removed; share and store-name link composed. P03: store-name link only | Grok 4.7 | Medium |
 | P29 settlement copy (REG-64). REG-53 closes by R-K01 (modes are retired; do not derive a mode from category) | Grok 4.7 | Low |
 | Exit evidence | Grok 4.7 | Max |
 
-`PAGES:` P01, P02, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70
+`PAGES:` P01, P02, P03, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70
+
+P03 is on this line for the store-name link only (ListingCard storeHref; REG-72). Phase 03 stays signed. Nothing else about P03 changes.
 
 `CODES:` FR-PUB-1, FR-PUB-2, FR-PUB-4, FR-PUB-5, AC-PUB-1, AC-PUB-2, AC-PUB-4, AC-PUB-5, FR-AUTH-3, AC-AUTH-3, FR-SEL-1, FR-SEL-5, FR-SEL-7, FR-SEL-9, FR-SEL-10, AC-SEL-1, AC-SEL-5, AC-SEL-7, AC-SEL-9, AC-SEL-10, FR-CAT-1, AC-CAT-1, AC-CAT-2, AC-CAT-3, AC-CAT-4, AC-CAT-5, AC-CAT-6, R-L01, R-L04, R-L09, R-L16, R-L17, R-L18, R-L19, R-L20, R-L21, R-L22, R-S10, R-K01, R-V03, AC-VIS-2, FR-AGR-1, R-G01, R-G02, R-G03, R-G04, R-G05, R-G06, R-G07, R-G08, AC-AGR-1, AC-AGR-2, AC-AGR-3, AC-AGR-4, AC-AGR-5, FR-ADM-2, AC-ADM-2, R-M01
 
@@ -406,7 +408,7 @@ Every code appears on exactly one `CODES:` line in §1 or §2. Implied ACs are o
 | 03 | P03 |
 | 04 | P24, P26, P28 |
 | 05 | P30 |
-| 09 | P01, P02, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70 |
+| 09 | P01, P02, P03, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70 |
 | 10 | P13, P14, P36, P37, P66 |
 | 11 | P10, P15 |
 | 12 | P16, P17, P18, P58 |
@@ -419,7 +421,7 @@ Every code appears on exactly one `CODES:` line in §1 or §2. Implied ACs are o
 | 19 | P41, P42, P43, P44, P45, P46, P59 |
 | 20 | P34, P35, P65 |
 
-79 pages. P58 stays Phase 12 when Phase 14 enables COD confirm. P18 stays Phase 12 when Phase 16 enables review and dispute. P39 stays Phase 13 when Phase 15 adds the return block.
+79 pages. P03 stays on phase 03 (the page stays signed). The phase 09 cell lists P03 for the store-name link only (ListingCard storeHref; REG-72). P58 stays Phase 12 when Phase 14 enables COD confirm. P18 stays Phase 12 when Phase 16 enables review and dispute. P39 stays Phase 13 when Phase 15 adds the return block.
 
 ### 4.c Table → first write, and the phase that lands RLS
 
