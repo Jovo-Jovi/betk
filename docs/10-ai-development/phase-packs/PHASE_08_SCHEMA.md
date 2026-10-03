@@ -657,6 +657,6 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | T05 | | |
 | T05b | done 2026-10-02. Staging not written. Green run [37057129740](https://github.com/Jovo-Jovi/betk/actions/runs/37057129740): 59 rows, every pass `t`, `all_pass` actual `true\|58`. | `AUDIT-M78.md`; §4.4 M7/M8 LF binding |
 | T05b-FIX | done 2026-10-02. Staging not written. N27 [37060438890](https://github.com/Jovo-Jovi/betk/actions/runs/37060438890): 45 rows, `true\|44`. p08-m78 [37061620442](https://github.com/Jovo-Jovi/betk/actions/runs/37061620442): 67 rows, `true\|66`. Took REG-102..REG-104. | §4.4 decisions and the superseded M8 line |
-| T06 | | |
+| T06 | done 2026-10-03 | M7 `20261003075902` and M8 `20261003082041` equal the bound files. **L1 (human, 2026-10-03), verbatim:** L1 Ledger repair. Row 20261003080558 / v2_08_functions holds the 31-byte comment "-- placeholder will be replaced". It was applied by mistake in T06 and changed no schema. It is removed, with the same effect as Supabase's `supabase migration repair --status reverted 20261003080558` (cite search_docs). This is the only non-SELECT execute_sql authorized in Phase 08. |
 | T07 | | |
 | T08 | | |

@@ -6,6 +6,11 @@
  * `confirmed`. Each case reads the seeded listing and expects the seed stock.
  *
  * Seeds via the service-role client. Cleans up to zero residue.
+ *
+ * No checkout cases. Staging admin_settings pins are empty, so checkout
+ * fails closed until Phase 11. Stock-at-checkout is proven by the p08-m78
+ * cases fail_out_of_stock, happy_stock, and release_stock_once in run
+ * 37061620442.
  */
 
 import { randomUUID } from "node:crypto";

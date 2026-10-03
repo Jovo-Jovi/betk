@@ -666,6 +666,53 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     expect(payoutOk).toBe(true);
   });
 
+  // Plan §2.3, after M7. master_orders INSERT is granted to authenticated.
+  // The seller_orders cases above are unchanged.
+  it("A4d: master_orders phone gate denies an unverified buyer and allows a verified buyer", async () => {
+    const { data: gMaster, error: gErr } = await actors.googleG.client
+      .from("master_orders" as unknown as "orders")
+      .insert({
+        buyer_id: actors.googleG.id,
+        betk_ref: `RLS-${RUN}-GMO`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id");
+    const gRejected = !!gErr && rowCount(gMaster) === 0;
+    record(
+      "A4d-deny",
+      "master_orders",
+      "master_orders_phone_gate (RESTRICTIVE)",
+      gRejected ? "PASS" : "FAIL",
+      gRejected
+        ? `buyer without a verified phone rejected on master_orders INSERT: ${gErr?.message}`
+        : "SECURITY BREACH — no-phone user inserted a master order",
+    );
+    const gId = firstId(gMaster);
+    if (gId) await svc().from("master_orders" as unknown as "orders").delete().eq("id", gId);
+    expect(gRejected).toBe(true);
+
+    const { data: aMaster, error: aErr } = await actors.buyerA.client
+      .from("master_orders" as unknown as "orders")
+      .insert({
+        buyer_id: actors.buyerA.id,
+        betk_ref: `RLS-${RUN}-AMO`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id");
+    const aId = firstId(aMaster);
+    if (aId) await svc().from("master_orders" as unknown as "orders").delete().eq("id", aId);
+    record(
+      "A4d-allow",
+      "master_orders",
+      "master_orders_insert + master_orders_phone_gate (RESTRICTIVE)",
+      aId ? "PASS" : "FAIL",
+      aId
+        ? "verified buyer inserted a master order"
+        : `verified buyer rejected on master_orders INSERT: ${aErr?.message}`,
+    );
+    expect(aId, "verified buyer must be able to INSERT their own master order").toBeTruthy();
+  });
+
   // -------------------------------------------------------------------------
   // Assertion 5 — append-only sanity (OPTIONAL, opt-in)
   // -------------------------------------------------------------------------
