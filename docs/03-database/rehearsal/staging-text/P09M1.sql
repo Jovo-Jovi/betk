@@ -1,4 +1,6 @@
--- P09M1. Phase 09 publish gate and onboarding submit. Not applied by T02.
+-- P09M1. Phase 09 publish gate and onboarding submit. Not applied to staging.
+-- F-P1 narrows when enforce_listing_publish runs. F-P2 requires the four
+-- food document types to be approved. T04 applies this file byte-for-byte.
 -- One migration transaction. No admin_settings UPDATE. checkout_from_cart
 -- is not in this file.
 --
@@ -13,10 +15,15 @@
 -- CREATE OR REPLACE of the two RPCs keeps their grants (authenticated
 -- EXECUTE; public and anon false). This file does not GRANT.
 
--- Listings publish gate. Runs only when the new row is active, so a draft,
--- paused, removed, or sold_out write is not a publish. An UPDATE that leaves
--- status active is a publish and must pass. Empty prep cap or either price
--- band key fails closed. food_requirements is read and not parsed.
+-- Listings publish gate (F-P1). The checks run only when the row is being
+-- published: INSERT with status active; UPDATE to active from draft, paused,
+-- or removed; or UPDATE that leaves status active and changes type,
+-- price_type, price, prep_days, category_id, subcategory_id, or store_id.
+-- Every other update returns NEW unchecked, including a stock-only update,
+-- sold_out to or from active, and an edit to a non-publish column. Empty
+-- prep cap or either price band key fails closed. food_requirements is read
+-- and not parsed. F-P2: a food publish needs four distinct food document
+-- types with review_status approved. The approved-category check stays.
 CREATE OR REPLACE FUNCTION betk.enforce_listing_publish()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -33,8 +40,30 @@ DECLARE
   v_is_food boolean;
   v_food_raw text;
   v_docs integer;
+  v_publish boolean;
 BEGIN
-  IF NEW.status IS DISTINCT FROM 'active'::betk.listing_status THEN
+  -- F-P1. Check only a publish. Anything else returns NEW unchecked.
+  v_publish := FALSE;
+  IF TG_OP = 'INSERT' AND NEW.status = 'active'::betk.listing_status THEN
+    v_publish := TRUE;
+  ELSIF TG_OP = 'UPDATE' AND NEW.status = 'active'::betk.listing_status THEN
+    IF OLD.status IN (
+      'draft'::betk.listing_status,
+      'paused'::betk.listing_status,
+      'removed'::betk.listing_status
+    ) THEN
+      v_publish := TRUE;
+    ELSIF NEW.type IS DISTINCT FROM OLD.type
+       OR NEW.price_type IS DISTINCT FROM OLD.price_type
+       OR NEW.price IS DISTINCT FROM OLD.price
+       OR NEW.prep_days IS DISTINCT FROM OLD.prep_days
+       OR NEW.category_id IS DISTINCT FROM OLD.category_id
+       OR NEW.subcategory_id IS DISTINCT FROM OLD.subcategory_id
+       OR NEW.store_id IS DISTINCT FROM OLD.store_id THEN
+      v_publish := TRUE;
+    END IF;
+  END IF;
+  IF NOT v_publish THEN
     RETURN NEW;
   END IF;
 
@@ -109,6 +138,7 @@ BEGIN
       RAISE EXCEPTION 'BETK_FOOD_REQUIREMENTS_UNCONFIGURED';
     END IF;
 
+    -- F-P2. Distinct types, and only rows the reviewer approved.
     SELECT count(DISTINCT d.document_type)::integer INTO v_docs
     FROM betk.seller_documents AS d
     JOIN betk.stores AS s
@@ -119,7 +149,8 @@ BEGIN
       'food_label',
       'food_expiry',
       'food_social_url'
-    ]::betk.doc_type[]);
+    ]::betk.doc_type[])
+      AND d.review_status = 'approved';
     IF v_docs < 4 THEN
       RAISE EXCEPTION 'BETK_FOOD_APPROVAL_REQUIRED';
     END IF;
