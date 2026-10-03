@@ -527,7 +527,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 | T00 | written 2026-10-03 | this file; pins in SESSION_CONTEXT; ledger 39; residue 7/7/12; payouts 0; enforce_admins true |
 | T01 | written 2026-10-03 | five staging keys; pre-check length 0; row count 5; post-check STAGING-DRAFT-1, STAGING-DRAFT-1, food-v1, 1, 1000000; ledger 39 last 20261003082041; F1–F4 in §4 and §6; no migration; no pull request (E3) |
 | T02 | written 2026-10-03 | `P09M1.sql` and `AUDIT-P09.md`; zero MISMATCH; staging not written; ledger 39 last `20261003082041`; E1 pushed `b5a2817`; E2 REG-62 append; E3 fixture table in the audit; no pull request |
-| T03 | written 2026-10-04 | F-P1 and F-P2 in `P09M1.sql`; `p09/asserts.sql`; `.github/workflows/p09-db.yml`; LF blob `853e9b715dd245d3acb6caf09246a315a5e5aec9`; SHA256 `936e0a768e280b9b5466821bdfb9dfd106676dff046b25c7a08acc069012433b`; run URL recorded after the push; PR #72 stays open for T11 |
+| T03 | done 2026-10-04 | F-P1 and F-P2 in `P09M1.sql`; `p09/asserts.sql`; `.github/workflows/p09-db.yml`; LF blob `853e9b715dd245d3acb6caf09246a315a5e5aec9`; SHA256 `936e0a768e280b9b5466821bdfb9dfd106676dff046b25c7a08acc069012433b`; green run [37155187920](https://github.com/Jovo-Jovi/betk/actions/runs/37155187920) (27 rows, every pass t, all_pass `true\|26`); PR #72 stays open for T11 |
 | T04 | | |
 | T05 | | |
 | T06 | | |
