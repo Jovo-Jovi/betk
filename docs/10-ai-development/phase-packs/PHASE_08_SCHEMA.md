@@ -277,6 +277,10 @@ G1 F-ESC — fix. In M8, a seller_orders UPDATE that changes escalated_at, escal
 
 G2 F-AGREE — accepted. A four-key allow-list of non-sensitive version labels; buyers must see the version they accept (R-G02). AUDIT verdict: BROADER — ACCEPTED (human, G2).
 
+**Decisions (human, 2026-10-03), verbatim:**
+
+G2b checkout_payment_window_minutes and checkout_quote_multiplier (SECURITY DEFINER, EXECUTE to authenticated) are accepted on G2's grounds. They return non-sensitive product rules that buyers see (the payment window, the quote band), and the INVOKER checkout needs them to fail closed (plan §8.2.5). AUDIT-M78 rows 119–120 → BROADER — ACCEPTED (human, G2b). The advisor rise 2 → 5 is attributed to G2 + G2b.
+
 G3 F-BLOCK — fix, fail-closed. enforce_payout_cap also refuses while the seller order has any dispute or return in a non-terminal status. Take the terminal sets from the live enum labels (SELECT; cite them). Treat every status not explicitly closed, resolved, rejected, refunded or cancelled as blocking. Mint a REG at mint time: "payout-blocking dispute/return statuses — product pin; M8 currently blocks every non-terminal status". Owner: Human. Before: the phase that builds payouts (cite BETK_PHASES).
 
 G4 F-REFUND — accepted as latent (no refund flow exists before the returns/disputes phase). Mint a REG: "refunded_subtotal writer = admin-only SECURITY DEFINER function with an is_admin() check, never a column grant to authenticated; must exist before the first refund write". Owner: the phase that builds refunds (cite). Before: the first refund write.
@@ -658,5 +662,6 @@ Commit message: docs(p08-t08): Phase 08 exit evidence
 | T05b | done 2026-10-02. Staging not written. Green run [37057129740](https://github.com/Jovo-Jovi/betk/actions/runs/37057129740): 59 rows, every pass `t`, `all_pass` actual `true\|58`. | `AUDIT-M78.md`; §4.4 M7/M8 LF binding |
 | T05b-FIX | done 2026-10-02. Staging not written. N27 [37060438890](https://github.com/Jovo-Jovi/betk/actions/runs/37060438890): 45 rows, `true\|44`. p08-m78 [37061620442](https://github.com/Jovo-Jovi/betk/actions/runs/37061620442): 67 rows, `true\|66`. Took REG-102..REG-104. | §4.4 decisions and the superseded M8 line |
 | T06 | done 2026-10-03 | M7 `20261003075902` and M8 `20261003082041` equal the bound files. **L1 (human, 2026-10-03), verbatim:** L1 Ledger repair. Row 20261003080558 / v2_08_functions holds the 31-byte comment "-- placeholder will be replaced". It was applied by mistake in T06 and changed no schema. It is removed, with the same effect as Supabase's `supabase migration repair --status reverted 20261003080558` (cite search_docs). This is the only non-SELECT execute_sql authorized in Phase 08. |
+| T06-FIX | done 2026-10-03. RLS smoke [37111051808](https://github.com/Jovo-Jovi/betk/actions/runs/37111051808) green, including A4 and A4d. Types drift red (window). Build skipped. | §4.4 G2b; AUDIT rows 119–120 |
 | T07 | | |
 | T08 | | |

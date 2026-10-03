@@ -28,6 +28,7 @@ G5 FLAGs. Accepted as provisional (record each with its owner phase): REG-88, SU
 
 1. **F-ESC `orders_update`.** **MATCH.** `M8.sql:217-224` raises `BETK_ESCALATION_ACTOR` when `escalated_at`, `escalation_reason`, or `escalation_note` changes, unless `NEW.store_id = betk.my_store_id()` or `betk.is_admin()`, and that check runs before the unchanged-status `RETURN NEW` (`M8.sql:226-228`). `escalation_resolved_at` stays admin-only because it is absent from the authenticated UPDATE grant (`M7.sql:56-62` grants `status`, `cancellation_reason`, `escalated_at`, `escalation_reason`, `escalation_note` only; plan §1.6). A seller UPDATE of that column raises 42501. M7 was not changed.
 2. **F-AGREE `checkout_agreement_version`.** **BROADER — ACCEPTED (human, G2).** `M8.sql:92-117` is SECURITY DEFINER, granted to `authenticated`, and allow-lists the four agreement version keys. A key outside that list raises `BETK_AGREEMENT_KEY_NOT_CHECKOUT`. Buyers must see the version they accept (R-G02).
+2b. **G2b `checkout_payment_window_minutes` and `checkout_quote_multiplier`.** **BROADER — ACCEPTED (human, G2b).** Both are SECURITY DEFINER with EXECUTE granted to `authenticated` (`M8.sql:48-68`, `M8.sql:70-90`). They return the payment window and the quote band, which buyers see, and the INVOKER checkout needs them to fail closed (plan §8.2.5). Rows 119–120. The advisor rise 2 → 5 is G2 plus these two.
 3. **F-BLOCK `enforce_payout_cap`.** **MATCH.** `M8.sql:562-577` excludes a seller order that has a dispute or return whose status text is not `closed`, `resolved`, `rejected`, `refunded`, or `cancelled`. Live labels (SELECT 2026-10-02, `pg_enum`): `dispute_status` `submitted`, `under_review`, `awaiting_seller`, `resolved`, `closed`; `return_status` `requested`, `accepted`, `rejected`, `refunded`. Terminal among those: dispute `resolved` and `closed`; return `rejected` and `refunded`. `accepted` blocks. `cancelled` is in neither enum. The product pin of which statuses should block is **REG-102**. Owner: Human. Before: Phase 19 (`BETK_PHASES.md`, earnings and payouts).
 4. **F-REFUND `refunded_subtotal`.** **AUTHORED, accepted as latent (human, G4).** No M8 statement writes the column (`M8.sql:15-17`). It is not in the authenticated UPDATE grant (`M7.sql:56-62`). No refund flow exists before Phase 15. **REG-103.** Owner: Phase 15. Before: the first refund write.
 
@@ -41,16 +42,20 @@ G5 FLAGs. Accepted as provisional (record each with its owner phase): REG-88, SU
 - FLAG-QUOTE-HOURS. Checkout uses `quote_expires_at`. It does not re-read `quote_validity_hours` (`M8.sql:36-38`). Owner phase: Phase 10 (quote send).
 - FLAG-PREP-NULL. `prep_deadline` stays null when every snapshot is null (`M8.sql:34-35`). **REG-104.** Owner: Human. Before: Phase 13 (the prep-SLA ladder).
 
+**Decisions (human, 2026-10-03), verbatim:**
+
+G2b checkout_payment_window_minutes and checkout_quote_multiplier (SECURITY DEFINER, EXECUTE to authenticated) are accepted on G2's grounds. They return non-sensitive product rules that buyers see (the payment window, the quote band), and the INVOKER checkout needs them to fail closed (plan §8.2.5). AUDIT-M78 rows 119–120 → BROADER — ACCEPTED (human, G2b). The advisor rise 2 → 5 is attributed to G2 + G2b.
+
 ## Counts by verdict
 
 | Part | MATCH | BROADER | NARROWER | AUTHORED | MISMATCH | FINDING |
 |---|---:|---:|---:|---:|---:|---:|
 | a Grants | 13 | 0 | 0 | 0 | 0 | 0 |
 | b Policies | 29 | 0 | 0 | 0 | 0 | 0 |
-| c Functions and triggers | 14 | 1 | 0 | 7 | 0 | 0 |
+| c Functions and triggers | 14 | 3 | 0 | 5 | 0 | 0 |
 | d Checkout defects | 8 | 0 | 0 | 2 | 0 | 0 |
 
-BROADER row: `checkout_agreement_version` (c, F-AGREE), **BROADER — ACCEPTED (human, G2)**. `orders_update` is MATCH via the G1 trigger. `enforce_payout_cap` is MATCH via the G3 filter (REG-102). The refund gap stays the AUTHORED absence row, accepted as latent (human, G4, REG-103). No BROADER row is closed by a GRANT. No MISMATCH. No open FINDING.
+BROADER rows: `checkout_agreement_version` (c, F-AGREE), **BROADER — ACCEPTED (human, G2)**; `checkout_payment_window_minutes` and `checkout_quote_multiplier` (c), **BROADER — ACCEPTED (human, G2b)**. The advisor rise 2 → 5 is attributed to G2 + G2b. `orders_update` is MATCH via the G1 trigger. `enforce_payout_cap` is MATCH via the G3 filter (REG-102). The refund gap stays the AUTHORED absence row, accepted as latent (human, G4, REG-103). No BROADER row is closed by a GRANT. No MISMATCH. No open FINDING.
 
 ## a. Grants
 
@@ -116,8 +121,8 @@ New definers set `search_path` to `betk, public` and revoke EXECUTE from PUBLIC,
 
 | Object | Kit | Source | Verdict | Note |
 |---|---|---|---|---|
-| `checkout_payment_window_minutes` | `M8.sql:48-68` | plan §8.2.5; D4 | AUTHORED | INVOKER cannot see the admin-only key. Empty or non-integer raises `BETK_PAYMENT_WINDOW_UNCONFIGURED` |
-| `checkout_quote_multiplier` | `M8.sql:70-90` | plan §1.7 band | AUTHORED | Does not hardcode 2. Empty fails closed |
+| `checkout_payment_window_minutes` | `M8.sql:48-68` | plan §8.2.5; D4 | BROADER — ACCEPTED (human, G2b) | Returns the payment window buyers see. INVOKER checkout needs it to fail closed (plan §8.2.5). Empty or non-integer raises `BETK_PAYMENT_WINDOW_UNCONFIGURED` |
+| `checkout_quote_multiplier` | `M8.sql:70-90` | plan §1.7 band | BROADER — ACCEPTED (human, G2b) | Returns the quote band buyers see. Does not hardcode 2. Empty fails closed |
 | `checkout_agreement_version(text)` | `M8.sql:92-117` | plan §8.2.5; REG-88; R-G02 | BROADER — ACCEPTED (human, G2) | Four version keys. Any other key raises `BETK_AGREEMENT_KEY_NOT_CHECKOUT`. FLAG-REG-88, Phase 09 |
 | `touch_stock` + `trg_touch_stock` | `M8.sql:121-141` | plan §1.7; §4.2 | MATCH | INVOKER. Stamps `stock_touched_at` when `stock_qty` changes. EXECUTE revoked |
 | `decrement_stock_on_confirm` body | `M8.sql:148-183` | plan §1.7; §7.2 | MATCH | Skips null stock. Raises `BETK_CHECKOUT_OUT_OF_STOCK`. `sold_out` at 0. Does not assign `stock_touched_at`; the UPDATE fires `trg_touch_stock` |
