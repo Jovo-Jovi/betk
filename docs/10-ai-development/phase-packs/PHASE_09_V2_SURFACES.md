@@ -37,7 +37,7 @@ Phase 08 lessons, binding here:
 
 - Staging SQL is a file under `docs/03-database/rehearsal/staging-text/`, audited before any apply. The audit verdicts are MATCH, BROADER, NARROWER, AUTHORED, MISMATCH, FINDING. A GRANT never closes a BROADER table privilege.
 - Before every `apply_migration`, state the query argument's md5 and byte length and show they equal the bound file (`PRECEDENTS.md`, apply_migration gets the bound text).
-- Shared close: push and `gh pr create` only where this pack says a PR is due (E3). Phase 09 tasks stay on `feature/phase-09-surfaces` until the exit PR (T11). T01–T10 commit on that branch and do not push and do not open a pull request. T11 pushes and opens the one PR. See the block below.
+- Shared close: every task after T00 commits on `feature/phase-09-surfaces` and pushes (`git push -u origin HEAD`). The pull request stays deferred to T11 (E3, amended by E1 on 2026-10-03). T11 opens the one PR. See the block below.
 - No prompt wording that contradicts a binding in this pack, in `BETK_PHASES.md`, or in a pinned REG.
 - Smoke and integration fixtures satisfy Phase 08 constraints: an active listing has shipping dimensions; a payout fixture has an eligible balance under the cap. Guard G's residue set is unchanged: 7 `seller_orders`, 7 `master_orders`, 12 `order_status_history`. The detector reports anything outside that set and never deletes it.
 - Types come from the CI Types drift diff, applied verbatim. No hand edit. No bridge cast left.
@@ -46,7 +46,7 @@ Phase 08 lessons, binding here:
 
 **W1 (verbatim).** W1 Workflow: at the end of any task that needs a PR, Cursor opens it with `gh pr create` (title = commit subject; body = the task's evidence summary). The human only merges. Never merge, never bypass.
 
-**Shared close** (every prompt after T00 ends with this). E3: push and `gh pr create` are not in this block. T11's prompt is where the PR is due.
+**Shared close** (every prompt after T00 ends with this). E1 (planning-chat review of T01, 2026-10-03): this block pushes. E3: `gh pr create` is not in this block. T11's prompt is where the PR is due.
 
 ```text
 STEP Z
@@ -55,7 +55,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 ```
 
@@ -256,7 +256,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: staging-text/P09M1.sql, AUDIT-P09.md, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: docs(p09-t02): author the Phase 09 publish and submit texts
@@ -280,7 +280,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the workflow and harness files this task adds under .github/workflows and docs/03-database/rehearsal, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: test(p09-t03): CI proof of the Phase 09 publish and submit texts
@@ -307,7 +307,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the renamed migration, BETK_DATABASE_SCHEMA.sql, src/lib/supabase/types.ts, the call sites the diff forced, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t04): apply the Phase 09 publish and submit texts
@@ -335,7 +335,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P08 and P67–P70 route and action files, messages/ar.json, messages/en.json, the Guard F pin file only if the page count changed, tests that prove the gate, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t05): signup acceptance gate and pending legal pages
@@ -363,7 +363,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: seller-onboarding and seller delivery route, action, and validation files, messages ar/en, the integration test, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t06): onboarding pickup, agreement, and food artefacts
@@ -391,7 +391,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: listings feature files for P31 P32 P33, messages ar/en, the integration tests, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t07): catalogue publish rules on the listing surfaces
@@ -419,7 +419,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P49 admin route and action files, messages ar/en, the integration test, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t08): admin seller and food approval queue
@@ -448,7 +448,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P01 P02 P04 P05 composition files, the guest-cart test, SESSION_CONTEXT.md (REG-51 and REG-72 status), DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t09): public surfaces share, store links, and guest cart refusal
@@ -472,7 +472,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: P29 copy and messages, the axe test and its CI wiring, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t10): settlement copy and automated contrast check
@@ -526,7 +526,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 |---|---|---|
 | T00 | written 2026-10-03 | this file; pins in SESSION_CONTEXT; ledger 39; residue 7/7/12; payouts 0; enforce_admins true |
 | T01 | written 2026-10-03 | five staging keys; pre-check length 0; row count 5; post-check STAGING-DRAFT-1, STAGING-DRAFT-1, food-v1, 1, 1000000; ledger 39 last 20261003082041; F1–F4 in §4 and §6; no migration; no pull request (E3) |
-| T02 | | |
+| T02 | written 2026-10-03 | `P09M1.sql` and `AUDIT-P09.md`; zero MISMATCH; staging not written; ledger 39 last `20261003082041`; E1 pushed `b5a2817`; E2 REG-62 append; E3 fixture table in the audit; no pull request |
 | T03 | | |
 | T04 | | |
 | T05 | | |
