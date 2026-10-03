@@ -25,6 +25,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    globalSetup: ["./tests/setup/residueGlobalSetup.ts"],
     setupFiles: ["./tests/setup/env.ts"],
     include: [
       "tests/**/*.{test,spec}.ts",

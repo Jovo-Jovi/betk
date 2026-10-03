@@ -1,0 +1,259 @@
+# N27 rehearsal on a local Supabase stack (B-CI).
+# Not a required status check. This file does not change branch protection.
+# No secrets. Synthetic data only.
+#
+# Actions:
+# - actions/checkout@v4
+#     fetch-depth: 0
+#     so `git checkout 40f5b9c -- supabase/migrations` has that commit
+# - supabase/setup-cli@v1
+#     version: 2.106.0
+#     same pin as pnpm-lock.yaml `supabase@2.106.0`, which CI's Types drift
+#     job runs via `pnpm exec supabase`. This job does not install the app.
+#
+# CLI and tools:
+# - rm -rf supabase/migrations, then git checkout 40f5b9c -- supabase/migrations
+#     checkout alone leaves files added after 40f5b9c (T03–T05, six files).
+#     The job-local directory is replaced so the count stays 31. Not committed.
+# - supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+#     --exclude (-x): containers the rehearsal does not need. The database
+#     container is not in that list, so it still starts. pg_cron is inside it.
+# - docker exec -i <supabase_db_*> psql
+#     the db container's psql, not a client installed on the runner
+#     -U postgres -d postgres -v ON_ERROR_STOP=1 -P pager=off
+#     -c "SET TIME ZONE 'UTC'"
+#     -f -   (one SQL file per invocation, on stdin)
+#     08 also passes -P format=csv so the result table can be counted
+# - supabase stop --no-backup
+#     --no-backup deletes the local data volumes after the job
+# - Job-local config copy only (never committed): [db.seed] enabled = false
+#   because seed.sql is absent; [auth.hook.send_sms] and [auth.external.google]
+#   enabled = false because those blocks read secrets and this job has none.
+
+name: N27 rehearsal
+
+on:
+  push:
+    branches:
+      - feature/phase-08-schema
+    paths:
+      - "docs/03-database/rehearsal/run/**"
+      - "docs/03-database/rehearsal/staging-text/M1.sql"
+      - "docs/03-database/rehearsal/staging-text/M2.sql"
+      - "docs/03-database/rehearsal/staging-text/M3.sql"
+      - "docs/03-database/rehearsal/staging-text/M4.sql"
+      - "docs/03-database/rehearsal/staging-text/M5.sql"
+      - "docs/03-database/rehearsal/staging-text/M6.sql"
+      - ".github/workflows/n27-rehearsal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rehearse:
+    name: N27 rehearsal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pin migrations to 40f5b9c
+        run: |
+          set -euo pipefail
+          rm -rf supabase/migrations
+          git checkout 40f5b9c -- supabase/migrations
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migration_files=$n"
+          test "$n" -eq 31
+          echo "migration_files=31" > "$RUNNER_TEMP/n27-facts.txt"
+          echo "migrations_commit=40f5b9c" >> "$RUNNER_TEMP/n27-facts.txt"
+
+      - name: Install Supabase CLI 2.106.0
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.106.0
+
+      - name: Disable seed in a job-local config copy
+        run: |
+          set -euo pipefail
+          # seed.sql is absent, and [db.seed] is enabled. The Send SMS hook and
+          # Google provider are enabled and read secrets from the environment.
+          # This job has no secrets. Both switches are turned off in the runner
+          # copy only. The repo file is not committed from this job.
+          mkdir -p "$RUNNER_TEMP"
+          cp supabase/config.toml "$RUNNER_TEMP/config.toml.repo"
+          python3 << 'PY'
+          from pathlib import Path
+          path = Path("supabase/config.toml")
+          text = path.read_text(encoding="utf-8")
+          replacements = {
+              (
+                  "[db.seed]\n"
+                  "# If enabled, seeds the database after migrations during a db reset.\n"
+                  "enabled = true\n"
+              ): (
+                  "[db.seed]\n"
+                  "# Job-local copy only. seed.sql is absent. Never committed.\n"
+                  "enabled = false\n"
+              ),
+              "[auth.hook.send_sms]\nenabled = true\n": "[auth.hook.send_sms]\nenabled = false\n",
+              "[auth.external.google]\nenabled = true\n": "[auth.external.google]\nenabled = false\n",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"config block not found: {old.splitlines()[0]}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+          grep -n -A 2 -E '^\[(db.seed|auth.hook.send_sms|auth.external.google)\]' supabase/config.toml
+
+      - name: Start local Supabase
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Record server version, role, and migration ledger
+        run: |
+          set -euo pipefail
+          db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
+          echo "db_container=$db"
+          test "$(printf '%s\n' "$db" | wc -l)" -eq 1
+          echo "DB_CONTAINER=$db" >> "$GITHUB_ENV"
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "SELECT current_setting('server_version') AS server_version, current_user, r.rolsuper FROM pg_roles AS r WHERE r.rolname = current_user;" \
+            -c "SELECT count(*) AS version_count, max(version) AS last_version FROM supabase_migrations.schema_migrations;" \
+            | tee "$RUNNER_TEMP/n27-ledger.txt"
+
+      - name: Run rehearsal files 00 through 08
+        run: |
+          set -euo pipefail
+          db="$DB_CONTAINER"
+          mkdir -p "$RUNNER_TEMP/n27"
+          run_sql() {
+            name="$1"
+            file="$2"
+            echo "===== ${name} $(basename "$file") ====="
+            docker exec -i "$db" psql \
+              -U postgres \
+              -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -P pager=off \
+              -c "SET TIME ZONE 'UTC'" \
+              -f - < "$file" | tee "$RUNNER_TEMP/n27/${name}.log"
+          }
+          run_sql 00 docs/03-database/rehearsal/run/00_guard_and_sentinel.sql
+          run_sql 01 docs/03-database/rehearsal/run/01_M1.sql
+          run_sql 02 docs/03-database/rehearsal/run/02_M2.sql
+          run_sql 03 docs/03-database/rehearsal/run/03_M3.sql
+          run_sql 04 docs/03-database/rehearsal/run/04_seed_shape.sql
+          run_sql 05 docs/03-database/rehearsal/run/05_M4.sql
+          run_sql 06 docs/03-database/rehearsal/run/06_M5.sql
+          run_sql 07 docs/03-database/rehearsal/run/07_M6.sql
+          echo "===== 08 08_asserts.sql ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -P format=csv \
+            -c "SET TIME ZONE 'UTC'" \
+            -f - < docs/03-database/rehearsal/run/08_asserts.sql | tee "$RUNNER_TEMP/n27/08.log"
+
+      - name: Check the 08 table
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/n27/08.log" << 'PY'
+          import csv
+          import sys
+          from pathlib import Path
+
+          raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+          header = "name,expected,actual,pass"
+          lines = raw.splitlines()
+          try:
+              start = lines.index(header)
+          except ValueError:
+              sys.exit("08 produced no result header")
+          rows = []
+          for parsed in csv.reader(lines[start + 1 :]):
+              if len(parsed) != 4:
+                  break
+              rows.append(parsed)
+          print(f"parsed_rows={len(rows)}")
+          first_fail = None
+          for index, parsed in enumerate(rows, start=1):
+              name, expected, actual, passed = parsed
+              row_fail = passed != "t"
+              if index == len(rows) and (
+                  name != "all_pass" or actual != "true|44" or passed != "t"
+              ):
+                  row_fail = True
+              if row_fail and first_fail is None:
+                  first_fail = (index, name, expected, actual, passed)
+          if first_fail is not None:
+              index, name, expected, actual, passed = first_fail
+              print(
+                  f"first_fail row={index} name={name} expected={expected} "
+                  f"actual={actual} pass={passed}"
+              )
+          last = rows[-1] if rows else ("", "", "", "")
+          if (
+              len(rows) != 45
+              or any(parsed[3] != "t" for parsed in rows)
+              or last[0] != "all_pass"
+              or last[2] != "true|44"
+              or last[3] != "t"
+          ):
+              print(
+                  f"FAIL expected 45 rows, every pass=t, "
+                  f"last all_pass actual=true|44 pass=t; "
+                  f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
+              )
+              sys.exit(1)
+          print("08 PASS: 45 rows, every pass = t, last row all_pass actual=true|44 pass=t")
+          PY
+
+      - name: Write the step summary
+        if: always()
+        run: |
+          {
+            echo "## N27 rehearsal"
+            echo
+            echo "Migrations pinned with \`git checkout 40f5b9c -- supabase/migrations\`."
+            echo "CLI: supabase/setup-cli@v1 version 2.106.0."
+            echo "psql: db container (\`docker exec -i\`), \`-v ON_ERROR_STOP=1\`, \`SET TIME ZONE 'UTC'\`."
+            echo
+            if [ -f "$RUNNER_TEMP/n27-facts.txt" ]; then
+              echo '```'
+              cat "$RUNNER_TEMP/n27-facts.txt"
+              echo '```'
+            fi
+            if [ -f "$RUNNER_TEMP/n27-ledger.txt" ]; then
+              echo
+              echo "### Ledger"
+              echo '```'
+              cat "$RUNNER_TEMP/n27-ledger.txt"
+              echo '```'
+            fi
+            if [ -f "$RUNNER_TEMP/n27/08.log" ]; then
+              echo
+              echo "### 08"
+              echo '```'
+              cat "$RUNNER_TEMP/n27/08.log"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop local Supabase
+        if: always()
+        run: |
+          supabase stop --no-backup

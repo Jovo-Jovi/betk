@@ -1,0 +1,2 @@
+docs/03-database/rehearsal/**/*.sql text eol=lf
+supabase/migrations/*.sql text eol=lf

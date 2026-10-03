@@ -186,6 +186,8 @@ Dependency order: **08 schema → 09 signed-surface delta → 10 cart → 11 che
 |---|---|---|
 | T00 write the pack | Grok 4.7 | High |
 | P38, P39 seller orders; P25 drops the acceptance queue | Grok 4.7 | Medium |
+
+**T00 carry-forward (P08-T06, 2026-10-03).** G1's actor check reads the signed-in identity; writes with no signed-in user (cron, service role) raise BETK_ESCALATION_ACTOR — the prep-SLA breach escalation must use a path that passes it (design at Phase 13 T00).
 | Prep deadline and the 50/80 ladder | Grok 4.7 | High |
 | P75 escalation queue; no automatic strike (R-E04) | Grok 4.7 | High |
 | P55 admin order drawer; fee and child total derived from `payments`, not selected from the hidden columns | Grok 4.7 | High |

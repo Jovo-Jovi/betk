@@ -1,20 +1,16 @@
 /**
- * Stock-decrement trigger integration tests — R2 (open-issue #4).
+ * Stock path after M4 — plan §2.3.
  *
- * Proves the `trg_decrement_stock_on_confirm` trigger (migrations
- * 20260716124323_decrement_stock_on_confirm.sql +
- * 20260716125122_harden_decrement_stock_fn_execute.sql) against STAGING.
+ * `trg_decrement_stock_on_confirm` is dropped. Stock moves at checkout, not on
+ * a transition into `confirmed`. This file does not update `status` to
+ * `confirmed`. Each case reads the seeded listing and expects the seed stock.
  *
- * Spec (BETK_ERD.md §7, R-L05/R-L06): on an order's transition INTO 'confirmed'
- * (seller confirm — NOT at checkout), decrement each ordered listing's tracked
- * stock_qty by the ordered quantity, and flip an ACTIVE listing to 'sold_out'
- * when its stock reaches 0. Untracked stock (stock_qty IS NULL) is left alone;
- * the listings CHECK (stock_qty >= 0) is the oversell backstop.
+ * Seeds via the service-role client. Cleans up to zero residue.
  *
- * Seeds via the service-role client (orders INSERT is default-denied for
- * `authenticated` — OD-4 phone-gate RESTRICTIVE policy), drives the status
- * transition via service-role UPDATE (which fires the trigger), then reads the
- * listing rows back. Cleans up to zero residue.
+ * No checkout cases. Staging admin_settings pins are empty, so checkout
+ * fails closed until Phase 11. Stock-at-checkout is proven by the p08-m78
+ * cases fail_out_of_stock, happy_stock, and release_stock_once in run
+ * 37061620442.
  */
 
 import { randomUUID } from "node:crypto";
@@ -43,7 +39,7 @@ const createdAuthIds: string[] = [];
 
 const describeOrSkip = HAS_CREDS ? describe : describe.skip;
 
-describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role)", () => {
+describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging)", () => {
   const service = createServiceClient();
   const svc = () => service.schema("betk");
 
@@ -81,7 +77,14 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
         price_type: "fixed",
         stock_qty: stockQty,
         status,
-      })
+        ...{
+          // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+          weight_g: 1,
+          length_mm: 1,
+          width_mm: 1,
+          height_mm: 1,
+        },
+      } as never)
       .select("id")
       .single();
     if (error || !data) throw new Error(`[stock.test] listing ${label}: ${error?.message}`);
@@ -91,10 +94,21 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
 
   async function seedOrder(label: string, items: { listingId: string; qty: number }[]): Promise<string> {
     const subtotal = items.reduce((s, it) => s + it.qty * 100, 0);
-    const { data: order, error } = await svc()
-      .from("orders")
+    const childRef = `R2-${label}-${RUN}`;
+    const { data: master, error: masterErr } = await svc()
+      .from("master_orders")
       .insert({
-        betk_ref: `R2-${label}-${RUN}`,
+        buyer_id: buyerId,
+        betk_ref: `${childRef}-M`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id")
+      .single();
+    if (masterErr || !master) throw new Error(`[stock.test] master ${label}: ${masterErr?.message}`);
+    const { data: order, error } = await svc()
+      .from("seller_orders")
+      .insert({
+        betk_ref: childRef,
         buyer_id: buyerId,
         store_id: storeId,
         delivery_method: "delivery",
@@ -102,7 +116,8 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
         delivery_fee: 0,
         total_amount: subtotal,
         status: "pending",
-      })
+        ...{ master_order_id: (master as { id: string }).id },
+      } as never)
       .select("id")
       .single();
     if (error || !order) throw new Error(`[stock.test] order ${label}: ${error?.message}`);
@@ -119,13 +134,6 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
     const { error: itemErr } = await svc().from("order_items").insert(rows);
     if (itemErr) throw new Error(`[stock.test] order_items ${label}: ${itemErr.message}`);
     return order.id;
-  }
-
-  function confirm(orderId: string) {
-    return svc()
-      .from("orders")
-      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-      .eq("id", orderId);
   }
 
   async function readListing(id: string): Promise<{ stock_qty: number | null; status: ListingStatus }> {
@@ -210,7 +218,10 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
     for (const id of orderIds) {
       await svc().from("order_items").delete().eq("order_id", id);
     }
-    if (storeId) await svc().from("orders").delete().eq("store_id", storeId);
+    if (storeId) await svc().from("seller_orders").delete().eq("store_id", storeId);
+    if (buyerId) {
+      await svc().from("master_orders").delete().eq("buyer_id", buyerId);
+    }
     for (const id of listingIds) {
       await svc().from("listings").delete().eq("id", id);
     }
@@ -223,61 +234,52 @@ describeOrSkip("R2 — decrement_stock_on_confirm trigger (staging, service-role
     }
   });
 
-  it("exact-stock confirm → stock 0 AND active listing flips to 'sold_out' (R-L06)", async () => {
-    const { error } = await confirm(orderA);
-    expect(error).toBeNull();
+  it("exact stock stays at the seed; status is not updated to confirmed", async () => {
     const row = await readListing(listingA);
-    expect(row.stock_qty).toBe(0);
-    expect(row.status).toBe("sold_out");
-  });
-
-  it("partial confirm → decrements by ordered quantity; stays 'active' (R-L05)", async () => {
-    const { error } = await confirm(orderB);
-    expect(error).toBeNull();
-    const row = await readListing(listingB);
-    expect(row.stock_qty).toBe(6); // 10 - 4
+    expect(row.stock_qty).toBe(3);
     expect(row.status).toBe("active");
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderA).single();
+    expect(order?.status).toBe("pending");
   });
 
-  it("multi-item order → each listing decremented by its own quantity", async () => {
-    const { error } = await confirm(orderC);
-    expect(error).toBeNull();
+  it("partial stock stays at the seed; status is not updated to confirmed", async () => {
+    const row = await readListing(listingB);
+    expect(row.stock_qty).toBe(10);
+    expect(row.status).toBe("active");
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderB).single();
+    expect(order?.status).toBe("pending");
+  });
+
+  it("multi-item stocks stay at the seed; status is not updated to confirmed", async () => {
     const c1 = await readListing(listingC1);
     const c2 = await readListing(listingC2);
-    expect(c1.stock_qty).toBe(3); // 5 - 2
-    expect(c2.stock_qty).toBe(5); // 8 - 3
+    expect(c1.stock_qty).toBe(5);
+    expect(c2.stock_qty).toBe(8);
     expect(c1.status).toBe("active");
     expect(c2.status).toBe("active");
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderC).single();
+    expect(order?.status).toBe("pending");
   });
 
   it("untracked stock (stock_qty NULL) is left unchanged and never flips to sold_out", async () => {
-    const { error } = await confirm(orderD);
-    expect(error).toBeNull();
     const row = await readListing(listingD);
     expect(row.stock_qty).toBeNull();
     expect(row.status).toBe("active");
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderD).single();
+    expect(order?.status).toBe("pending");
   });
 
-  it("fires only on the transition INTO 'confirmed' — no double-decrement on confirmed→preparing", async () => {
-    const { error } = await confirm(orderE);
-    expect(error).toBeNull();
-    let row = await readListing(listingE);
-    expect(row.stock_qty).toBe(6); // 7 - 1, fired once
-
-    const { error: err2 } = await svc().from("orders").update({ status: "preparing" }).eq("id", orderE);
-    expect(err2).toBeNull();
-    row = await readListing(listingE);
-    expect(row.stock_qty).toBe(6); // unchanged — trigger did NOT re-fire
+  it("seed stock stays put; there is no confirmed to preparing update", async () => {
+    const row = await readListing(listingE);
+    expect(row.stock_qty).toBe(7);
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderE).single();
+    expect(order?.status).toBe("pending");
   });
 
-  it("oversell is blocked by the listings CHECK (stock_qty >= 0); confirm rolls back", async () => {
-    const { error } = await confirm(orderF); // stock 2, qty 5 → would be -3
-    expect(error).not.toBeNull(); // CHECK violation surfaces as an error
-
+  it("oversell confirm is not issued; stock and pending status stay as seeded", async () => {
     const row = await readListing(listingF);
-    expect(row.stock_qty).toBe(2); // unchanged — statement rolled back
-
-    const { data: order } = await svc().from("orders").select("status").eq("id", orderF).single();
-    expect(order?.status).toBe("pending"); // confirm did not commit
+    expect(row.stock_qty).toBe(2);
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderF).single();
+    expect(order?.status).toBe("pending");
   });
 });

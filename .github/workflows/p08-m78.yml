@@ -1,0 +1,211 @@
+# T05b. M7 and M8 on a local Supabase stack. Not a required check.
+# No secrets. Staging is not written. The 37 migrations are the tree at 4f08616.
+
+name: P08 M7 M8
+
+on:
+  push:
+    branches:
+      - feature/phase-08-schema
+    paths:
+      - "docs/03-database/rehearsal/m78/**"
+      - "docs/03-database/rehearsal/staging-text/M7.sql"
+      - "docs/03-database/rehearsal/staging-text/M8.sql"
+      - ".github/workflows/p08-m78.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m78:
+    name: M7 M8 local proof
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pin migrations to 4f08616
+        run: |
+          set -euo pipefail
+          git checkout 4f08616 -- supabase/migrations
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migration_files=$n"
+          test "$n" -eq 37
+
+      - name: Hold M5 and M6 until the rehearsal seed
+        run: |
+          set -euo pipefail
+          # M5 at 4f08616 is the staging-bound copy. Its header says the
+          # rehearsal substitutes that block only, and the block's order
+          # ids are the live ones. A fresh database has no orders, so
+          # supabase start cannot apply that file. M6 renames orders, so
+          # it has to follow the seed and M5. Both files stay the pinned
+          # bytes except M5's marked block, which is replaced from
+          # run/06_M5.sql on the runner only. Nothing here is committed.
+          mkdir -p "$RUNNER_TEMP/held"
+          mv supabase/migrations/20261002081523_v2_08_n27_masters.sql "$RUNNER_TEMP/held/M5.sql"
+          mv supabase/migrations/20261002081631_v2_08_rename_seller_orders.sql "$RUNNER_TEMP/held/M6.sql"
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          held = Path(os.environ["RUNNER_TEMP"]) / "held"
+          pinned = (held / "M5.sql").read_text(encoding="utf-8")
+          rehearsal = Path("docs/03-database/rehearsal/run/06_M5.sql").read_text(encoding="utf-8")
+          start = "-- >>> STAGING-BOUND LITERALS"
+          end_marker = "-- <<< STAGING-BOUND LITERALS"
+
+          def span(text):
+              a = text.index(start)
+              b = text.index(end_marker) + len(end_marker)
+              return a, b
+
+          pa, pb = span(pinned)
+          ra, rb = span(rehearsal)
+          (held / "M5-ci.sql").write_text(
+              pinned[:pa] + rehearsal[ra:rb] + pinned[pb:],
+              encoding="utf-8",
+          )
+          PY
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migrations_at_start=$n"
+          test "$n" -eq 35
+
+      - name: Install Supabase CLI 2.106.0
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.106.0
+
+      - name: Disable seed in a job-local config copy
+        run: |
+          set -euo pipefail
+          python3 << 'PY'
+          from pathlib import Path
+          path = Path("supabase/config.toml")
+          text = path.read_text(encoding="utf-8")
+          replacements = {
+              (
+                  "[db.seed]\n"
+                  "# If enabled, seeds the database after migrations during a db reset.\n"
+                  "enabled = true\n"
+              ): (
+                  "[db.seed]\n"
+                  "# Job-local copy only. seed.sql is absent. Never committed.\n"
+                  "enabled = false\n"
+              ),
+              "[auth.hook.send_sms]\nenabled = true\n": "[auth.hook.send_sms]\nenabled = false\n",
+              "[auth.external.google]\nenabled = true\n": "[auth.external.google]\nenabled = false\n",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"config block not found: {old.splitlines()[0]}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Start local Supabase
+        run: |
+          set -euo pipefail
+          supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Apply M7 then M8, then the asserts
+        run: |
+          set -euo pipefail
+          db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
+          test "$(printf '%s\n' "$db" | wc -l)" -eq 1
+          echo "DB_CONTAINER=$db" >> "$GITHUB_ENV"
+          apply() {
+            name="$1"
+            file="$2"
+            echo "===== ${name} $(basename "$file") ====="
+            docker exec -i "$db" psql \
+              -U postgres \
+              -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -P pager=off \
+              -c "SET TIME ZONE 'UTC'" \
+              -f - < "$file"
+          }
+          echo "===== sentinel ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "CREATE SCHEMA IF NOT EXISTS rehearsal; CREATE TABLE IF NOT EXISTS rehearsal.sentinel (note text PRIMARY KEY); INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only') ON CONFLICT DO NOTHING;"
+          apply seed docs/03-database/rehearsal/run/04_seed_shape.sql
+          apply M5 "$RUNNER_TEMP/held/M5-ci.sql"
+          apply M6 "$RUNNER_TEMP/held/M6.sql"
+          apply M7 docs/03-database/rehearsal/staging-text/M7.sql
+          apply M8 docs/03-database/rehearsal/staging-text/M8.sql
+          echo "===== asserts ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -P format=csv \
+            -c "SET TIME ZONE 'UTC'" \
+            -f - < docs/03-database/rehearsal/m78/asserts.sql | tee "$RUNNER_TEMP/m78.csv"
+
+      - name: Check the assert table
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/m78.csv" << 'PY'
+          import csv
+          import sys
+          from pathlib import Path
+
+          raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+          header = "name,expected,actual,pass"
+          lines = raw.splitlines()
+          try:
+              start = lines.index(header)
+          except ValueError:
+              sys.exit("asserts produced no result header")
+          rows = []
+          for parsed in csv.reader(lines[start + 1 :]):
+              if len(parsed) != 4:
+                  break
+              rows.append(parsed)
+          print(f"parsed_rows={len(rows)}")
+          first_fail = None
+          for index, parsed in enumerate(rows, start=1):
+              name, expected, actual, passed = parsed
+              row_fail = passed != "t"
+              if index == len(rows) and (
+                  name != "all_pass" or actual != "true|66" or passed != "t"
+              ):
+                  row_fail = True
+              if row_fail and first_fail is None:
+                  first_fail = (index, name, expected, actual, passed)
+          if first_fail is not None:
+              index, name, expected, actual, passed = first_fail
+              print(
+                  f"first_fail row={index} name={name} expected={expected} "
+                  f"actual={actual} pass={passed}"
+              )
+          last = rows[-1] if rows else ("", "", "", "")
+          if (
+              len(rows) != 67
+              or any(parsed[3] != "t" for parsed in rows)
+              or last[0] != "all_pass"
+              or last[2] != "true|66"
+              or last[3] != "t"
+          ):
+              print(
+                  f"FAIL expected 67 rows, every pass=t, "
+                  f"last all_pass actual=true|66 pass=t; "
+                  f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
+              )
+              sys.exit(1)
+          print("PASS: 67 rows, every pass = t, last row all_pass actual=true|66 pass=t")
+          PY
+
+      - name: Stop local Supabase
+        if: always()
+        run: |
+          supabase stop --no-backup

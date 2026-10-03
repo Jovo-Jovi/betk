@@ -88,6 +88,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
   let collectionListingId = ""; // active listing attached to a live collection
   let visibleReviewId = ""; // is_visible=true → its photos are public
   let hiddenReviewId = ""; // is_visible=false → its photos must stay hidden
+  let reviewBuyerId = "";
 
   beforeAll(async () => {
     // ---- STAGING_GUARD ----
@@ -221,11 +222,16 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       price: 150,
       price_type: "fixed" as const,
       stock_qty: 10,
+      // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
 
     const { data: active, error: aErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `منتج فعال ${RUN}`, status: "active" })
+      .insert({ ...baseListing, title_ar: `منتج فعال ${RUN}`, status: "active" } as never)
       .select("id")
       .single();
     if (aErr || !active) throw new Error(`[discovery.test] active listing: ${aErr?.message}`);
@@ -234,7 +240,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
 
     const { data: draft, error: dErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `منتج مسودة ${RUN}`, status: "draft" })
+      .insert({ ...baseListing, title_ar: `منتج مسودة ${RUN}`, status: "draft" } as never)
       .select("id")
       .single();
     if (dErr || !draft) throw new Error(`[discovery.test] draft listing: ${dErr?.message}`);
@@ -247,7 +253,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
         title_ar: `منتج محذوف ${RUN}`,
         status: "active",
         deleted_at: new Date().toISOString(),
-      })
+      } as never)
       .select("id")
       .single();
     if (delErr || !deleted) throw new Error(`[discovery.test] deleted listing: ${delErr?.message}`);
@@ -315,6 +321,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       throw new Error(`[discovery.test] buyer createUser failed: ${buyerAuthErr?.message}`);
     }
     const buyerId = buyerAuth.user.id;
+    reviewBuyerId = buyerId;
     createdAuthIds.push(buyerId);
 
     const { error: buyerRowErr } = await svc()
@@ -322,10 +329,23 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       .insert({ id: buyerId, phone_number: `0102${RUN}`, auth_provider: "phone" });
     if (buyerRowErr) throw new Error(`[discovery.test] buyer users seed: ${buyerRowErr.message}`);
 
-    const { data: order, error: orderErr } = await svc()
-      .from("orders")
+    const visibleRef = `T01-${RUN}`;
+    const { data: visibleMaster, error: visibleMasterErr } = await svc()
+      .from("master_orders")
       .insert({
-        betk_ref: `T01-${RUN}`,
+        buyer_id: buyerId,
+        betk_ref: `${visibleRef}-M`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id")
+      .single();
+    if (visibleMasterErr || !visibleMaster) {
+      throw new Error(`[discovery.test] master seed: ${visibleMasterErr?.message}`);
+    }
+    const { data: order, error: orderErr } = await svc()
+      .from("seller_orders")
+      .insert({
+        betk_ref: visibleRef,
         buyer_id: buyerId,
         store_id: storeId,
         delivery_method: "delivery",
@@ -333,7 +353,8 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
         delivery_fee: 0,
         total_amount: 150,
         status: "delivered",
-      })
+        ...{ master_order_id: (visibleMaster as { id: string }).id },
+      } as never)
       .select("id")
       .single();
     if (orderErr || !order) throw new Error(`[discovery.test] order seed: ${orderErr?.message}`);
@@ -361,10 +382,23 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
 
     // ---- NEGATIVE fixture: a HIDDEN review (is_visible=false) + its photo ----
     // reviews.uq_review_per_order is UNIQUE(order_id) → needs its own order.
-    const { data: hiddenOrder, error: hiddenOrderErr } = await svc()
-      .from("orders")
+    const hiddenRef = `T01H-${RUN}`;
+    const { data: hiddenMaster, error: hiddenMasterErr } = await svc()
+      .from("master_orders")
       .insert({
-        betk_ref: `T01H-${RUN}`,
+        buyer_id: buyerId,
+        betk_ref: `${hiddenRef}-M`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id")
+      .single();
+    if (hiddenMasterErr || !hiddenMaster) {
+      throw new Error(`[discovery.test] hidden master seed: ${hiddenMasterErr?.message}`);
+    }
+    const { data: hiddenOrder, error: hiddenOrderErr } = await svc()
+      .from("seller_orders")
+      .insert({
+        betk_ref: hiddenRef,
         buyer_id: buyerId,
         store_id: storeId,
         delivery_method: "delivery",
@@ -372,7 +406,8 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
         delivery_fee: 0,
         total_amount: 150,
         status: "delivered",
-      })
+        ...{ master_order_id: (hiddenMaster as { id: string }).id },
+      } as never)
       .select("id")
       .single();
     if (hiddenOrderErr || !hiddenOrder) {
@@ -409,7 +444,8 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
     // `boosts`/`orders` do NOT cascade from `stores` and must be deleted first.
     if (storeId) {
       await svc().from("reviews").delete().eq("store_id", storeId);
-      await svc().from("orders").delete().eq("store_id", storeId);
+      await svc().from("seller_orders").delete().eq("store_id", storeId);
+      await svc().from("master_orders").delete().eq("buyer_id", reviewBuyerId);
       await svc().from("boosts").delete().eq("store_id", storeId);
       await svc().from("rating_aggregates").delete().eq("store_id", storeId);
     }

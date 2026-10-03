@@ -110,6 +110,8 @@ function record(
 // supabase-js infers `never` for some insert/update/delete `.select()` result
 // types; coerce through `unknown` so the harness checks stay type-safe.
 const rowCount = (data: unknown): number => (Array.isArray(data) ? data.length : 0);
+const permissionDenied = (error: { message?: string } | null): boolean =>
+  !!error && /permission denied/i.test(error.message ?? "");
 const firstId = (data: unknown): string | undefined => {
   if (Array.isArray(data) && data[0] && typeof data[0] === "object") {
     const id = (data[0] as { id?: unknown }).id;
@@ -137,6 +139,23 @@ function anonClient(): BetkClient {
 const service = createServiceClient();
 const svc = () => service.schema("betk");
 
+/** M5 made seller_orders.master_order_id NOT NULL. Service role inserts the parent.
+ *  The `as "orders"` cast is the pre-regen types.ts window (REG-32). Runtime table is seller_orders.
+ */
+async function seedMaster(buyerId: string, ref: string): Promise<string> {
+  const { data, error } = await svc()
+    .from("master_orders")
+    .insert({
+      buyer_id: buyerId,
+      betk_ref: ref,
+      combined_delivery_total: 0,
+    } as never)
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`master_orders insert: ${error?.message}`);
+  return data.id;
+}
+
 /**
  * Deletes every fixture owned by the given auth user ids, in FK-safe order,
  * then removes the auth.users rows. Self-derives store/order ids so it works
@@ -156,13 +175,13 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
 
   const orderIdSet = new Set<string>();
   const { data: ordersByBuyer } = await db
-    .from("orders")
+    .from("seller_orders")
     .select("id")
     .in("buyer_id", userIds);
   for (const o of ordersByBuyer ?? []) orderIdSet.add(o.id);
   if (storeIds.length) {
     const { data: ordersByStore } = await db
-      .from("orders")
+      .from("seller_orders")
       .select("id")
       .in("store_id", storeIds);
     for (const o of ordersByStore ?? []) orderIdSet.add(o.id);
@@ -172,7 +191,8 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   if (orderIds.length) {
     await db.from("order_items").delete().in("order_id", orderIds);
     await db.from("payments").delete().in("order_id", orderIds);
-    await db.from("orders").delete().in("id", orderIds);
+    await db.from("seller_orders").delete().in("id", orderIds);
+    await db.from("master_orders").delete().in("buyer_id", userIds);
   }
   if (storeIds.length) {
     await db.from("payouts").delete().in("store_id", storeIds);
@@ -186,6 +206,46 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
 
   for (const id of userIds) {
     await service.auth.admin.deleteUser(id).catch(() => undefined);
+  }
+}
+
+/** Service-role delete of the REG-92 seed. No-ops when that step never ran. */
+async function cleanupReg92Fixture(): Promise<void> {
+  const db = svc();
+  if (reg92OrderId) {
+    const { error } = await db
+      .from("seller_orders")
+      .delete()
+      .eq("id", reg92OrderId);
+    if (!error) reg92OrderId = "";
+  }
+  if (reg92MasterId) {
+    const { error } = await db
+      .from("master_orders")
+      .delete()
+      .eq("id", reg92MasterId);
+    if (!error) reg92MasterId = "";
+  }
+}
+
+/**
+ * Removes the A4 payout-cap seed: the payout A4 inserts, then the seller
+ * order, then the master. Runs from afterAll even when beforeAll throws
+ * after a partial insert. Service role. No-ops when that step never ran.
+ */
+async function cleanupPayoutCapFixture(): Promise<void> {
+  const db = svc();
+  if (storeId) {
+    await db.from("payouts").delete().eq("store_id", storeId);
+  }
+  if (payoutCapOrderId) {
+    await db.from("seller_orders").delete().eq("id", payoutCapOrderId);
+  }
+  if (payoutCapMasterId) {
+    await db
+      .from("master_orders")
+      .delete()
+      .eq("id", payoutCapMasterId);
   }
 }
 
@@ -217,6 +277,14 @@ let activeListingId = "";
 let draftListingId = "";
 let deletedListingId = "";
 let buyerAOrderId = "";
+// A4 cap fixture. Set as soon as each insert returns so afterAll can
+// delete a partial seed when beforeAll throws.
+let payoutCapMasterId = "";
+let payoutCapOrderId = "";
+// REG-92 fixture. Set as soon as each insert returns so afterAll can
+// delete a partial seed when the test throws before its own finally.
+let reg92MasterId = "";
+let reg92OrderId = "";
 
 async function createActor(spec: {
   key: ActorKey;
@@ -366,10 +434,15 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       price: 100,
       price_type: "fixed" as const,
       stock_qty: 5,
+      // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
     const { data: active, error: aErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `RLS active ${RUN}`, status: "active" })
+      .insert({ ...baseListing, title_ar: `RLS active ${RUN}`, status: "active" } as never)
       .select("id")
       .single();
     if (aErr || !active) throw new Error(`active listing: ${aErr?.message}`);
@@ -377,7 +450,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
 
     const { data: draft, error: dErr } = await svc()
       .from("listings")
-      .insert({ ...baseListing, title_ar: `RLS draft ${RUN}`, status: "draft" })
+      .insert({ ...baseListing, title_ar: `RLS draft ${RUN}`, status: "draft" } as never)
       .select("id")
       .single();
     if (dErr || !draft) throw new Error(`draft listing: ${dErr?.message}`);
@@ -390,15 +463,16 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         title_ar: `RLS deleted ${RUN}`,
         status: "active",
         deleted_at: new Date().toISOString(),
-      })
+      } as never)
       .select("id")
       .single();
     if (delErr || !deleted) throw new Error(`deleted listing: ${delErr?.message}`);
     deletedListingId = deleted.id;
 
     // ---- One order owned by Buyer A ----
+    const buyerAMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-AM`);
     const { data: order, error: oErr } = await svc()
-      .from("orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-A`,
         buyer_id: actors.buyerA.id,
@@ -408,15 +482,56 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: buyerAMasterId },
+      } as never)
       .select("id")
       .single();
     if (oErr || !order) throw new Error(`order insert: ${oErr?.message}`);
     buyerAOrderId = order.id;
+
+    // Eligible balance for A4's payout INSERT (amount 100; payouts_amount_check).
+    // Mirrors payout_within_cap in
+    // docs/03-database/rehearsal/m78/asserts.sql lines 955–985:
+    // one master order, one seller order on this phone-verified seller's store,
+    // status pending, balance_confirmed_at and payout_eligible_at <= now(),
+    // subtotal 200. trg_set_order_commission_snapshot stamps commission_amount
+    // on INSERT (commission_rate_pct 0, so commission 0). refunded_subtotal
+    // defaults to 0. Available = 200 - 0 - 0, which covers 100.
+    payoutCapMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-PM`);
+    const { data: capOrder, error: capErr } = await svc()
+      .from("seller_orders")
+      .insert({
+        betk_ref: `RLS-${RUN}-PAY`,
+        buyer_id: actors.buyerA.id,
+        store_id: storeId,
+        delivery_method: "delivery",
+        delivery_fee: 0,
+        subtotal: 200,
+        total_amount: 200,
+        commission_amount: 0,
+        status: "pending",
+        balance_confirmed_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        payout_eligible_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        ...{ master_order_id: payoutCapMasterId },
+      } as never)
+      .select("id")
+      .single();
+    if (capErr || !capOrder) {
+      throw new Error(`payout-cap order insert: ${capErr?.message}`);
+    }
+    payoutCapOrderId = capOrder.id;
   });
 
   afterAll(async () => {
-    await purgeByUserIds(createdUserIds);
+    try {
+      await cleanupPayoutCapFixture();
+    } finally {
+      try {
+        await cleanupReg92Fixture();
+      } finally {
+        await purgeByUserIds(createdUserIds);
+      }
+    }
 
     // ---- Summary ----
     const pass = results.filter((r) => r.outcome === "PASS").length;
@@ -488,13 +603,13 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   // -------------------------------------------------------------------------
   it("A2: Buyer B cannot read Buyer A's order (no error leak)", async () => {
     const { data, error } = await actors.buyerB.client
-      .from("orders")
+      .from("seller_orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
     // Sanity: the owner CAN read it.
     const { data: ownerRows } = await actors.buyerA.client
-      .from("orders")
+      .from("seller_orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
@@ -553,8 +668,9 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   it("A4: phone gate rejects no-phone Google user; phone user passes a gated insert", async () => {
     // 4a (security-critical): Google user G (phone NULL) must be REJECTED on an
     // orders INSERT even with otherwise-correct ownership.
+    const googleMasterId = await seedMaster(actors.googleG.id, `RLS-${RUN}-GM`);
     const { data: gOrder, error: gErr } = await actors.googleG.client
-      .from("orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-G`,
         buyer_id: actors.googleG.id,
@@ -564,7 +680,8 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: googleMasterId },
+      } as never)
       .select("id");
     const gRejected = !!gErr && rowCount(gOrder) === 0;
     record(
@@ -578,7 +695,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     );
     // If somehow inserted, clean it up so teardown stays complete.
     const gOrderId = firstId(gOrder);
-    if (gOrderId) await svc().from("orders").delete().eq("id", gOrderId);
+    if (gOrderId) await svc().from("seller_orders").delete().eq("id", gOrderId);
     expect(gRejected).toBe(true);
 
     // 4b (spec: "Buyer A passes"): Buyer A has a verified phone AND owns the row,
@@ -586,8 +703,9 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // the RESTRICTIVE `orders_phone_gate` both pass -> INSERT succeeds. This was a
     // FINDING before Phase 07 / T01 (no permissive INSERT policy existed); REG-09
     // is now CLOSED so this is a hard PASS. Insert is cleaned up immediately.
+    const buyerASecondMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-A2M`);
     const { data: aOrder, error: aErr } = await actors.buyerA.client
-      .from("orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-A2`,
         buyer_id: actors.buyerA.id,
@@ -597,10 +715,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         delivery_fee: 0,
         total_amount: 100,
         status: "pending",
-      })
+        ...{ master_order_id: buyerASecondMasterId },
+      } as never)
       .select("id");
     const aOrderId = firstId(aOrder);
-    if (aOrderId) await svc().from("orders").delete().eq("id", aOrderId);
+    if (aOrderId) await svc().from("seller_orders").delete().eq("id", aOrderId);
     record(
       "A4b",
       "orders",
@@ -635,6 +754,148 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         : `unexpected payouts INSERT rejection: ${pErr?.message}`,
     );
     expect(payoutOk).toBe(true);
+  });
+
+  // Plan §2.3, after M7. master_orders INSERT is granted to authenticated.
+  // The seller_orders cases above are unchanged.
+  it("A4d: master_orders phone gate denies an unverified buyer and allows a verified buyer", async () => {
+    const { data: gMaster, error: gErr } = await actors.googleG.client
+      .from("master_orders")
+      .insert({
+        buyer_id: actors.googleG.id,
+        betk_ref: `RLS-${RUN}-GMO`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id");
+    const gRejected = !!gErr && rowCount(gMaster) === 0;
+    record(
+      "A4d-deny",
+      "master_orders",
+      "master_orders_phone_gate (RESTRICTIVE)",
+      gRejected ? "PASS" : "FAIL",
+      gRejected
+        ? `buyer without a verified phone rejected on master_orders INSERT: ${gErr?.message}`
+        : "SECURITY BREACH — no-phone user inserted a master order",
+    );
+    const gId = firstId(gMaster);
+    if (gId) await svc().from("master_orders").delete().eq("id", gId);
+    expect(gRejected).toBe(true);
+
+    const { data: aMaster, error: aErr } = await actors.buyerA.client
+      .from("master_orders")
+      .insert({
+        buyer_id: actors.buyerA.id,
+        betk_ref: `RLS-${RUN}-AMO`,
+        combined_delivery_total: 0,
+      } as never)
+      .select("id");
+    const aId = firstId(aMaster);
+    if (aId) await svc().from("master_orders").delete().eq("id", aId);
+    record(
+      "A4d-allow",
+      "master_orders",
+      "master_orders_insert + master_orders_phone_gate (RESTRICTIVE)",
+      aId ? "PASS" : "FAIL",
+      aId
+        ? "verified buyer inserted a master order"
+        : `verified buyer rejected on master_orders INSERT: ${aErr?.message}`,
+    );
+    expect(aId, "verified buyer must be able to INSERT their own master order").toBeTruthy();
+  });
+
+  // REG-92. Not a typecheck. The phone-verified seller (authenticated) is
+  // denied select * , RETURNING * , and the two hidden money columns.
+  // An explicit allowed column list succeeds. Existing cases above are unchanged.
+  it("REG-92: seller select-star, RETURNING-star, and hidden money columns are denied", async () => {
+    reg92MasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-R92M`);
+    try {
+      const { data: seeded, error: seedErr } = await svc()
+        .from("seller_orders")
+        .insert({
+          betk_ref: `RLS-${RUN}-R92`,
+          buyer_id: actors.buyerA.id,
+          store_id: storeId,
+          delivery_method: "delivery",
+          subtotal: 100,
+          delivery_fee: 0,
+          total_amount: 100,
+          status: "pending",
+          ...{ master_order_id: reg92MasterId },
+        } as never)
+        .select("id")
+        .single();
+      if (seedErr || !seeded) {
+        throw new Error(`REG-92 seed: ${seedErr?.message ?? "no id"}`);
+      }
+      reg92OrderId = seeded.id;
+
+      const seller = actors.seller.client;
+      const star = await seller
+        .from("seller_orders")
+        .select("*")
+        .eq("id", reg92OrderId);
+      const fee = await seller
+        .from("seller_orders")
+        .select("delivery_fee")
+        .eq("id", reg92OrderId);
+      const total = await seller
+        .from("seller_orders")
+        .select("total_amount")
+        .eq("id", reg92OrderId);
+      const allowed = await seller
+        .from("seller_orders")
+        .select("id, betk_ref, status, subtotal")
+        .eq("id", reg92OrderId);
+      const returning = await seller
+        .from("seller_orders")
+        .update({ escalation_note: "reg92" } as never)
+        .eq("id", reg92OrderId)
+        .select();
+
+      const deniedStar = permissionDenied(star.error);
+      const deniedFee = permissionDenied(fee.error);
+      const deniedTotal = permissionDenied(total.error);
+      const deniedReturning = permissionDenied(returning.error);
+      const allowedOk = allowed.error === null && (allowed.data?.length ?? 0) === 1;
+
+      const { data: probe } = await svc()
+        .from("seller_orders")
+        .select("*")
+        .eq("id", reg92OrderId)
+        .single();
+      const note =
+        (probe as { escalation_note?: string | null } | null)?.escalation_note ?? null;
+
+      const ok = deniedStar && deniedFee && deniedTotal && deniedReturning && allowedOk && note === null;
+      record(
+        "REG-92",
+        "seller_orders",
+        "column SELECT grant (ADR-020)",
+        ok ? "PASS" : "FAIL",
+        ok
+          ? "select * , RETURNING * , delivery_fee, and total_amount are permission denied; id, betk_ref, status, subtotal succeed"
+          : `star:${star.error?.message ?? "no error"} fee:${fee.error?.message ?? "no error"} total:${total.error?.message ?? "no error"} returning:${returning.error?.message ?? "no error"} allowed:${allowed.error?.message ?? "ok"} note:${note ?? "null"}`,
+      );
+
+      expect(star.error?.message ?? "", "select * must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(fee.error?.message ?? "", "delivery_fee must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(total.error?.message ?? "", "total_amount must be permission denied").toMatch(
+        /permission denied/i,
+      );
+      expect(
+        returning.error?.message ?? "",
+        "update .select() / RETURNING * must be permission denied",
+      ).toMatch(/permission denied/i);
+      expect(allowed.error, "an explicit allowed column list must succeed").toBeNull();
+      expect(allowed.data?.length ?? 0).toBe(1);
+      expect(note, "RETURNING * must roll the escalation_note write back").toBeNull();
+    } finally {
+      await cleanupReg92Fixture();
+    }
   });
 
   // -------------------------------------------------------------------------
@@ -737,11 +998,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     );
     record(
       "F3",
-      "orders trigger",
+      "seller_orders trigger",
       "decrement_stock_on_confirm",
       "PASS",
-      "RESOLVED — the decrement_stock_on_confirm trigger (R-L05/06) is live " +
-        "(migration 20260716124323, REG-02); AFTER UPDATE OF status WHEN NEW.status='confirmed'.",
+      "M4 dropped trg_decrement_stock_on_confirm before N27. Stock no longer moves on confirm. " +
+        "This case does not update status to confirmed.",
     );
     expect(findings.length).toBeGreaterThan(0);
   });
