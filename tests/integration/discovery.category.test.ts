@@ -185,6 +185,19 @@ describeOrSkip("Phase 03 / T04 — category browse (staging, anon client)", () =
     if (suspErr || !suspStore) throw new Error(`[category.test] suspended store: ${suspErr?.message}`);
     suspendedStoreId = (suspStore as { id: string }).id;
 
+    for (const sid of [activeStoreId, suspendedStoreId]) {
+      const { error: scIns } = await svc()
+        .from("store_categories")
+        .insert({ store_id: sid, category_id: topCategoryId });
+      if (scIns) throw new Error(`[category.test] store_categories insert: ${scIns.message}`);
+      const { error: scUpd } = await svc()
+        .from("store_categories")
+        .update({ approved_at: new Date().toISOString() })
+        .eq("store_id", sid)
+        .eq("category_id", topCategoryId);
+      if (scUpd) throw new Error(`[category.test] store_categories approve: ${scUpd.message}`);
+    }
+
     // ── listings ──
     const base = {
       category_id: topCategoryId,
@@ -193,6 +206,11 @@ describeOrSkip("Phase 03 / T04 — category browse (staging, anon client)", () =
       price_type: "fixed" as const,
       stock_qty: 5,
       status: "active" as const,
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
 
     ids.topOnly = await seedListing({ ...base, store_id: activeStoreId, title_ar: `منتج فئة رئيسية ${RUN}` });

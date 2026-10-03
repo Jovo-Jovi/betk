@@ -134,6 +134,19 @@ describeOrSkip("PERF-02 — GET /api/category-listings (staging, anon handler)",
     if (ssErr || !suspendedStore) throw new Error(`suspended store: ${ssErr?.message}`);
     suspendedStoreId = suspendedStore.id;
 
+    for (const sid of [activeStoreId, suspendedStoreId]) {
+      const { error: scIns } = await svc()
+        .from("store_categories")
+        .insert({ store_id: sid, category_id: topCategoryId });
+      if (scIns) throw new Error(`store_categories insert: ${scIns.message}`);
+      const { error: scUpd } = await svc()
+        .from("store_categories")
+        .update({ approved_at: new Date().toISOString() })
+        .eq("store_id", sid)
+        .eq("category_id", topCategoryId);
+      if (scUpd) throw new Error(`store_categories approve: ${scUpd.message}`);
+    }
+
     // ---- listings in the SAME category ----
     const base = {
       category_id: topCategoryId,
@@ -141,6 +154,11 @@ describeOrSkip("PERF-02 — GET /api/category-listings (staging, anon handler)",
       price: 100,
       price_type: "fixed" as const,
       stock_qty: 5,
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
 
     const seedListing = async (

@@ -44,6 +44,7 @@ import {
 import type { Database } from "@/lib/supabase/types";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import { buyerTermsBlock } from "@/services/agreementVersions";
 
 type InquiryInsert = Database["betk"]["Tables"]["inquiries"]["Insert"];
 
@@ -70,6 +71,10 @@ export async function createInquiry(input: CreateInquiryInput): Promise<CreateIn
   Sentry.setUser({ id: userId });
 
   const supabase = await createClient();
+
+  if (await buyerTermsBlock(supabase, userId)) {
+    return { ok: false, reason: "error" };
+  }
 
   // Resolve the listing's store SERVER-SIDE (never client-supplied). The buyer
   // reads the listing via listings_public; an unreadable listing → unavailable.

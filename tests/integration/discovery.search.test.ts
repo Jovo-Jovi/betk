@@ -150,12 +150,30 @@ describeOrSkip("Phase 03 / T03 — searchListings (staging, anon client)", () =>
     if (suspErr || !suspStore) throw new Error(`[search.test] suspended store: ${suspErr?.message}`);
     const suspendedStoreId = (suspStore as { id: string }).id;
 
+    for (const sid of [activeStoreId, suspendedStoreId]) {
+      const { error: scIns } = await svc()
+        .from("store_categories")
+        .insert({ store_id: sid, category_id: topCategoryId });
+      if (scIns) throw new Error(`[search.test] store_categories insert: ${scIns.message}`);
+      const { error: scUpd } = await svc()
+        .from("store_categories")
+        .update({ approved_at: new Date().toISOString() })
+        .eq("store_id", sid)
+        .eq("category_id", topCategoryId);
+      if (scUpd) throw new Error(`[search.test] store_categories approve: ${scUpd.message}`);
+    }
+
     const base = {
       store_id: activeStoreId,
       category_id: topCategoryId,
       type: "product" as const,
       price_type: "fixed" as const,
       stock_qty: 10,
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     };
 
     // ── "سماعات" set: keyword-match + exclusion probes ──

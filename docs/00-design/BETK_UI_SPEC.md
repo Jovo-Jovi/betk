@@ -175,7 +175,18 @@ Measured 2026-09-22 with `git ls-tree -r --name-only origin/main src/app`, then 
 
 Not pages under §0, listed so they are not counted: `src/app/[locale]/(auth)/auth/callback/route.ts`, `src/app/api/category-listings/route.ts`, `src/app/[locale]/not-found.tsx`, `src/app/global-not-found.tsx`.
 
-The other P-numbers (cart, checkout, orders, admin, legal, and the rest) have no `page.tsx` on `origin/main`. They stay in the 79 as the target inventory. Absence from `main` is not a deletion.
+The other P-numbers (cart, checkout, orders, admin, and the rest) have no `page.tsx` on `origin/main`. They stay in the 79 as the target inventory. Absence from `main` is not a deletion.
+
+#### Phase 09 T05 reconciliation (2026-10-04)
+
+Guard F's built-file pin moves **26 → 30** in the same commit as these four `page.tsx` files. OD-21 stays **79**. Each new file is one route pattern already in §5.1. Locales count once. F3: the body is the pending-review notice plus the version label. The E-1 drafts are not rendered.
+
+| Built route (locale stripped) | P-number | File |
+|---|---|---|
+| `/legal/terms` | P67 | `src/app/[locale]/(public)/legal/terms/page.tsx` |
+| `/legal/seller-agreement` | P68 | `src/app/[locale]/(public)/legal/seller-agreement/page.tsx` |
+| `/legal/returns` | P69 | `src/app/[locale]/(public)/legal/returns/page.tsx` |
+| `/legal/privacy` | P70 | `src/app/[locale]/(public)/legal/privacy/page.tsx` |
 
 ---
 

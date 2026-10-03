@@ -39,6 +39,7 @@ import { translateZodIssue } from "@/validations/zodMessages";
 import { deactivateAccount as deactivateUserRow } from "@/services/authUsers";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import { buyerTermsBlock } from "@/services/agreementVersions";
 
 /** Public landing page after deactivation + sign-out. */
 const POST_DEACTIVATION_PATH = "/";
@@ -75,6 +76,15 @@ export async function deactivateAccount(
 
   if (authError || !user) {
     return { errorAr: tErrors("mustLoginFirst") };
+  }
+
+  const termsBlock = await buyerTermsBlock(supabase, user.id);
+  if (termsBlock) {
+    return {
+      errorAr: tErrors(
+        termsBlock === "unconfigured" ? "buyerTermsUnavailable" : "buyerTermsRequired",
+      ),
+    };
   }
 
   // ── Set deleted_at for auth.uid() only (service-role, deleted_at-only) ──────

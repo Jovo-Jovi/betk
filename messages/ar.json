@@ -127,6 +127,8 @@
       "cityLabel": "المدينة",
       "cityOptional": "(اختياري)",
       "cityPlaceholder": "مثال: مدينة نصر",
+      "acceptLabel": "أقبل شروط المشتري الحالية",
+      "acceptLink": "شروط المشتري",
       "saving": "جاري الحفظ…",
       "submit": "إكمال التسجيل"
     },
@@ -192,6 +194,35 @@
       }
     }
   },
+  "legal": {
+    "common": {
+      "pendingTitle": "بانتظار المراجعة القانونية",
+      "pendingBody": "تعرض هذه الصفحة بطاقة النسخة فقط. نص الوثيقة غير منشور بعد.",
+      "versionCaption": "النسخة",
+      "error": "تعذّر تحميل بطاقة النسخة. يُرجى المحاولة مرة أخرى.",
+      "retry": "حاول مرة أخرى"
+    },
+    "terms": {
+      "title": "شروط المشتري",
+      "metaTitle": "شروط المشتري — BETK",
+      "metaDescription": "بطاقة نسخة شروط المشتري الحالية"
+    },
+    "sellerAgreement": {
+      "title": "اتفاقية البائع",
+      "metaTitle": "اتفاقية البائع — BETK",
+      "metaDescription": "بطاقة نسخة اتفاقية البائع الحالية"
+    },
+    "returns": {
+      "title": "سياسة الإرجاع والاسترداد",
+      "metaTitle": "سياسة الإرجاع والاسترداد — BETK",
+      "metaDescription": "بطاقة نسخة سياسة الإرجاع والاسترداد الحالية"
+    },
+    "privacy": {
+      "title": "الخصوصية",
+      "metaTitle": "الخصوصية — BETK",
+      "metaDescription": "بطاقة نسخة الخصوصية الحالية"
+    }
+  },
   "validation": {
     "invalidInput": "بيانات غير صحيحة",
     "phoneRequired": "رقم الهاتف مطلوب",
@@ -204,11 +235,14 @@
     "governorateRequired": "المحافظة مطلوبة",
     "governorateInvalid": "اختر محافظة صحيحة",
     "cityTooLong": "اسم المدينة لا يتجاوز 100 حرف",
+    "buyerTermsRequired": "اقبل شروط المشتري الحالية للمتابعة.",
     "deactivateConfirmRequired": "يجب تأكيد تعطيل الحساب قبل المتابعة."
   },
   "errors": {
     "invalidInput": "بيانات غير صحيحة. يُرجى التحقق من المدخلات.",
     "mustLoginFirst": "يجب تسجيل الدخول أولاً.",
+    "buyerTermsRequired": "اقبل شروط المشتري الحالية للمتابعة.",
+    "buyerTermsUnavailable": "شروط المشتري غير متاحة بعد. لم يُحفظ شيء.",
     "profileSaveFailed": "حدث خطأ أثناء حفظ الملف الشخصي. يُرجى المحاولة مرة أخرى.",
     "rateLimited": "يُرجى الانتظار دقيقة واحدة قبل طلب كود جديد.",
     "sendOtpFailed": "حدث خطأ أثناء إرسال الكود. يُرجى المحاولة مرة أخرى.",

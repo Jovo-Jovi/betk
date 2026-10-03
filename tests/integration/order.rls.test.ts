@@ -243,10 +243,18 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
 
     await sweepLeftovers();
 
+    const { data: foodParent, error: foodErr } = await svc()
+      .from("categories")
+      .select("id")
+      .eq("slug", "food-beverages")
+      .single();
+    if (foodErr || !foodParent) throw new Error(`food parent: ${foodErr?.message}`);
     const { data: cat, error: catErr } = await svc()
       .from("categories")
       .select("id")
       .eq("is_active", true)
+      .neq("slug", "food-beverages")
+      .or(`parent_id.is.null,parent_id.neq.${foodParent.id}`)
       .limit(1)
       .single();
     if (catErr || !cat) throw new Error(`no active category for fixtures: ${catErr?.message}`);
@@ -258,6 +266,17 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
     outsiderBuyer = await createBuyer("outsider", makePhone());
     googleNoPhone = await createBuyer("nophone", null);
 
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: sellerA.storeId, category_id: categoryId });
+    if (scIns) throw new Error(`store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", sellerA.storeId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`store_categories approve: ${scUpd.message}`);
+
     const { data: listing, error: lErr } = await svc()
       .from("listings")
       .insert({
@@ -268,6 +287,7 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
         price: 100,
         price_type: "fixed",
         status: "active",
+        prep_days: 1,
         ...{
           // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
           weight_g: 1,

@@ -179,6 +179,19 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     if (suspErr || !suspStore) throw new Error(`[listing.test] suspended store: ${suspErr?.message}`);
     suspendedStoreId = (suspStore as { id: string }).id;
 
+    for (const sid of [activeStoreId, suspendedStoreId]) {
+      const { error: scIns } = await svc()
+        .from("store_categories")
+        .insert({ store_id: sid, category_id: categoryId });
+      if (scIns) throw new Error(`[listing.test] store_categories insert: ${scIns.message}`);
+      const { error: scUpd } = await svc()
+        .from("store_categories")
+        .update({ approved_at: new Date().toISOString() })
+        .eq("store_id", sid)
+        .eq("category_id", categoryId);
+      if (scUpd) throw new Error(`[listing.test] store_categories approve: ${scUpd.message}`);
+    }
+
     await svc().from("rating_aggregates").insert({
       store_id: activeStoreId,
       average_rating: 4.8,
@@ -199,6 +212,7 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
       price_type: "fixed" as const,
       stock_qty: 10,
       status: "active" as const,
+      prep_days: 1,
       // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
       weight_g: 1,
       length_mm: 1,
@@ -223,6 +237,7 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
       price_type: "quote_only",
       stock_qty: 2,
       low_stock_threshold: 3,
+      status: "sold_out",
     });
     ids.stockZeroActiveListing = await seedListing({ ...base, title_ar: `منتج نفد مخزونه ${RUN}`, stock_qty: 0 });
     // REG-25 fixture — direct insert with status='sold_out' (bypasses the

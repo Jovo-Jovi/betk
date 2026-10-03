@@ -8,7 +8,9 @@
 
 **Goal.** T&C at signup. Catalogue: products only, fixed price, shipping attributes, store categories max 3, food branch. Onboarding: pickup address, seller agreement, delivery-mode toggles retired. REG-51 and REG-72 through the §8 gap list (compose, do not restyle).
 
-**PAGES:** P01, P02, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70
+**PAGES:** P01, P02, P03, P04, P05, P08, P23, P27, P29, P31, P32, P33, P49, P67, P68, P69, P70
+
+P03 is on this list for the store-name link only (F1, ListingCard `storeHref`, REG-72). Phase 03 stays signed. Nothing else about P03 changes.
 
 **CODES:** FR-PUB-1, FR-PUB-2, FR-PUB-4, FR-PUB-5, AC-PUB-1, AC-PUB-2, AC-PUB-4, AC-PUB-5, FR-AUTH-3, AC-AUTH-3, FR-SEL-1, FR-SEL-5, FR-SEL-7, FR-SEL-9, FR-SEL-10, AC-SEL-1, AC-SEL-5, AC-SEL-7, AC-SEL-9, AC-SEL-10, FR-CAT-1, AC-CAT-1, AC-CAT-2, AC-CAT-3, AC-CAT-4, AC-CAT-5, AC-CAT-6, R-L01, R-L04, R-L09, R-L16, R-L17, R-L18, R-L19, R-L20, R-L21, R-L22, R-S10, R-K01, R-V03, AC-VIS-2, FR-AGR-1, R-G01, R-G02, R-G03, R-G04, R-G05, R-G06, R-G07, R-G08, AC-AGR-1, AC-AGR-2, AC-AGR-3, AC-AGR-4, AC-AGR-5, FR-ADM-2, AC-ADM-2, R-M01
 
@@ -35,7 +37,7 @@ Phase 08 lessons, binding here:
 
 - Staging SQL is a file under `docs/03-database/rehearsal/staging-text/`, audited before any apply. The audit verdicts are MATCH, BROADER, NARROWER, AUTHORED, MISMATCH, FINDING. A GRANT never closes a BROADER table privilege.
 - Before every `apply_migration`, state the query argument's md5 and byte length and show they equal the bound file (`PRECEDENTS.md`, apply_migration gets the bound text).
-- Shared close for every task after T00 includes the push and `gh pr create`. See the block below.
+- Shared close: every task after T00 commits on `feature/phase-09-surfaces` and pushes (`git push -u origin HEAD`). The pull request stays deferred to T11 (E3, amended by E1 on 2026-10-03). T11 opens the one PR. See the block below.
 - No prompt wording that contradicts a binding in this pack, in `BETK_PHASES.md`, or in a pinned REG.
 - Smoke and integration fixtures satisfy Phase 08 constraints: an active listing has shipping dimensions; a payout fixture has an eligible balance under the cap. Guard G's residue set is unchanged: 7 `seller_orders`, 7 `master_orders`, 12 `order_status_history`. The detector reports anything outside that set and never deletes it.
 - Types come from the CI Types drift diff, applied verbatim. No hand edit. No bridge cast left.
@@ -44,7 +46,7 @@ Phase 08 lessons, binding here:
 
 **W1 (verbatim).** W1 Workflow: at the end of any task that needs a PR, Cursor opens it with `gh pr create` (title = commit subject; body = the task's evidence summary). The human only merges. Never merge, never bypass.
 
-**Shared close** (every prompt after T00 ends with this):
+**Shared close** (every prompt after T00 ends with this). E1 (planning-chat review of T01, 2026-10-03): this block pushes. E3: `gh pr create` is not in this block. T11's prompt is where the PR is due.
 
 ```text
 STEP Z
@@ -53,8 +55,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 ```
 
@@ -82,17 +83,29 @@ REG-96 / REG-97: agreement version labels are opaque strings, compared for equal
 - Staging value = "STAGING-DRAFT-1" for buyer_terms and seller_agreement, written by a named Phase 09 task, labelled as a placeholder (CF-12).
 - Both rows stay OPEN for the production value.
 
-**Register status after T00.** REG-75 and REG-88 are `PINNED 2026-10-03 (B)`. They close at the consuming exit with evidence. REG-95 is pinned `food-v1` and stays open until T01's post-check. REG-96 and REG-97 stay OPEN for the production value. Staging placeholder is decided.
+**Decisions (human, 2026-10-03), verbatim.** Recorded in `SESSION_CONTEXT.md` and in §6.
 
-**T01 is the named staging write.** One guarded `execute_sql` UPDATE of exactly these three keys, and no others:
+F1 = P03 in. P03 joins Phase 09 for the store-name link only (ListingCard storeHref; REG-72). Edit BETK_PHASES.md Phase 09: PAGES line, the Blocked "Navigable store identity" list and the §4.b page→phase row add P03, for this purpose only. Nothing else about P03 changes; Phase 03 stays signed.
 
-- `agreement_buyer_terms_version` = `STAGING-DRAFT-1`
-- `agreement_seller_agreement_version` = `STAGING-DRAFT-1`
+F2 = P33 only. DataTable is composed on P33 in Phase 09. P30 keeps its current list; DataTable on P30 stays a UI_SPEC §8 note with no owner.
+
+F3 = pending. P67–P70 render a "pending legal review" notice (i18n ar/en) plus the version label. The E-1 drafts are never rendered.
+
+F4 = drop GO. Pack T04 no longer waits for "GO P09-T04". The planning-chat review of T02 and T03 is the gate. GO stays reserved for irreversible steps.
+
+**Register status after T01.** REG-75 and REG-88 are `PINNED 2026-10-03 (B)`. They close at the consuming exit with evidence. REG-95 is pinned `food-v1` and **closed** on T01's post-check. REG-96 and REG-97 stay OPEN for the production value. The staging placeholder is written.
+
+**T01 is the named staging write.** One guarded `execute_sql` of exactly these five keys, and no others (E2):
+
+- `agreement_buyer_terms_version` = `STAGING-DRAFT-1` (CF-12 placeholder)
+- `agreement_seller_agreement_version` = `STAGING-DRAFT-1` (CF-12 placeholder)
 - `food_requirements` = `food-v1`
+- `price_band_min_egp` = `1`, labelled "STAGING placeholder — not a product decision (REG-62 launch gate unchanged)"
+- `price_band_max_egp` = `1000000`, labelled "STAGING placeholder — not a product decision (REG-62 launch gate unchanged)"
 
-Pre-check: each of those three values is empty text (T00 SELECT: length 0, `is_empty` true). Post-check: each value equals the string above. If any pre-check fails, STOP and write nothing. The statement is guarded so a non-empty value is not overwritten. Record it the way L1 was recorded: the statement, the row count, the before values' lengths, the after values. It is authorized by the decisions in this section. It is not a migration. A migration would carry the staging strings to production.
+Pre-check: each of those five values is empty text or the sentinel (`''` or `'0'`). Post-check: each value equals the string above. If any pre-check fails, STOP and write nothing. The statement is guarded so a value that is already non-empty and not the sentinel is not overwritten. Record it the way L1 was recorded: the statement, the row count, the before values' lengths, the after values. It is authorized by the decisions in this section and by E2. It is not a migration. A migration would carry the staging strings to production.
 
-`agreement_return_policy_version` and `agreement_privacy_version` stay empty. Phase 11 reads REG-88 before it consults them. Do not write a price-band value. REG-62: building against the sentinel is allowed; launch is not. An empty band fails closed (plan §8.2.5).
+`agreement_return_policy_version` and `agreement_privacy_version` stay empty. Phase 11 reads REG-88 before it consults them. REG-62: building against the sentinel is allowed; launch is not. The two band values above are a staging placeholder, not a product decision. An empty band still fails closed (plan §8.2.5). Production stays REG-62. Do not write another band value.
 
 CI may set its own keys to values labelled `CI TEST VALUE`. Those values never go to staging (Phase 08 R2).
 
@@ -114,7 +127,7 @@ Server-side enforcement is required for every refusal. A hidden control is not e
 | AC-CAT-1. Publishing a service listing is refused. | **(b)** the same publish trigger: `status = 'active'` requires `type = 'product'`. The `service` enum member stays (ERD: dead at publish). R-L16's "app layer" sentence is the server action as well; the action is not the evidence, because a direct insert would bypass it. | Live `listing_type` still has `service` (schema source). No listing trigger today (ERD publish gate not landed in M8). |
 | AC-CAT-2. Publishing without weight or without length, width, and height is refused. | **(a)** `chk_active_listing_shipping`. | Live SELECT 2026-10-03: `CHECK ((status <> 'active') OR (weight_g, length_mm, width_mm, and height_mm are all NOT NULL)) NOT VALID`. New writes are checked. Existing rows were not validated. Per-column `> 0` checks are also live. |
 | AC-CAT-6 and AC-CAT-5, inside the same ERD publish gate. Not a separate exit bullet. | **(b)** the same trigger. Active requires `price_type = 'fixed'` and `price` not null. `prep_days` must sit inside `prep_cap_days`; an empty cap fails closed. | ERD listings publish gate. R-L17, R-L22. Dead `price_type` members stay. |
-| AC-CAT-3. Price outside the band is refused. | **(b)** the same trigger. Either band key empty fails closed. Do not write a band value. Launch stays REG-62. | Plan §8.2.5. REG-62 pin in §6. |
+| AC-CAT-3. Price outside the band is refused. | **(b)** the same trigger. Either band key empty fails closed. T01 writes the staging band as a placeholder. Launch stays REG-62. Do not write another band value. | Plan §8.2.5. REG-62 pin in §6. |
 | R-S10. Food publish without food approval is refused. | **(b)** the same trigger. A listing whose category is the seeded parent slug `food-beverages` or a descendant is food (`supabase/migrations/20260622091700_categories_seed.sql`). Publish requires that store-category row's `approved_at` and the four `seller_documents` types from M1: `food_packaging`, `food_label`, `food_expiry`, `food_social_url`. `food_requirements` is a version label. It is not parsed. An empty label does not skip the check and does not count as approval. | R-S10. ERD `seller_documents`. REG-95. Plan §8.2.5 food row. |
 | REG-65. Onboarding no longer stores a delivery fee. | **(b)** the RPC body does not write a delivery fee and does not treat `p_delivery_options` as authority. **(c)** P23 and P27 server actions do not send modes or `delivery_fee_egp`. The column `stores.delivery_options` stays (ERD: not authoritative). Do not drop it. | Live RPC still has `p_delivery_options jsonb`. UI spec P23 binding and P27 "Do not write `stores.delivery_options`". OD-10. |
 | Guest cannot add to cart. | **(a)** `cart_items_insert` requires `buyer_id = auth.uid()`, and INSERT is revoked from `anon`. A guest insert creates no row. The page task redirects to authentication; the redirect is not the evidence. | Applied `M2.sql` (`20261001091538`): policy `cart_items_insert` and `REVOKE INSERT, UPDATE, DELETE ON betk.cart_items FROM anon`. R-C01, AC-CART-1. Phase 10 owns the cart product. This phase's public pages must not grow a guest insert path. |
@@ -125,7 +138,7 @@ The three active staging listings may lack shipping attributes (`chk_active_list
 
 1. **T02 authors** `docs/03-database/rehearsal/staging-text/P09M1.sql` and `docs/03-database/rehearsal/AUDIT-P09.md`. Objects, in one transaction: a BEFORE INSERT OR UPDATE publish trigger on `listings` for the (b) rows in the table above; a BEFORE INSERT trigger that forces `store_categories.approved_at` null unless `is_admin()`; `CREATE OR REPLACE` of `submit_seller_application` and `resubmit_seller_application` with the live argument lists, bodies that enforce AC-AGR-3 and REG-65. No new table. No new argument. No edit of `checkout_from_cart`. No settings UPDATE in the file. Audit every grant, policy, and function: MATCH / BROADER / NARROWER / AUTHORED / MISMATCH / FINDING. A GRANT never closes a BROADER table privilege. Zero MISMATCH before CI.
 2. **T03 proves it in CI** on a local Supabase stack. Migrations are the 39 files at `30de78d` plus this text. A behaviour-assert harness prints CSV with header `name,expected,actual,pass`. The gate parses that header and stops at the first row that is not four fields. CI settings values are labelled `CI TEST VALUE` and are not the staging strings. Staging is not written.
-3. **Review** is the planning chat, before apply. T04 STOPs until the human has typed `GO P09-T04` in that task's request.
+3. **Review** is the planning chat, before apply. That review of T02 and T03 is the gate (F4). T04 does not wait for `GO P09-T04`. GO stays reserved for irreversible steps.
 4. **T04 applies** the bound file with `apply_migration`. State md5 and byte length before the call. Ledger 1:1. Backfill `BETK_DATABASE_SCHEMA.sql`. Advisors before and after; every delta attributed. Then apply the CI Types drift diff verbatim. No bridge cast left.
 5. **T01** (the placeholder) is not part of this file and can land before T04. It does not change the ledger.
 
@@ -136,10 +149,10 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-09-surfaces` from `origi
 | T | Work | Model | Thinking | Branch |
 |---|---|---|---|---|
 | T00 | This pack. Pins. Inventory. | Grok 4.7 | High | `v2-p09-t00` |
-| T01 | Staging placeholder write of the three keys. Not a migration. | Grok 4.7 | High | creates `feature/phase-09-surfaces` |
+| T01 | Staging placeholder write of the five keys. Not a migration. | Grok 4.7 | High | creates `feature/phase-09-surfaces` |
 | T02 | Author `P09M1.sql` and the audit. No apply. | Grok 4.7 | Max | `feature/phase-09-surfaces` |
 | T03 | CI proof on a local stack. Gate parses the CSV header. | Grok 4.7 | Max | `feature/phase-09-surfaces` |
-| T04 | Apply the bound text after `GO P09-T04`. Types diff verbatim. | Grok 4.7 | Max | `feature/phase-09-surfaces` |
+| T04 | Apply the bound text after the planning-chat review of T02 and T03. No GO. Types diff verbatim. | Grok 4.7 | Max | `feature/phase-09-surfaces` |
 | T05 | P08 + P67–P70 acceptance capture. Prose is the pending-review notice. | Grok 4.7 | Medium | `feature/phase-09-surfaces` |
 | T06 | P23 and P27. Pickup, categories, seller agreement, food artefacts. Toggles removed. | Grok 4.7 | Medium | `feature/phase-09-surfaces` |
 | T07 | P31, P32, P33 catalogue rules. | Grok 4.7 | Medium | `feature/phase-09-surfaces` |
@@ -161,7 +174,7 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-09-surfaces` from `origi
 | Phase 09: P23 pickup, categories, seller agreement, food artefacts; P27 pickup address; toggles removed | T06 |
 | Phase 09: P31, P32, P33 catalogue rules | T07 |
 | Phase 09: P49 food and seller approval, composing ProofViewer | T08 |
-| Phase 09: P01, P02, P04, P05 guest cart, service filter, share, store-name link | T09 |
+| Phase 09: P01, P02, P04, P05 guest cart, service filter, share, store-name link. P03 store-name link only (F1) | T09 |
 | Phase 09: P29 settlement copy (REG-64). REG-53 closes by R-K01 | T10 |
 | Phase 09: Exit evidence | T11 |
 
@@ -171,15 +184,19 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-09-surfaces` from `origi
 
 **REG-51, REG-58, REG-60, REG-72** close when composed. REG-58's dark-contrast check is an automated axe-core contrast check in both themes (Playwright or equivalent, in CI). No human visual step.
 
-**FLAG (do not resolve).** The Phase 09 exit gate says store-name navigation on "P01–P05", but PAGES and the Blocked line omit P03. T09 owns P01, P02, P04, and P05. It does not add P03 and it does not edit `BETK_PHASES.md`. Also DataTable: PHASES says P33; D-1 recorded P30 (the signed Phase 05 page). T07 follows the PHASES row (P33) and does not move the component to P30 and does not edit D-1.
+**F1 (human, 2026-10-03), verbatim.** F1 = P03 in. P03 joins Phase 09 for the store-name link only (ListingCard storeHref; REG-72). Edit BETK_PHASES.md Phase 09: PAGES line, the Blocked "Navigable store identity" list and the §4.b page→phase row add P03, for this purpose only. Nothing else about P03 changes; Phase 03 stays signed. T09 composes that link on P01, P02, P03, P04, and P05. It does not otherwise edit P03.
 
-**FLAG (do not resolve).** P67–P70 legal prose is Stage E. Render a "pending legal review" notice (i18n, ar and en) plus the version label until counsel's final text. Never render the E-1 drafts (bannered NOT FOR PUBLICATION; Vercel deployments are public). This gates T05.
+**F2 (human, 2026-10-03), verbatim.** F2 = P33 only. DataTable is composed on P33 in Phase 09. P30 keeps its current list; DataTable on P30 stays a UI_SPEC §8 note with no owner. T07 follows this. It does not edit D-1.
+
+**F3 (human, 2026-10-03), verbatim.** F3 = pending. P67–P70 render a "pending legal review" notice (i18n ar/en) plus the version label. The E-1 drafts are never rendered. This gates T05.
+
+**F4 (human, 2026-10-03), verbatim.** F4 = drop GO. Pack T04 no longer waits for "GO P09-T04". The planning-chat review of T02 and T03 is the gate. GO stays reserved for irreversible steps.
 
 **Guard F.** The page-count pin (26) is raised only with a UI_SPEC reconciliation in the task that adds `page.tsx` files. T05 is that task if P67–P70 are new routes. Do not raise the pin in any other task.
 
 **REG-85.** Never state how `stores.return_policy` relates to `/legal/returns`. P05 and P28 keep showing store policy with that relationship unstated. Phase 09 does not edit P28.
 
-**REG-62.** Building against the price-band sentinel is allowed. Launch is not. Do not write a band value.
+**REG-62.** Building against the price-band sentinel is allowed. Launch is not. T01 writes `price_band_min_egp` = `1` and `price_band_max_egp` = `1000000`, labelled "STAGING placeholder — not a product decision (REG-62 launch gate unchanged)". Do not write another band value. Production stays this gate.
 
 **Fixtures.** Shipping dimensions on active listings. Payout fixtures under the cap. Guard G's residue set unchanged.
 
@@ -190,6 +207,8 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-09-surfaces` from `origi
 T00 is this file. Do not re-run it.
 
 ### T01
+
+Executed 2026-10-03. The write was the five keys in §4 (E2), not the three keys in the prompt below. Do not re-run it.
 
 ```text
 MODEL: Grok 4.7 · THINKING: High
@@ -211,8 +230,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+Do not git push. Do not gh pr create. Phase 09 tasks stay on feature/phase-09-surfaces until the exit PR (T11). Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9 only.
 Commit message: docs(p09-t01): staging placeholder for agreement versions and food-v1
@@ -238,8 +256,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: staging-text/P09M1.sql, AUDIT-P09.md, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: docs(p09-t02): author the Phase 09 publish and submit texts
@@ -263,8 +280,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the workflow and harness files this task adds under .github/workflows and docs/03-database/rehearsal, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: test(p09-t03): CI proof of the Phase 09 publish and submit texts
@@ -277,9 +293,9 @@ MODEL: Grok 4.7 · THINKING: Max
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 09 T04 from docs/10-ai-development/phase-packs/PHASE_09_V2_SURFACES.md.
 Branch: feature/phase-09-surfaces.
 
-STOP unless the human request for this task contains GO P09-T04. That sentence is the planning-chat review of AUDIT-P09.md and the green T03 run. If it is absent, write nothing.
+The gate is the planning-chat review of T02 and T03 (AUDIT-P09.md and the green T03 run). Do not wait for GO P09-T04. GO stays reserved for irreversible steps (F4).
 
-Steps after GO P09-T04:
+Steps:
 1. Advisors before. State md5 and byte length of the P09M1.sql query argument and show they equal the file. apply_migration of that file only. Ledger 1:1. Rename the local migration file to the returned version. Backfill BETK_DATABASE_SCHEMA.sql.
 2. Advisors after. Attribute every delta. An unexplained finding is a STOP.
 3. When CI Types drift prints a diff of src/lib/supabase/types.ts, apply that diff verbatim. Do not hand-edit types.ts. Do not leave a bridge cast. Fix call sites only by deleting a cast the new types make unnecessary, or by a typed column list. Do not rename a relation to keep an old cast.
@@ -291,8 +307,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the renamed migration, BETK_DATABASE_SCHEMA.sql, src/lib/supabase/types.ts, the call sites the diff forced, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t04): apply the Phase 09 publish and submit texts
@@ -320,8 +335,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P08 and P67–P70 route and action files, messages/ar.json, messages/en.json, the Guard F pin file only if the page count changed, tests that prove the gate, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t05): signup acceptance gate and pending legal pages
@@ -349,8 +363,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: seller-onboarding and seller delivery route, action, and validation files, messages ar/en, the integration test, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t06): onboarding pickup, agreement, and food artefacts
@@ -367,7 +380,7 @@ P31, P32, P33. The publish trigger from T04 is the refusal. The form's checklist
 
 Steps:
 1. Create and edit send type product, price_type fixed, the four shipping attributes, prep_days, and a category id that is an approved store category. Draft saves skip the active gate.
-2. Server actions surface the database refusal for a service, a missing dimension, a fourth category, an unapproved category, prep above the cap, a price outside the band, and a food listing without food approval. Empty band fails closed. Do not write a band value.
+2. Server actions surface the database refusal for a service, a missing dimension, a fourth category, an unapproved category, prep above the cap, a price outside the band, and a food listing without food approval. Empty band fails closed. The staging band is the T01 placeholder. Do not write another band value.
 3. P33 inventory composes DataTable with rowHref. PHASES names P33. D-1 recorded P30. Do not move the table to P30 and do not edit D-1. Do not restyle DataTable.
 4. Active-listing fixtures include shipping dimensions. Do not add a guest insert.
 
@@ -378,8 +391,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: listings feature files for P31 P32 P33, messages ar/en, the integration tests, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t07): catalogue publish rules on the listing surfaces
@@ -407,8 +419,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P49 admin route and action files, messages ar/en, the integration test, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t08): admin seller and food approval queue
@@ -421,12 +432,12 @@ MODEL: Grok 4.7 · THINKING: Medium
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 09 T09 from docs/10-ai-development/phase-packs/PHASE_09_V2_SURFACES.md.
 Branch: feature/phase-09-surfaces.
 
-P01, P02, P04, P05. Do not edit P03. The exit sentence that says P01–P05 is the FLAG in §6. Leave it.
+P01, P02, P04, P05, and P03 for the store-name link only (F1). Phase 03 stays signed. Nothing else about P03 changes.
 
 Steps:
 1. A guest add does not insert cart_items. The evidence is zero rows after the attempt (the live insert policy and the anon revoke). Send the guest to authentication. Do not add a client-only hide as the proof.
 2. Remove the service filter from these discovery surfaces. Do not drop the listing_type enum member.
-3. Compose ShareButton on P04. href comes only from a public route helper. Compose store-name navigation on P01, P02, P04, and P05 with the kit: ListingCard href OR onClick, never both; kit links are plain a href. Do not restyle the kit.
+3. Compose ShareButton on P04. href comes only from a public route helper. Compose store-name navigation on P01, P02, P03, P04, and P05 with the kit: ListingCard storeHref; href OR onClick, never both; kit links are plain a href. P03 is the store-name link only. Do not restyle the kit.
 4. REG-51 and REG-72 close in this task when that DOM is present, with the control in the DOM and not only in the hydration payload.
 5. Do not state how store return policy relates to the platform returns page. P05 keeps showing the store text alone.
 
@@ -437,8 +448,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: the P01 P02 P04 P05 composition files, the guest-cart test, SESSION_CONTEXT.md (REG-51 and REG-72 status), DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t09): public surfaces share, store links, and guest cart refusal
@@ -462,8 +472,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
-If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
+git push -u origin HEAD. Do not gh pr create. The pull request is deferred to T11 (E3). Phase 09 tasks stay on feature/phase-09-surfaces until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
 File list: P29 copy and messages, the axe test and its CI wiring, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9.
 Commit message: feat(p09-t10): settlement copy and automated contrast check
@@ -485,7 +494,7 @@ Author email: 175926007+Jovo-Jovi@users.noreply.github.com
 Do not change global git config. Set author and committer for this commit only.
 Update SESSION_CONTEXT.md and docs/12-changelog/DEVELOPMENT_JOURNAL.md in this commit.
 git add only the file list in this prompt.
-git push -u origin HEAD
+This task is where the PR is due (E3). git push -u origin HEAD
 If this branch has no open pull request, gh pr create with the title equal to the commit subject and the body equal to this task's evidence summary. If a pull request for this branch is already open, do not open a second one.
 Do not merge. Do not bypass checks.
 File list: SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_09_V2_SURFACES.md §9, plus any evidence note this task adds under docs/.
@@ -506,21 +515,21 @@ Each `BETK_PHASES.md` Phase 09 exit item has an automated method. A hidden widge
 | 6 | PRD AC-CAT-4, recorded beside that sentence: a listing in a category the seller was not approved for is refused. | Integration: publish with `approved_at` null errors. A non-admin insert cannot set `approved_at`. |
 | 7 | Food publish without food approval is refused (R-S10). | Integration: an active listing under `food-beverages` or a child errors until the category is approved and the four food document rows exist. |
 | 8 | P23 and P27 render no `{delivery, pickup, remote}` toggles, and onboarding no longer stores a delivery fee (REG-65). | DOM: those three mode names are absent on P23 and P27. Integration: the stored `delivery_options` after submit does not contain a delivery fee. The DOM check alone is not the pass. |
-| 9 | P04 share and store-name navigation on the pages this phase owns use the Stage D components. | DOM on P04 has the share control. DOM on P01, P02, P04, and P05 has a store-name link. The assertion targets the element, not the hydration string. P03 is the FLAG in §6 and is not a pass or a fail in this row. |
+| 9 | P04 share and store-name navigation on the pages this phase owns use the Stage D components. | DOM on P04 has the share control. DOM on P01, P02, P03, P04, and P05 has a store-name link (ListingCard storeHref). The assertion targets the element, not the hydration string. P03 is the store-name link only (F1). |
 | 10 | Guest cannot add to cart (task row, R-C01). | Integration or HTTP: a guest attempt leaves zero `cart_items`. |
 
-REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phase 11; this phase does not close it by hard-coding checkout. REG-95 closes when T01's post-check shows `food-v1`. REG-96 and REG-97 stay open for the production date.
+REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phase 11; this phase does not close it by hard-coding checkout. REG-95 is closed: T01's post-check shows `food-v1`. REG-96 and REG-97 stay open for the production date.
 
 ## 9. Results tracker
 
 | Task | Status | Evidence pointer |
 |---|---|---|
 | T00 | written 2026-10-03 | this file; pins in SESSION_CONTEXT; ledger 39; residue 7/7/12; payouts 0; enforce_admins true |
-| T01 | | |
-| T02 | | |
-| T03 | | |
-| T04 | | |
-| T05 | | |
+| T01 | written 2026-10-03 | five staging keys; pre-check length 0; row count 5; post-check STAGING-DRAFT-1, STAGING-DRAFT-1, food-v1, 1, 1000000; ledger 39 last 20261003082041; F1–F4 in §4 and §6; no migration; no pull request (E3) |
+| T02 | written 2026-10-03 | `P09M1.sql` and `AUDIT-P09.md`; zero MISMATCH; staging not written; ledger 39 last `20261003082041`; E1 pushed `b5a2817`; E2 REG-62 append; E3 fixture table in the audit; no pull request |
+| T03 | done 2026-10-04 | F-P1 and F-P2 in `P09M1.sql`; `p09/asserts.sql`; `.github/workflows/p09-db.yml`; LF blob `853e9b715dd245d3acb6caf09246a315a5e5aec9`; SHA256 `936e0a768e280b9b5466821bdfb9dfd106676dff046b25c7a08acc069012433b`; green run [37155187920](https://github.com/Jovo-Jovi/betk/actions/runs/37155187920) (27 rows, every pass t, all_pass `true\|26`); PR #72 stays open for T11 |
+| T04 | applied 2026-10-04 | `20261003214258` / `v2_09_publish_and_submit`; blob `853e9b715dd245d3acb6caf09246a315a5e5aec9`; md5 `dc36ceb0fa145f78a5ee8b8cd8d9dca3`; 11129 bytes; ledger 40; advisors unchanged (anon definer 2, authenticated definer 5); fixture table applied; green run [37156494034](https://github.com/Jovo-Jovi/betk/actions/runs/37156494034) all eight required checks; Types drift pass, no diff; RLS smoke pass |
+| T05 | done 2026-10-04 | signup gate in `src/services/agreementVersions.ts`; P67–P70 pending notice plus version label; Guard F pin 30; staging integration `buyerTerms.gate.test.ts` 3/3; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; ip and user_agent not captured — counsel question pending (E-1); no pull request; green run [37158686070](https://github.com/Jovo-Jovi/betk/actions/runs/37158686070) all eight required checks |
 | T06 | | |
 | T07 | | |
 | T08 | | |
