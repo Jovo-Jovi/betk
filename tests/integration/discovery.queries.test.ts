@@ -213,6 +213,17 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       });
     if (raErr) throw new Error(`[discovery.test] rating_aggregates seed: ${raErr.message}`);
 
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: storeId, category_id: topCategoryId });
+    if (scIns) throw new Error(`[discovery.test] store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", storeId)
+      .eq("category_id", topCategoryId);
+    if (scUpd) throw new Error(`[discovery.test] store_categories approve: ${scUpd.message}`);
+
     // ---- listings: active / draft / soft-deleted ----
     const baseListing = {
       store_id: storeId,
@@ -222,6 +233,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       price: 150,
       price_type: "fixed" as const,
       stock_qty: 10,
+      prep_days: 1,
       // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
       weight_g: 1,
       length_mm: 1,

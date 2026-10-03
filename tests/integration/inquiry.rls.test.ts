@@ -162,6 +162,11 @@ async function seedListing(storeId: string, categoryId: string): Promise<string>
       price: 100,
       price_type: "fixed",
       status: "active",
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     })
     .select("id")
     .single();
@@ -198,10 +203,18 @@ describeOrSkip("Phase 06 / T01 — inquiries + inquiry_messages RLS (staging)", 
       await svc().from("users").delete().in("id", stale.map((s) => s.seller_id));
     }
 
+    const { data: foodParent, error: foodErr } = await svc()
+      .from("categories")
+      .select("id")
+      .eq("slug", "food-beverages")
+      .single();
+    if (foodErr || !foodParent) throw new Error(`food parent: ${foodErr?.message}`);
     const { data: cat, error: catErr } = await svc()
       .from("categories")
       .select("id")
       .eq("is_active", true)
+      .neq("slug", "food-beverages")
+      .or(`parent_id.is.null,parent_id.neq.${foodParent.id}`)
       .limit(1)
       .single();
     if (catErr || !cat) throw new Error(`no active category for fixtures: ${catErr?.message}`);
@@ -211,6 +224,16 @@ describeOrSkip("Phase 06 / T01 — inquiries + inquiry_messages RLS (staging)", 
     sellerB = await createSeller("sellerb");
     buyer = await createBuyer("buyer");
     outsiderBuyer = await createBuyer("outsider");
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: sellerA.storeId, category_id: categoryId });
+    if (scIns) throw new Error(`store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", sellerA.storeId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`store_categories approve: ${scUpd.message}`);
     listingA = await seedListing(sellerA.storeId, categoryId);
   });
 

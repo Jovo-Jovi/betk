@@ -77,6 +77,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
         price_type: "fixed",
         stock_qty: stockQty,
         status,
+        prep_days: 1,
         ...{
           // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
           weight_g: 1,
@@ -193,6 +194,17 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
       .single();
     if (stErr || !store) throw new Error(`[stock.test] store: ${stErr?.message}`);
     storeId = store.id;
+
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: storeId, category_id: categoryId });
+    if (scIns) throw new Error(`[stock.test] store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", storeId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`[stock.test] store_categories approve: ${scUpd.message}`);
 
     // Scenario fixtures
     listingA = await seedListing("A", 3); // exact → 0 → sold_out

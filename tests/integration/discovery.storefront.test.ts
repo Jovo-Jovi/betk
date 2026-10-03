@@ -188,6 +188,17 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
     if (suspErr || !susp) throw new Error(`[storefront.test] suspended store: ${suspErr?.message}`);
     suspendedStoreId = (susp as { id: string }).id;
 
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: activeStoreId, category_id: categoryId });
+    if (scIns) throw new Error(`[storefront.test] store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", activeStoreId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`[storefront.test] store_categories approve: ${scUpd.message}`);
+
     // ── one active listing on the active store (wishlist target) ──
     const { data: listing, error: listErr } = await svc()
       .from("listings")
@@ -200,6 +211,11 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
         price_type: "fixed",
         stock_qty: 5,
         status: "active",
+        prep_days: 1,
+        weight_g: 1,
+        length_mm: 1,
+        width_mm: 1,
+        height_mm: 1,
       } as never)
       .select("id")
       .single();
