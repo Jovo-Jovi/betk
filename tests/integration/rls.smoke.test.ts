@@ -207,6 +207,27 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   }
 }
 
+/**
+ * Removes the A4 payout-cap seed: the payout A4 inserts, then the seller
+ * order, then the master. Runs from afterAll even when beforeAll throws
+ * after a partial insert. Service role. No-ops when that step never ran.
+ */
+async function cleanupPayoutCapFixture(): Promise<void> {
+  const db = svc();
+  if (storeId) {
+    await db.from("payouts").delete().eq("store_id", storeId);
+  }
+  if (payoutCapOrderId) {
+    await db.from("seller_orders" as "orders").delete().eq("id", payoutCapOrderId);
+  }
+  if (payoutCapMasterId) {
+    await db
+      .from("master_orders" as unknown as "orders")
+      .delete()
+      .eq("id", payoutCapMasterId);
+  }
+}
+
 /** Removes leftover auth users (and their fixtures) from prior crashed runs. */
 async function sweepLeftovers(): Promise<void> {
   const leftover: string[] = [];
@@ -235,6 +256,10 @@ let activeListingId = "";
 let draftListingId = "";
 let deletedListingId = "";
 let buyerAOrderId = "";
+// A4 cap fixture. Set as soon as each insert returns so afterAll can
+// delete a partial seed when beforeAll throws.
+let payoutCapMasterId = "";
+let payoutCapOrderId = "";
 
 async function createActor(spec: {
   key: ActorKey;
@@ -438,10 +463,46 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       .single();
     if (oErr || !order) throw new Error(`order insert: ${oErr?.message}`);
     buyerAOrderId = order.id;
+
+    // Eligible balance for A4's payout INSERT (amount 100; payouts_amount_check).
+    // Mirrors payout_within_cap in
+    // docs/03-database/rehearsal/m78/asserts.sql lines 955–985:
+    // one master order, one seller order on this phone-verified seller's store,
+    // status pending, balance_confirmed_at and payout_eligible_at <= now(),
+    // subtotal 200. trg_set_order_commission_snapshot stamps commission_amount
+    // on INSERT (commission_rate_pct 0, so commission 0). refunded_subtotal
+    // defaults to 0. Available = 200 - 0 - 0, which covers 100.
+    payoutCapMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-PM`);
+    const { data: capOrder, error: capErr } = await svc()
+      .from("seller_orders" as "orders")
+      .insert({
+        betk_ref: `RLS-${RUN}-PAY`,
+        buyer_id: actors.buyerA.id,
+        store_id: storeId,
+        delivery_method: "delivery",
+        delivery_fee: 0,
+        subtotal: 200,
+        total_amount: 200,
+        commission_amount: 0,
+        status: "pending",
+        balance_confirmed_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        payout_eligible_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        ...{ master_order_id: payoutCapMasterId },
+      } as never)
+      .select("id")
+      .single();
+    if (capErr || !capOrder) {
+      throw new Error(`payout-cap order insert: ${capErr?.message}`);
+    }
+    payoutCapOrderId = capOrder.id;
   });
 
   afterAll(async () => {
-    await purgeByUserIds(createdUserIds);
+    try {
+      await cleanupPayoutCapFixture();
+    } finally {
+      await purgeByUserIds(createdUserIds);
+    }
 
     // ---- Summary ----
     const pass = results.filter((r) => r.outcome === "PASS").length;
