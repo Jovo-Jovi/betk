@@ -331,7 +331,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
 
     const visibleRef = `T01-${RUN}`;
     const { data: visibleMaster, error: visibleMasterErr } = await svc()
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: buyerId,
         betk_ref: `${visibleRef}-M`,
@@ -343,7 +343,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       throw new Error(`[discovery.test] master seed: ${visibleMasterErr?.message}`);
     }
     const { data: order, error: orderErr } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: visibleRef,
         buyer_id: buyerId,
@@ -384,7 +384,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
     // reviews.uq_review_per_order is UNIQUE(order_id) → needs its own order.
     const hiddenRef = `T01H-${RUN}`;
     const { data: hiddenMaster, error: hiddenMasterErr } = await svc()
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: buyerId,
         betk_ref: `${hiddenRef}-M`,
@@ -396,7 +396,7 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
       throw new Error(`[discovery.test] hidden master seed: ${hiddenMasterErr?.message}`);
     }
     const { data: hiddenOrder, error: hiddenOrderErr } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: hiddenRef,
         buyer_id: buyerId,
@@ -444,8 +444,8 @@ describeOrSkip("Phase 03 / T01 — discovery query layer (staging, anon client)"
     // `boosts`/`orders` do NOT cascade from `stores` and must be deleted first.
     if (storeId) {
       await svc().from("reviews").delete().eq("store_id", storeId);
-      await svc().from("seller_orders" as "orders").delete().eq("store_id", storeId);
-      await svc().from("master_orders" as unknown as "orders").delete().eq("buyer_id", reviewBuyerId);
+      await svc().from("seller_orders").delete().eq("store_id", storeId);
+      await svc().from("master_orders").delete().eq("buyer_id", reviewBuyerId);
       await svc().from("boosts").delete().eq("store_id", storeId);
       await svc().from("rating_aggregates").delete().eq("store_id", storeId);
     }

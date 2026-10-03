@@ -37,6 +37,8 @@ export const orderStatusColors: Record<OrderStatus, StatusColorPair> = {
   pending:     { bg: "bg-warning/15",     fg: "text-warning-text" },
   confirmed:   { bg: "bg-success/15",     fg: "text-success" },
   preparing:   { bg: "bg-warning/15",     fg: "text-warning-text" },
+  // CD-DELTA-6 addendum (Claude Design, 2026-10-03)
+  ready:       { bg: "bg-success/15",     fg: "text-success" },
   dispatched:  { bg: "bg-info/[0.12]",    fg: "text-info" },
   delivered:   { bg: "bg-primary/[0.12]", fg: "text-primary" },
   cancelled:   { bg: "bg-destructive/[0.12]", fg: "text-destructive" },

@@ -90,6 +90,47 @@ export type Database = {
           },
         ]
       }
+      agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          document: Database["betk"]["Enums"]["agreement_document"]
+          id: string
+          ip: unknown
+          status: string
+          user_agent: string | null
+          user_id: string
+          version_label: string
+        }
+        Insert: {
+          accepted_at?: string
+          document: Database["betk"]["Enums"]["agreement_document"]
+          id?: string
+          ip?: unknown
+          status?: string
+          user_agent?: string | null
+          user_id: string
+          version_label: string
+        }
+        Update: {
+          accepted_at?: string
+          document?: Database["betk"]["Enums"]["agreement_document"]
+          id?: string
+          ip?: unknown
+          status?: string
+          user_agent?: string | null
+          user_id?: string
+          version_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_acceptances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boost_packages: {
         Row: {
           duration_hours: number
@@ -229,6 +270,64 @@ export type Database = {
           },
         ]
       }
+      cart_items: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          inquiry_id: string | null
+          is_custom: boolean
+          listing_id: string
+          quantity: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          inquiry_id?: string | null
+          is_custom?: boolean
+          listing_id: string
+          quantity: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          inquiry_id?: string | null
+          is_custom?: boolean
+          listing_id?: string
+          quantity?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           icon_url: string | null
@@ -359,6 +458,33 @@ export type Database = {
           },
         ]
       }
+      courier_rates: {
+        Row: {
+          destination_governorate: string
+          fee_egp: number
+          id: string
+          origin_governorate: string
+          weight_max_g: number | null
+          weight_min_g: number
+        }
+        Insert: {
+          destination_governorate: string
+          fee_egp: number
+          id?: string
+          origin_governorate: string
+          weight_max_g?: number | null
+          weight_min_g: number
+        }
+        Update: {
+          destination_governorate?: string
+          fee_egp?: number
+          id?: string
+          origin_governorate?: string
+          weight_max_g?: number | null
+          weight_min_g?: number
+        }
+        Relationships: []
+      }
       dispute_evidence: {
         Row: {
           description: string | null
@@ -448,6 +574,7 @@ export type Database = {
           resolution: Database["betk"]["Enums"]["dispute_resolution"] | null
           resolution_notes: string | null
           resolved_at: string | null
+          return_id: string | null
           sla_deadline: string
           status: Database["betk"]["Enums"]["dispute_status"]
           store_id: string
@@ -463,6 +590,7 @@ export type Database = {
           resolution?: Database["betk"]["Enums"]["dispute_resolution"] | null
           resolution_notes?: string | null
           resolved_at?: string | null
+          return_id?: string | null
           sla_deadline: string
           status?: Database["betk"]["Enums"]["dispute_status"]
           store_id: string
@@ -478,6 +606,7 @@ export type Database = {
           resolution?: Database["betk"]["Enums"]["dispute_resolution"] | null
           resolution_notes?: string | null
           resolved_at?: string | null
+          return_id?: string | null
           sla_deadline?: string
           status?: Database["betk"]["Enums"]["dispute_status"]
           store_id?: string
@@ -501,7 +630,14 @@ export type Database = {
             foreignKeyName: "disputes_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: true
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "returns"
             referencedColumns: ["id"]
           },
           {
@@ -586,6 +722,10 @@ export type Database = {
           last_message_at: string
           listing_id: string
           quantity: number | null
+          quote_expires_at: string | null
+          quoted_at: string | null
+          quoted_prep_days: number | null
+          quoted_price: number | null
           special_requests: string | null
           status: Database["betk"]["Enums"]["inquiry_status"]
           store_id: string
@@ -602,6 +742,10 @@ export type Database = {
           last_message_at?: string
           listing_id: string
           quantity?: number | null
+          quote_expires_at?: string | null
+          quoted_at?: string | null
+          quoted_prep_days?: number | null
+          quoted_price?: number | null
           special_requests?: string | null
           status?: Database["betk"]["Enums"]["inquiry_status"]
           store_id: string
@@ -618,6 +762,10 @@ export type Database = {
           last_message_at?: string
           listing_id?: string
           quantity?: number | null
+          quote_expires_at?: string | null
+          quoted_at?: string | null
+          quoted_prep_days?: number | null
+          quoted_price?: number | null
           special_requests?: string | null
           status?: Database["betk"]["Enums"]["inquiry_status"]
           store_id?: string
@@ -627,7 +775,7 @@ export type Database = {
             foreignKeyName: "fk_inquiries_order"
             columns: ["converted_to_order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
           {
@@ -765,15 +913,20 @@ export type Database = {
           deleted_at: string | null
           delivery_options: Json
           description_ar: string | null
+          height_mm: number | null
           id: string
           inquiry_count: number
           is_made_to_order: boolean
+          length_mm: number | null
           low_stock_threshold: number
+          prep_days: number | null
           price: number | null
           price_type: Database["betk"]["Enums"]["price_type"]
           search_vector: unknown
+          specs: Json
           status: Database["betk"]["Enums"]["listing_status"]
           stock_qty: number | null
+          stock_touched_at: string | null
           store_id: string
           subcategory_id: string | null
           title_ar: string
@@ -781,6 +934,8 @@ export type Database = {
           type: Database["betk"]["Enums"]["listing_type"]
           updated_at: string
           view_count: number
+          weight_g: number | null
+          width_mm: number | null
         }
         Insert: {
           accepts_custom_orders?: boolean
@@ -790,15 +945,20 @@ export type Database = {
           deleted_at?: string | null
           delivery_options?: Json
           description_ar?: string | null
+          height_mm?: number | null
           id?: string
           inquiry_count?: number
           is_made_to_order?: boolean
+          length_mm?: number | null
           low_stock_threshold?: number
+          prep_days?: number | null
           price?: number | null
           price_type?: Database["betk"]["Enums"]["price_type"]
           search_vector?: unknown
+          specs?: Json
           status?: Database["betk"]["Enums"]["listing_status"]
           stock_qty?: number | null
+          stock_touched_at?: string | null
           store_id: string
           subcategory_id?: string | null
           title_ar: string
@@ -806,6 +966,8 @@ export type Database = {
           type: Database["betk"]["Enums"]["listing_type"]
           updated_at?: string
           view_count?: number
+          weight_g?: number | null
+          width_mm?: number | null
         }
         Update: {
           accepts_custom_orders?: boolean
@@ -815,15 +977,20 @@ export type Database = {
           deleted_at?: string | null
           delivery_options?: Json
           description_ar?: string | null
+          height_mm?: number | null
           id?: string
           inquiry_count?: number
           is_made_to_order?: boolean
+          length_mm?: number | null
           low_stock_threshold?: number
+          prep_days?: number | null
           price?: number | null
           price_type?: Database["betk"]["Enums"]["price_type"]
           search_vector?: unknown
+          specs?: Json
           status?: Database["betk"]["Enums"]["listing_status"]
           stock_qty?: number | null
+          stock_touched_at?: string | null
           store_id?: string
           subcategory_id?: string | null
           title_ar?: string
@@ -831,6 +998,8 @@ export type Database = {
           type?: Database["betk"]["Enums"]["listing_type"]
           updated_at?: string
           view_count?: number
+          weight_g?: number | null
+          width_mm?: number | null
         }
         Relationships: [
           {
@@ -852,6 +1021,78 @@ export type Database = {
             columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      master_orders: {
+        Row: {
+          betk_ref: string
+          buyer_id: string
+          combined_delivery_total: number
+          created_at: string
+          delivery_address_id: string | null
+          id: string
+          payment_deadline: string | null
+          proof_path: string | null
+          proof_uploaded_at: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          snapshot_building_notes: string | null
+          snapshot_city: string | null
+          snapshot_governorate: string | null
+          snapshot_street_address: string | null
+          transfer_reference: string | null
+        }
+        Insert: {
+          betk_ref: string
+          buyer_id: string
+          combined_delivery_total: number
+          created_at?: string
+          delivery_address_id?: string | null
+          id?: string
+          payment_deadline?: string | null
+          proof_path?: string | null
+          proof_uploaded_at?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          snapshot_building_notes?: string | null
+          snapshot_city?: string | null
+          snapshot_governorate?: string | null
+          snapshot_street_address?: string | null
+          transfer_reference?: string | null
+        }
+        Update: {
+          betk_ref?: string
+          buyer_id?: string
+          combined_delivery_total?: number
+          created_at?: string
+          delivery_address_id?: string | null
+          id?: string
+          payment_deadline?: string | null
+          proof_path?: string | null
+          proof_uploaded_at?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          snapshot_building_notes?: string | null
+          snapshot_city?: string | null
+          snapshot_governorate?: string | null
+          snapshot_street_address?: string | null
+          transfer_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "master_orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
             referencedColumns: ["id"]
           },
         ]
@@ -947,32 +1188,48 @@ export type Database = {
       order_items: {
         Row: {
           id: string
+          inquiry_id: string | null
+          is_custom: boolean
           listing_id: string
           listing_title_ar: string
           order_id: string
+          prep_days_snapshot: number | null
           quantity: number
           subtotal: number
           unit_price: number
         }
         Insert: {
           id?: string
+          inquiry_id?: string | null
+          is_custom?: boolean
           listing_id: string
           listing_title_ar: string
           order_id: string
+          prep_days_snapshot?: number | null
           quantity: number
           subtotal: number
           unit_price: number
         }
         Update: {
           id?: string
+          inquiry_id?: string | null
+          is_custom?: boolean
           listing_id?: string
           listing_title_ar?: string
           order_id?: string
+          prep_days_snapshot?: number | null
           quantity?: number
           subtotal?: number
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "order_items_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_items_listing_id_fkey"
             columns: ["listing_id"]
@@ -984,7 +1241,7 @@ export type Database = {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1022,7 +1279,7 @@ export type Database = {
             foreignKeyName: "fk_order_messages_order"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1077,102 +1334,7 @@ export type Database = {
             foreignKeyName: "order_status_history_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      orders: {
-        Row: {
-          betk_ref: string
-          buyer_id: string
-          cancellation_reason: string | null
-          cancelled_by: Database["betk"]["Enums"]["cancelled_by_type"] | null
-          commission_amount: number | null
-          commission_rate: number | null
-          confirmed_at: string | null
-          created_at: string
-          delivered_at: string | null
-          delivery_address_id: string | null
-          delivery_fee: number
-          delivery_method: Database["betk"]["Enums"]["delivery_preference"]
-          id: string
-          inquiry_id: string | null
-          notes: string | null
-          status: Database["betk"]["Enums"]["order_status"]
-          store_id: string
-          subtotal: number
-          total_amount: number
-        }
-        Insert: {
-          betk_ref: string
-          buyer_id: string
-          cancellation_reason?: string | null
-          cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
-          commission_amount?: number | null
-          commission_rate?: number | null
-          confirmed_at?: string | null
-          created_at?: string
-          delivered_at?: string | null
-          delivery_address_id?: string | null
-          delivery_fee?: number
-          delivery_method: Database["betk"]["Enums"]["delivery_preference"]
-          id?: string
-          inquiry_id?: string | null
-          notes?: string | null
-          status?: Database["betk"]["Enums"]["order_status"]
-          store_id: string
-          subtotal: number
-          total_amount: number
-        }
-        Update: {
-          betk_ref?: string
-          buyer_id?: string
-          cancellation_reason?: string | null
-          cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
-          commission_amount?: number | null
-          commission_rate?: number | null
-          confirmed_at?: string | null
-          created_at?: string
-          delivered_at?: string | null
-          delivery_address_id?: string | null
-          delivery_fee?: number
-          delivery_method?: Database["betk"]["Enums"]["delivery_preference"]
-          id?: string
-          inquiry_id?: string | null
-          notes?: string | null
-          status?: Database["betk"]["Enums"]["order_status"]
-          store_id?: string
-          subtotal?: number
-          total_amount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_delivery_address_id_fkey"
-            columns: ["delivery_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_inquiry_id_fkey"
-            columns: ["inquiry_id"]
-            isOneToOne: false
-            referencedRelation: "inquiries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1219,6 +1381,8 @@ export type Database = {
           order_id: string
           payment_type: Database["betk"]["Enums"]["payment_type"]
           proof_path: string | null
+          proof_snapshot_at: string | null
+          refunded_amount: number
           status: Database["betk"]["Enums"]["payment_status"]
           transfer_reference: string | null
         }
@@ -1233,6 +1397,8 @@ export type Database = {
           order_id: string
           payment_type: Database["betk"]["Enums"]["payment_type"]
           proof_path?: string | null
+          proof_snapshot_at?: string | null
+          refunded_amount?: number
           status?: Database["betk"]["Enums"]["payment_status"]
           transfer_reference?: string | null
         }
@@ -1247,6 +1413,8 @@ export type Database = {
           order_id?: string
           payment_type?: Database["betk"]["Enums"]["payment_type"]
           proof_path?: string | null
+          proof_snapshot_at?: string | null
+          refunded_amount?: number
           status?: Database["betk"]["Enums"]["payment_status"]
           transfer_reference?: string | null
         }
@@ -1262,7 +1430,7 @@ export type Database = {
             foreignKeyName: "payments_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1404,6 +1572,90 @@ export type Database = {
           },
         ]
       }
+      return_evidence: {
+        Row: {
+          created_at: string
+          id: string
+          return_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          return_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          return_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_evidence_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      returns: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          reason: string
+          resolved_at: string | null
+          seller_order_id: string
+          status: Database["betk"]["Enums"]["return_status"]
+          store_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          resolved_at?: string | null
+          seller_order_id: string
+          status?: Database["betk"]["Enums"]["return_status"]
+          store_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          resolved_at?: string | null
+          seller_order_id?: string
+          status?: Database["betk"]["Enums"]["return_status"]
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "returns_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_seller_order_id_fkey"
+            columns: ["seller_order_id"]
+            isOneToOne: false
+            referencedRelation: "seller_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_photos: {
         Row: {
           id: string
@@ -1494,7 +1746,7 @@ export type Database = {
             foreignKeyName: "reviews_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: true
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1540,6 +1792,154 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_orders: {
+        Row: {
+          balance_confirmed_at: string | null
+          betk_ref: string | null
+          buyer_id: string
+          cancellation_reason: string | null
+          cancelled_by: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount: number | null
+          commission_rate: number | null
+          confirmed_at: string | null
+          courier_rate_id: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_address_id: string | null
+          delivery_fee: number
+          delivery_method: Database["betk"]["Enums"]["delivery_preference"]
+          display_ref: string | null
+          escalated_at: string | null
+          escalation_note: string | null
+          escalation_reason:
+            | Database["betk"]["Enums"]["escalation_reason"]
+            | null
+          escalation_resolved_at: string | null
+          id: string
+          inquiry_id: string | null
+          master_order_id: string
+          notes: string | null
+          payout_eligible_at: string | null
+          prep_deadline: string | null
+          refunded_subtotal: number
+          status: Database["betk"]["Enums"]["order_status"]
+          store_id: string
+          subtotal: number
+          total_amount: number
+        }
+        Insert: {
+          balance_confirmed_at?: string | null
+          betk_ref?: string | null
+          buyer_id: string
+          cancellation_reason?: string | null
+          cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          confirmed_at?: string | null
+          courier_rate_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address_id?: string | null
+          delivery_fee?: number
+          delivery_method: Database["betk"]["Enums"]["delivery_preference"]
+          display_ref?: string | null
+          escalated_at?: string | null
+          escalation_note?: string | null
+          escalation_reason?:
+            | Database["betk"]["Enums"]["escalation_reason"]
+            | null
+          escalation_resolved_at?: string | null
+          id?: string
+          inquiry_id?: string | null
+          master_order_id: string
+          notes?: string | null
+          payout_eligible_at?: string | null
+          prep_deadline?: string | null
+          refunded_subtotal?: number
+          status?: Database["betk"]["Enums"]["order_status"]
+          store_id: string
+          subtotal: number
+          total_amount: number
+        }
+        Update: {
+          balance_confirmed_at?: string | null
+          betk_ref?: string | null
+          buyer_id?: string
+          cancellation_reason?: string | null
+          cancelled_by?: Database["betk"]["Enums"]["cancelled_by_type"] | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          confirmed_at?: string | null
+          courier_rate_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address_id?: string | null
+          delivery_fee?: number
+          delivery_method?: Database["betk"]["Enums"]["delivery_preference"]
+          display_ref?: string | null
+          escalated_at?: string | null
+          escalation_note?: string | null
+          escalation_reason?:
+            | Database["betk"]["Enums"]["escalation_reason"]
+            | null
+          escalation_resolved_at?: string | null
+          id?: string
+          inquiry_id?: string | null
+          master_order_id?: string
+          notes?: string | null
+          payout_eligible_at?: string | null
+          prep_deadline?: string | null
+          refunded_subtotal?: number
+          status?: Database["betk"]["Enums"]["order_status"]
+          store_id?: string
+          subtotal?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_courier_rate_id_fkey"
+            columns: ["courier_rate_id"]
+            isOneToOne: false
+            referencedRelation: "courier_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_master_order_id_fkey"
+            columns: ["master_order_id"]
+            isOneToOne: false
+            referencedRelation: "master_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1760,7 +2160,40 @@ export type Database = {
             foreignKeyName: "shipments_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: true
-            referencedRelation: "orders"
+            referencedRelation: "seller_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_categories: {
+        Row: {
+          approved_at: string | null
+          category_id: string
+          store_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          category_id: string
+          store_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          category_id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1796,6 +2229,41 @@ export type Database = {
             foreignKeyName: "store_follows_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_pickup_addresses: {
+        Row: {
+          building_notes: string | null
+          city: string
+          governorate: string
+          store_id: string
+          street_address: string
+          updated_at: string
+        }
+        Insert: {
+          building_notes?: string | null
+          city: string
+          governorate: string
+          store_id: string
+          street_address: string
+          updated_at?: string
+        }
+        Update: {
+          building_notes?: string | null
+          city?: string
+          governorate?: string
+          store_id?: string
+          street_address?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_pickup_addresses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -1991,17 +2459,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_order_from_inquiry: {
-        Args: {
-          p_address_id: string
-          p_delivery_method: Database["betk"]["Enums"]["delivery_preference"]
-          p_deposit_method: Database["betk"]["Enums"]["payment_method"]
-          p_inquiry_id: string
-        }
+      checkout_agreement_version: { Args: { p_key: string }; Returns: string }
+      checkout_from_cart: {
+        Args: { p_delivery_address_id: string }
         Returns: string
       }
+      checkout_payment_window_minutes: { Args: never; Returns: number }
+      checkout_quote_multiplier: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       my_store_id: { Args: never; Returns: string }
+      release_seller_orders: {
+        Args: { p_master_id: string; p_skip_payment_id: string }
+        Returns: undefined
+      }
       resubmit_seller_application: {
         Args: { p_doc_back_path: string; p_doc_front_path: string }
         Returns: undefined
@@ -2027,6 +2497,11 @@ export type Database = {
       }
     }
     Enums: {
+      agreement_document:
+        | "buyer_terms"
+        | "seller_agreement"
+        | "return_policy"
+        | "privacy"
       auth_provider: "phone" | "google"
       boost_status: "pending_payment" | "active" | "expired" | "cancelled"
       cancelled_by_type: "buyer" | "seller" | "admin" | "system"
@@ -2052,7 +2527,18 @@ export type Database = {
         | "resolved"
         | "closed"
       doc_review_status: "pending" | "approved" | "rejected"
-      doc_type: "national_id_front" | "national_id_back"
+      doc_type:
+        | "national_id_front"
+        | "national_id_back"
+        | "food_packaging"
+        | "food_label"
+        | "food_expiry"
+        | "food_social_url"
+      escalation_reason:
+        | "out_of_stock"
+        | "damaged"
+        | "cannot_fulfil"
+        | "sla_breach"
       flag_reason:
         | "misleading"
         | "counterfeit"
@@ -2077,6 +2563,7 @@ export type Database = {
         | "pending"
         | "confirmed"
         | "preparing"
+        | "ready"
         | "dispatched"
         | "delivered"
         | "cancelled"
@@ -2087,6 +2574,7 @@ export type Database = {
       payout_method: "instapay" | "vodafone_cash" | "orange_cash"
       payout_status: "pending" | "processing" | "processed" | "rejected"
       price_type: "fixed" | "per_hour" | "starting_from" | "quote_only"
+      return_status: "requested" | "accepted" | "rejected" | "refunded"
       seller_level: "bronze" | "silver" | "gold"
       seller_status: "pending" | "active" | "suspended" | "banned"
       sender_type: "buyer" | "seller" | "admin" | "system"
@@ -2320,6 +2808,12 @@ export type CompositeTypes<
 export const Constants = {
   betk: {
     Enums: {
+      agreement_document: [
+        "buyer_terms",
+        "seller_agreement",
+        "return_policy",
+        "privacy",
+      ],
       auth_provider: ["phone", "google"],
       boost_status: ["pending_payment", "active", "expired", "cancelled"],
       cancelled_by_type: ["buyer", "seller", "admin", "system"],
@@ -2348,7 +2842,20 @@ export const Constants = {
         "closed",
       ],
       doc_review_status: ["pending", "approved", "rejected"],
-      doc_type: ["national_id_front", "national_id_back"],
+      doc_type: [
+        "national_id_front",
+        "national_id_back",
+        "food_packaging",
+        "food_label",
+        "food_expiry",
+        "food_social_url",
+      ],
+      escalation_reason: [
+        "out_of_stock",
+        "damaged",
+        "cannot_fulfil",
+        "sla_breach",
+      ],
       flag_reason: [
         "misleading",
         "counterfeit",
@@ -2375,6 +2882,7 @@ export const Constants = {
         "pending",
         "confirmed",
         "preparing",
+        "ready",
         "dispatched",
         "delivered",
         "cancelled",
@@ -2386,6 +2894,7 @@ export const Constants = {
       payout_method: ["instapay", "vodafone_cash", "orange_cash"],
       payout_status: ["pending", "processing", "processed", "rejected"],
       price_type: ["fixed", "per_hour", "starting_from", "quote_only"],
+      return_status: ["requested", "accepted", "rejected", "refunded"],
       seller_level: ["bronze", "silver", "gold"],
       seller_status: ["pending", "active", "suspended", "banned"],
       sender_type: ["buyer", "seller", "admin", "system"],

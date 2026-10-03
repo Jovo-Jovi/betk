@@ -96,7 +96,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     const subtotal = items.reduce((s, it) => s + it.qty * 100, 0);
     const childRef = `R2-${label}-${RUN}`;
     const { data: master, error: masterErr } = await svc()
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: buyerId,
         betk_ref: `${childRef}-M`,
@@ -106,7 +106,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
       .single();
     if (masterErr || !master) throw new Error(`[stock.test] master ${label}: ${masterErr?.message}`);
     const { data: order, error } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: childRef,
         buyer_id: buyerId,
@@ -218,9 +218,9 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     for (const id of orderIds) {
       await svc().from("order_items").delete().eq("order_id", id);
     }
-    if (storeId) await svc().from("seller_orders" as "orders").delete().eq("store_id", storeId);
+    if (storeId) await svc().from("seller_orders").delete().eq("store_id", storeId);
     if (buyerId) {
-      await svc().from("master_orders" as unknown as "orders").delete().eq("buyer_id", buyerId);
+      await svc().from("master_orders").delete().eq("buyer_id", buyerId);
     }
     for (const id of listingIds) {
       await svc().from("listings").delete().eq("id", id);
@@ -238,7 +238,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     const row = await readListing(listingA);
     expect(row.stock_qty).toBe(3);
     expect(row.status).toBe("active");
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderA).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderA).single();
     expect(order?.status).toBe("pending");
   });
 
@@ -246,7 +246,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     const row = await readListing(listingB);
     expect(row.stock_qty).toBe(10);
     expect(row.status).toBe("active");
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderB).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderB).single();
     expect(order?.status).toBe("pending");
   });
 
@@ -257,7 +257,7 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     expect(c2.stock_qty).toBe(8);
     expect(c1.status).toBe("active");
     expect(c2.status).toBe("active");
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderC).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderC).single();
     expect(order?.status).toBe("pending");
   });
 
@@ -265,21 +265,21 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     const row = await readListing(listingD);
     expect(row.stock_qty).toBeNull();
     expect(row.status).toBe("active");
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderD).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderD).single();
     expect(order?.status).toBe("pending");
   });
 
   it("seed stock stays put; there is no confirmed to preparing update", async () => {
     const row = await readListing(listingE);
     expect(row.stock_qty).toBe(7);
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderE).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderE).single();
     expect(order?.status).toBe("pending");
   });
 
   it("oversell confirm is not issued; stock and pending status stay as seeded", async () => {
     const row = await readListing(listingF);
     expect(row.stock_qty).toBe(2);
-    const { data: order } = await svc().from("seller_orders" as "orders").select("status").eq("id", orderF).single();
+    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderF).single();
     expect(order?.status).toBe("pending");
   });
 });

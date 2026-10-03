@@ -256,7 +256,7 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
     // ── a confirmed order + a visible review (with a photo + seller reply) on the full listing's store ──
     const childRef = `BETK-T05TEST-${RUN}`;
     const { data: master, error: masterErr } = await svc()
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: buyerId,
         betk_ref: `${childRef}-M`,
@@ -266,7 +266,7 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
       .single();
     if (masterErr || !master) throw new Error(`[listing.test] master: ${masterErr?.message}`);
     const { data: order, error: orderErr } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: childRef,
         buyer_id: buyerId,
@@ -308,9 +308,9 @@ describeOrSkip("Phase 03 / T05 — listing detail (staging, anon client)", () =>
   afterAll(async () => {
     if (reviewId) await svc().from("review_photos").delete().eq("review_id", reviewId);
     if (reviewId) await svc().from("reviews").delete().eq("id", reviewId);
-    if (orderId) await svc().from("seller_orders" as "orders").delete().eq("id", orderId);
+    if (orderId) await svc().from("seller_orders").delete().eq("id", orderId);
     if (buyerId) {
-      await svc().from("master_orders" as unknown as "orders").delete().eq("buyer_id", buyerId);
+      await svc().from("master_orders").delete().eq("buyer_id", buyerId);
     }
     for (const id of Object.values(ids)) {
       if (id) await svc().from("listings").delete().eq("id", id);

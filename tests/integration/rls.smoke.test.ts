@@ -144,7 +144,7 @@ const svc = () => service.schema("betk");
  */
 async function seedMaster(buyerId: string, ref: string): Promise<string> {
   const { data, error } = await svc()
-    .from("master_orders" as unknown as "orders")
+    .from("master_orders")
     .insert({
       buyer_id: buyerId,
       betk_ref: ref,
@@ -175,13 +175,13 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
 
   const orderIdSet = new Set<string>();
   const { data: ordersByBuyer } = await db
-    .from("seller_orders" as "orders")
+    .from("seller_orders")
     .select("id")
     .in("buyer_id", userIds);
   for (const o of ordersByBuyer ?? []) orderIdSet.add(o.id);
   if (storeIds.length) {
     const { data: ordersByStore } = await db
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .select("id")
       .in("store_id", storeIds);
     for (const o of ordersByStore ?? []) orderIdSet.add(o.id);
@@ -191,8 +191,8 @@ async function purgeByUserIds(userIds: string[]): Promise<void> {
   if (orderIds.length) {
     await db.from("order_items").delete().in("order_id", orderIds);
     await db.from("payments").delete().in("order_id", orderIds);
-    await db.from("seller_orders" as "orders").delete().in("id", orderIds);
-    await db.from("master_orders" as unknown as "orders").delete().in("buyer_id", userIds);
+    await db.from("seller_orders").delete().in("id", orderIds);
+    await db.from("master_orders").delete().in("buyer_id", userIds);
   }
   if (storeIds.length) {
     await db.from("payouts").delete().in("store_id", storeIds);
@@ -214,14 +214,14 @@ async function cleanupReg92Fixture(): Promise<void> {
   const db = svc();
   if (reg92OrderId) {
     const { error } = await db
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .delete()
       .eq("id", reg92OrderId);
     if (!error) reg92OrderId = "";
   }
   if (reg92MasterId) {
     const { error } = await db
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .delete()
       .eq("id", reg92MasterId);
     if (!error) reg92MasterId = "";
@@ -239,11 +239,11 @@ async function cleanupPayoutCapFixture(): Promise<void> {
     await db.from("payouts").delete().eq("store_id", storeId);
   }
   if (payoutCapOrderId) {
-    await db.from("seller_orders" as "orders").delete().eq("id", payoutCapOrderId);
+    await db.from("seller_orders").delete().eq("id", payoutCapOrderId);
   }
   if (payoutCapMasterId) {
     await db
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .delete()
       .eq("id", payoutCapMasterId);
   }
@@ -472,7 +472,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // ---- One order owned by Buyer A ----
     const buyerAMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-AM`);
     const { data: order, error: oErr } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-A`,
         buyer_id: actors.buyerA.id,
@@ -499,7 +499,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // defaults to 0. Available = 200 - 0 - 0, which covers 100.
     payoutCapMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-PM`);
     const { data: capOrder, error: capErr } = await svc()
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-PAY`,
         buyer_id: actors.buyerA.id,
@@ -603,13 +603,13 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   // -------------------------------------------------------------------------
   it("A2: Buyer B cannot read Buyer A's order (no error leak)", async () => {
     const { data, error } = await actors.buyerB.client
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
     // Sanity: the owner CAN read it.
     const { data: ownerRows } = await actors.buyerA.client
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .select("id")
       .eq("id", buyerAOrderId);
 
@@ -670,7 +670,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // orders INSERT even with otherwise-correct ownership.
     const googleMasterId = await seedMaster(actors.googleG.id, `RLS-${RUN}-GM`);
     const { data: gOrder, error: gErr } = await actors.googleG.client
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-G`,
         buyer_id: actors.googleG.id,
@@ -695,7 +695,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     );
     // If somehow inserted, clean it up so teardown stays complete.
     const gOrderId = firstId(gOrder);
-    if (gOrderId) await svc().from("seller_orders" as "orders").delete().eq("id", gOrderId);
+    if (gOrderId) await svc().from("seller_orders").delete().eq("id", gOrderId);
     expect(gRejected).toBe(true);
 
     // 4b (spec: "Buyer A passes"): Buyer A has a verified phone AND owns the row,
@@ -705,7 +705,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     // is now CLOSED so this is a hard PASS. Insert is cleaned up immediately.
     const buyerASecondMasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-A2M`);
     const { data: aOrder, error: aErr } = await actors.buyerA.client
-      .from("seller_orders" as "orders")
+      .from("seller_orders")
       .insert({
         betk_ref: `RLS-${RUN}-A2`,
         buyer_id: actors.buyerA.id,
@@ -719,7 +719,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       } as never)
       .select("id");
     const aOrderId = firstId(aOrder);
-    if (aOrderId) await svc().from("seller_orders" as "orders").delete().eq("id", aOrderId);
+    if (aOrderId) await svc().from("seller_orders").delete().eq("id", aOrderId);
     record(
       "A4b",
       "orders",
@@ -760,7 +760,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
   // The seller_orders cases above are unchanged.
   it("A4d: master_orders phone gate denies an unverified buyer and allows a verified buyer", async () => {
     const { data: gMaster, error: gErr } = await actors.googleG.client
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: actors.googleG.id,
         betk_ref: `RLS-${RUN}-GMO`,
@@ -778,11 +778,11 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
         : "SECURITY BREACH — no-phone user inserted a master order",
     );
     const gId = firstId(gMaster);
-    if (gId) await svc().from("master_orders" as unknown as "orders").delete().eq("id", gId);
+    if (gId) await svc().from("master_orders").delete().eq("id", gId);
     expect(gRejected).toBe(true);
 
     const { data: aMaster, error: aErr } = await actors.buyerA.client
-      .from("master_orders" as unknown as "orders")
+      .from("master_orders")
       .insert({
         buyer_id: actors.buyerA.id,
         betk_ref: `RLS-${RUN}-AMO`,
@@ -790,7 +790,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       } as never)
       .select("id");
     const aId = firstId(aMaster);
-    if (aId) await svc().from("master_orders" as unknown as "orders").delete().eq("id", aId);
+    if (aId) await svc().from("master_orders").delete().eq("id", aId);
     record(
       "A4d-allow",
       "master_orders",
@@ -810,7 +810,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
     reg92MasterId = await seedMaster(actors.buyerA.id, `RLS-${RUN}-R92M`);
     try {
       const { data: seeded, error: seedErr } = await svc()
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .insert({
           betk_ref: `RLS-${RUN}-R92`,
           buyer_id: actors.buyerA.id,
@@ -831,23 +831,23 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
 
       const seller = actors.seller.client;
       const star = await seller
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .select("*")
         .eq("id", reg92OrderId);
       const fee = await seller
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .select("delivery_fee")
         .eq("id", reg92OrderId);
       const total = await seller
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .select("total_amount")
         .eq("id", reg92OrderId);
       const allowed = await seller
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .select("id, betk_ref, status, subtotal")
         .eq("id", reg92OrderId);
       const returning = await seller
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .update({ escalation_note: "reg92" } as never)
         .eq("id", reg92OrderId)
         .select();
@@ -859,7 +859,7 @@ describe.skipIf(!HAS_CREDS)("RLS smoke harness (staging)", () => {
       const allowedOk = allowed.error === null && (allowed.data?.length ?? 0) === 1;
 
       const { data: probe } = await svc()
-        .from("seller_orders" as "orders")
+        .from("seller_orders")
         .select("*")
         .eq("id", reg92OrderId)
         .single();
