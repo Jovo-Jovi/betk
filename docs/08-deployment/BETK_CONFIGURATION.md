@@ -7,6 +7,7 @@
 |---|---|---|---|
 | Supabase | `NEXT_PUBLIC_SUPABASE_URL` | client | Project URL |
 | Supabase | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client | Anon key — RLS applies |
+| Site | `NEXT_PUBLIC_SITE_ORIGIN` | client | Absolute origin for public share links (no path, no credentials). ShareButton href is this origin plus a public route helper. Absent → the share control is not offered. |
 | Supabase | `SUPABASE_SERVICE_KEY` | server only | Bypasses RLS; background jobs/trusted server only. NEVER expose to browser |
 | Google OAuth | `GOOGLE_CLIENT_ID` | server | **Active (OD-4)** — Supabase Auth Google provider |
 | Google OAuth | `GOOGLE_CLIENT_SECRET` | server | **Active (OD-4)** — configure in Supabase Auth |

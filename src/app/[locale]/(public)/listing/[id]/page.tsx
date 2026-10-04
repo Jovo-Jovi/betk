@@ -83,6 +83,8 @@ import { createAnonClient } from "@/lib/supabase/anon";
 import { localizedName } from "@/i18n/localizedName";
 import type { AppLocale } from "@/i18n/routing";
 import { GOVERNORATES } from "@/constants/governorates";
+import { routes, withLocale } from "@/constants/routes";
+import { publicListingShareUrl } from "@/features/discovery/publicUrl";
 import {
   catalogPriceLabels,
   catalogStockLabels,
@@ -176,6 +178,7 @@ export default async function ListingDetailPage({
   setRequestLocale(localeParam);
   const locale = localeParam as AppLocale;
   const t = await getTranslations({ locale, namespace: "listing" });
+  const tShare = await getTranslations({ locale, namespace: "share" });
   const catalogT = await getTranslations({ locale, namespace: "catalog" });
 
   const listing = await resolveListing(id);
@@ -240,18 +243,24 @@ export default async function ListingDetailPage({
           <ListingActionButtons
             listingId={listing.id}
             storeId={listing.storeId}
-            shareText={t("shareText", { title })}
+            shareHref={publicListingShareUrl(listing.id, locale) ?? undefined}
+            shareTitle={title}
             isSoldOut={soldOut}
             wishlistAddLabel={wishlistLabels.addLabel}
             wishlistRemoveLabel={wishlistLabels.removeLabel}
             inquiryLabel={t("cta.inquiry")}
             inquiryOwnListingReason={t("cta.inquiryOwnListingReason")}
             notifyMeLabel={t("cta.notifyMe")}
-            shareLabel={t("cta.share")}
+            addToCartLabel={t("cta.addToCart")}
+            shareActionLabel={tShare("action")}
+            shareFallbackLabel={tShare("fallback")}
+            shareCopiedLabel={tShare("copied")}
+            shareErrorLabel={tShare("error")}
           />
 
           <SellerMiniCard
             name={storeName}
+            storeHref={withLocale(routes.store(listing.store.slug), locale)}
             avatar={listing.store.avatarUrl ?? undefined}
             level={listing.seller?.level}
             verified={listing.seller?.isVerified}

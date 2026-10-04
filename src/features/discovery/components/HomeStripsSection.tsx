@@ -56,6 +56,7 @@ function toCardProps(
     price: listing.price,
     priceType: listing.priceType,
     storeName: listing.store ? localizedName({ ar: listing.store.nameAr, en: listing.store.nameEn }, locale) : null,
+    storeSlug: listing.store?.slug ?? null,
     rating: listing.store?.rating?.averageRating ?? null,
     reviews: listing.store?.rating?.totalReviews ?? null,
     boosted,

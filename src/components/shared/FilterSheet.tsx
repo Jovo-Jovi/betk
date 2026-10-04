@@ -14,7 +14,7 @@ import {
  */
 export interface FilterValue {
   category?: string | null;
-  type?: "all" | "product" | "service";
+  type?: "all" | "product";
   governorate?: string | null;
   priceMin?: number | string;
   priceMax?: number | string;
@@ -34,7 +34,7 @@ export interface FilterSheetLabels {
   apply: string;
   /** Apply button with count; "{count}" is interpolated. */
   resultCount: string;
-  types: Record<"all" | "product" | "service", string>;
+  types: Record<"all" | "product", string>;
   sorts: Record<"relevance" | "newest" | "price_asc" | "popular", string>;
 }
 
@@ -49,7 +49,7 @@ const DEFAULT_LABELS: FilterSheetLabels = {
   allGovernorates: "كل المحافظات",
   apply: "تطبيق",
   resultCount: "عرض {count} نتيجة",
-  types: { all: "الكل", product: "منتجات", service: "خدمات" },
+  types: { all: "الكل", product: "منتجات" },
   sorts: { relevance: "الأكثر صلة", newest: "الأحدث", price_asc: "السعر: من الأقل", popular: "الأكثر رواجًا" },
 };
 
@@ -99,7 +99,7 @@ export function FilterSheet({ value = {}, onChange, onApply, onClear, categories
     sorts: { ...DEFAULT_LABELS.sorts, ...labels?.sorts },
   };
   const set = (patch: Partial<FilterValue>) => onChange?.({ ...value, ...patch });
-  const TYPES = ["all", "product", "service"] as const;
+  const TYPES = ["all", "product"] as const;
   const SORTS = ["relevance", "newest", "price_asc", "popular"] as const;
   return (
     <aside className={cn("flex w-72 flex-col overflow-hidden border border-border bg-card shadow-sm", asSheet ? "w-full rounded-t-lg" : "rounded-lg", className)}>

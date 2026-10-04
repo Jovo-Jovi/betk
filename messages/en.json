@@ -6,6 +6,12 @@
     "backToHome": "Back to home",
     "or": "or"
   },
+  "share": {
+    "action": "Share",
+    "fallback": "Copy link",
+    "copied": "Link copied",
+    "error": "Could not share this link"
+  },
   "notFound": {
     "title": "Page not found",
     "description": "The page you’re looking for doesn’t exist or has moved.",
@@ -343,8 +349,7 @@
       "resultCount": "{count, plural, =0 {No results} one {Showing # result} other {Showing # results}}",
       "types": {
         "all": "All",
-        "product": "Products",
-        "service": "Services"
+        "product": "Products"
       },
       "sorts": {
         "relevance": "Most relevant",
@@ -453,7 +458,7 @@
       "inquiry": "Inquire now",
       "inquiryOwnListingReason": "You can't inquire about your own listing",
       "notifyMe": "Notify me when back",
-      "share": "Share on WhatsApp"
+      "addToCart": "Add to cart"
     },
     "composer": {
       "title": "Inquire about this listing",
@@ -471,7 +476,6 @@
       "errorGeneric": "Couldn't send the inquiry, try again",
       "errorUnavailable": "This listing is no longer available"
     },
-    "shareText": "{title} on BETK:",
     "reviews": {
       "title": "Store reviews",
       "subtitle": "These reviews reflect the store's overall experience, not just this listing",

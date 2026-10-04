@@ -34,49 +34,63 @@
  * routes straight to `/auth/login?returnUrl=` for guest AND authed alike,
  * unchanged from the T02 placeholder convention.
  *
- * Share is the one exception — sharing a public listing link needs no auth,
- * so it never redirects; it opens a `wa.me` deep-link with the page's own
- * current URL (client-only — `window.location.href` — no server-side
- * SITE_URL env var exists in this repo to build an absolute URL otherwise).
+ * Share is ShareButton. The page passes an absolute public href
+ * (site origin from configuration + the listing route). This component does
+ * not read the request and does not open a channel URL.
+ *
+ * ADD TO CART (P09 T09, R-C01): the click calls `addToCart`. A guest attempt
+ * inserts nothing and this component sends them to login. An authenticated
+ * buyer is not given a cart row here (Phase 10 owns that write).
  */
 
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { routes } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
-import { WishlistButton } from "@/components/shared";
+import { ShareButton, WishlistButton } from "@/components/shared";
 import { toggleWishlist } from "@/features/discovery/actions/toggleWishlist";
+import { addToCart } from "@/features/discovery/actions/addToCart";
 import { useViewerListingAccess } from "@/features/discovery/hooks/useViewerListingAccess";
 import { InquiryComposer } from "@/features/messaging/components/InquiryComposer";
-import { MessageCircle, BellRing, Share2 } from "lucide-react";
+import { MessageCircle, BellRing } from "lucide-react";
 
 export interface ListingActionButtonsProps {
   listingId: string;
   /** The listing's owning store — resolves viewer-ownership client-side. */
   storeId: string;
-  /** Text shared alongside the URL in the WhatsApp deep-link. */
-  shareText: string;
+  /** Absolute public listing URL. Absent → ShareButton renders nothing. */
+  shareHref?: string;
+  shareTitle: string;
   isSoldOut: boolean;
   wishlistAddLabel: string;
   wishlistRemoveLabel: string;
   inquiryLabel: string;
   inquiryOwnListingReason: string;
   notifyMeLabel: string;
-  shareLabel: string;
+  addToCartLabel: string;
+  shareActionLabel: string;
+  shareFallbackLabel: string;
+  shareCopiedLabel: string;
+  shareErrorLabel: string;
   className?: string;
 }
 
 export function ListingActionButtons({
   listingId,
   storeId,
-  shareText,
+  shareHref,
+  shareTitle,
   isSoldOut,
   wishlistAddLabel,
   wishlistRemoveLabel,
   inquiryLabel,
   inquiryOwnListingReason,
   notifyMeLabel,
-  shareLabel,
+  addToCartLabel,
+  shareActionLabel,
+  shareFallbackLabel,
+  shareCopiedLabel,
+  shareErrorLabel,
   className,
 }: ListingActionButtonsProps) {
   const router = useRouter();
@@ -106,10 +120,13 @@ export function ListingActionButtons({
     });
   };
 
-  const handleShare = () => {
-    if (typeof window === "undefined") return;
-    const text = `${shareText} ${window.location.href}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  const handleAddToCart = () => {
+    startTransition(async () => {
+      const result = await addToCart(listingId);
+      if (!result.ok && result.reason === "unauthenticated") {
+        goToLogin();
+      }
+    });
   };
 
   const isOwnListing = access.status === "authed" && access.isOwnListing;
@@ -149,9 +166,17 @@ export function ListingActionButtons({
         removeLabel={wishlistRemoveLabel}
         onToggle={handleToggleSave}
       />
-      <Button type="button" variant="outline" size="icon" aria-label={shareLabel} onClick={handleShare}>
-        <Share2 className="size-4" />
+      <Button type="button" variant="outline" onClick={handleAddToCart}>
+        {addToCartLabel}
       </Button>
+      <ShareButton
+        href={shareHref}
+        shareTitle={shareTitle}
+        actionLabel={shareActionLabel}
+        fallbackLabel={shareFallbackLabel}
+        copiedLabel={shareCopiedLabel}
+        errorLabel={shareErrorLabel}
+      />
 
       {!isSoldOut && (
         <InquiryComposer

@@ -22,8 +22,10 @@
  *      from the catalog message catalog by every composition site.
  */
 
+import { useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { routes } from "@/constants/routes";
+import { routes, withLocale } from "@/constants/routes";
+import type { AppLocale } from "@/i18n/routing";
 import { ListingCard } from "@/components/shared";
 import type { PriceType } from "@/constants/enums";
 
@@ -34,6 +36,8 @@ export interface ListingCardLinkProps {
   price?: number | null;
   priceType: PriceType;
   storeName?: string | null;
+  /** Public store route (`routes.store`). The card keeps onClick; this is storeHref only. */
+  storeSlug?: string | null;
   rating?: number | null;
   reviews?: number | null;
   boosted?: boolean;
@@ -53,6 +57,7 @@ export function ListingCardLink({
   price,
   priceType,
   storeName,
+  storeSlug,
   rating,
   reviews,
   boosted,
@@ -65,6 +70,7 @@ export function ListingCardLink({
   className,
 }: ListingCardLinkProps) {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
 
   return (
     <ListingCard
@@ -73,6 +79,7 @@ export function ListingCardLink({
       price={price}
       priceType={priceType}
       storeName={storeName ?? undefined}
+      storeHref={storeSlug ? withLocale(routes.store(storeSlug), locale) : undefined}
       rating={typeof rating === "number" ? rating : undefined}
       reviews={reviews ?? undefined}
       boosted={boosted}

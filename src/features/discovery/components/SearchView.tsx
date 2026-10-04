@@ -337,6 +337,7 @@ export function SearchView({
                         ? localizedName({ ar: item.store.nameAr, en: item.store.nameEn }, locale)
                         : null
                     }
+                    storeSlug={item.store?.slug ?? null}
                     rating={item.store?.rating?.averageRating ?? null}
                     reviews={item.store?.rating?.totalReviews ?? null}
                     boosted={item.isBoosted}

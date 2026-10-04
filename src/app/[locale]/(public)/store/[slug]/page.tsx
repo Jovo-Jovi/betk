@@ -53,7 +53,8 @@ import {
   catalogLevelLabels,
   type CatalogTranslator,
 } from "@/i18n/catalogLabels";
-import { RatingSummary, StarRating, VerifiedBadge, LevelBadge, SkeletonGrid } from "@/components/shared";
+import { RatingSummary, ShareButton, StarRating, VerifiedBadge, LevelBadge, SkeletonGrid } from "@/components/shared";
+import { publicStoreShareUrl } from "@/features/discovery/publicUrl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StoreFollowButton } from "@/features/discovery/components/StoreFollowButton";
 import { StorefrontTabs } from "@/features/discovery/components/StorefrontTabs";
@@ -112,6 +113,7 @@ export default async function StorePage({
   const sp = await searchParams;
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations("store");
+  const tShare = await getTranslations("share");
   const catalogT = await getTranslations("catalog");
 
   const supabase = await createClient();
@@ -246,13 +248,23 @@ export default async function StorePage({
               <p className="text-sm text-muted-foreground">{locationLabel}</p>
               {responseLabel && <p className="text-xs text-muted-foreground">{responseLabel}</p>}
             </div>
-            <StoreFollowButton
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialFollowing={following}
-              followLabel={followLabels.followLabel}
-              followingLabel={followLabels.followingLabel}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <ShareButton
+                href={publicStoreShareUrl(store.slug, locale) ?? undefined}
+                shareTitle={name}
+                actionLabel={tShare("action")}
+                fallbackLabel={tShare("fallback")}
+                copiedLabel={tShare("copied")}
+                errorLabel={tShare("error")}
+              />
+              <StoreFollowButton
+                storeId={store.id}
+                storeSlug={store.slug}
+                initialFollowing={following}
+                followLabel={followLabels.followLabel}
+                followingLabel={followLabels.followingLabel}
+              />
+            </div>
           </div>
 
           {store.bioAr && (
