@@ -54,7 +54,6 @@ function UploadField({
   state,
   onSelect,
   onRetry,
-  uploadLabel,
   uploadedLabel,
   errorLabel,
   retryLabel,
@@ -65,7 +64,6 @@ function UploadField({
   state: DocUploadState;
   onSelect: (files: File[]) => void;
   onRetry: () => void;
-  uploadLabel: string;
   uploadedLabel: string;
   errorLabel: string;
   retryLabel: string;
@@ -104,7 +102,6 @@ export function StepDocuments(props: Props) {
         state={props.front}
         onSelect={props.onSelectFront}
         onRetry={props.onRetryFront}
-        uploadLabel={t("documents.uploadLabel")}
         uploadedLabel={t("documents.uploaded")}
         errorLabel={t("documents.uploadError")}
         retryLabel={t("documents.retry")}
@@ -116,7 +113,6 @@ export function StepDocuments(props: Props) {
         state={props.back}
         onSelect={props.onSelectBack}
         onRetry={props.onRetryBack}
-        uploadLabel={t("documents.uploadLabel")}
         uploadedLabel={t("documents.uploaded")}
         errorLabel={t("documents.uploadError")}
         retryLabel={t("documents.retry")}
@@ -135,7 +131,6 @@ export function StepDocuments(props: Props) {
             state={props.foodUploads.packaging}
             onSelect={(files) => props.onSelectFood("packaging", files)}
             onRetry={() => props.onRetryFood("packaging")}
-            uploadLabel={t("documents.uploadLabel")}
             uploadedLabel={t("documents.uploaded")}
             errorLabel={t("documents.uploadError")}
             retryLabel={t("documents.retry")}
@@ -147,7 +142,6 @@ export function StepDocuments(props: Props) {
             state={props.foodUploads.label}
             onSelect={(files) => props.onSelectFood("label", files)}
             onRetry={() => props.onRetryFood("label")}
-            uploadLabel={t("documents.uploadLabel")}
             uploadedLabel={t("documents.uploaded")}
             errorLabel={t("documents.uploadError")}
             retryLabel={t("documents.retry")}
@@ -159,7 +153,6 @@ export function StepDocuments(props: Props) {
             state={props.foodUploads.expiry}
             onSelect={(files) => props.onSelectFood("expiry", files)}
             onRetry={() => props.onRetryFood("expiry")}
-            uploadLabel={t("documents.uploadLabel")}
             uploadedLabel={t("documents.uploaded")}
             errorLabel={t("documents.uploadError")}
             retryLabel={t("documents.retry")}
