@@ -552,7 +552,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 | T08-DB | done 2026-10-04 | `P09M2.sql` LF blob `ba7f823db4295d6b4017708bf8114f886ae6cff4`, SHA256 `ec63f6e0eae0506e7411386f82dee3f20b7b43fdfe6270ccf27a07ee67910ec3`; REG-106; green run [37210944666](https://github.com/Jovo-Jovi/betk/actions/runs/37210944666) on `cc2c798` (60 rows, every pass t, `all_pass` `true\|59`); ledger 40; no pull request |
 | T08-APPLY | applied 2026-10-04 | `20261004172620` / `v2_09_approval_state_actor`; query md5 `d74202b62279731e2f36c201355f52ab`, 6737 bytes; ledger 41; food upsert sets `reviewed_at` null; REG-106 closed; REG-107 minted; green run [37221001414](https://github.com/Jovo-Jovi/betk/actions/runs/37221001414) on `0efa84f`, all eight required checks |
 | T08 | resumed 2026-10-04 | P49 queue. Guard F pin 31. Signed URL expiry 60s. Integration 4/4. Green run [37222984871](https://github.com/Jovo-Jovi/betk/actions/runs/37222984871) on `bb57fbf`, all eight required checks |
-| T08-FIX | in progress 2026-10-04 | Q1 recorded. Approval scenario uses fixture-admin and fixture-seller. Guard G expected set is N27 plus those accounts, the append-only rows they own, and the known buyer_terms acceptance. CI watch follows the push |
+| T08-FIX | done 2026-10-04 | Q1 recorded. Approval scenario uses fixture-admin and fixture-seller. Guard G expected set is N27 plus those accounts, the append-only rows they own, and the known buyer_terms acceptance. Green run [37233737013](https://github.com/Jovo-Jovi/betk/actions/runs/37233737013) on `1cc0443`, all eight required checks |
 | T09 | | |
 | T10 | | |
 | T11 | | |
