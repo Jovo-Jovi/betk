@@ -82,7 +82,20 @@ function userClient(): Db {
   );
 }
 
-async function residue(service: Service) {
+type ResidueCounts = {
+  seller_orders: number | null;
+  master_orders: number | null;
+  order_status_history: number | null;
+  payouts: number | null;
+  seller_profiles: number | null;
+  stores: number | null;
+  seller_documents: number | null;
+  agreement_acceptances: number | null;
+  moderation_logs: number | null;
+  betkTest: number;
+};
+
+async function residue(service: Service): Promise<ResidueCounts> {
   const names = [
     "seller_orders",
     "master_orders",
@@ -94,7 +107,7 @@ async function residue(service: Service) {
     "agreement_acceptances",
     "moderation_logs",
   ] as const;
-  const counts: Record<string, number | null> = {};
+  const counts = {} as ResidueCounts;
   for (const name of names) {
     const { count, error } = await service.schema("betk").from(name).select("id", { count: "exact", head: true });
     if (error) throw new Error(error.message);
@@ -102,8 +115,8 @@ async function residue(service: Service) {
   }
   const { data, error } = await service.auth.admin.listUsers({ page: 1, perPage: 200 });
   if (error) throw new Error(error.message);
-  const betkTest = (data.users ?? []).filter((user) => user.email?.endsWith("@betk.test")).length;
-  return { ...counts, betkTest };
+  counts.betkTest = (data.users ?? []).filter((user) => user.email?.endsWith("@betk.test")).length;
+  return counts;
 }
 
 async function findAuthUser(service: Service, email: string) {
