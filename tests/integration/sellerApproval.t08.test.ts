@@ -3,11 +3,13 @@
  *
  * Incomplete applications are refused. A non-admin cannot approve.
  * An admin approval is what lets a later food publish pass the trigger.
- * moderation_logs is append-only (`no_delete_mod_log` is DO INSTEAD NOTHING).
- * DELETE of the fixture log is a no-op while that rule is enabled, and the
- * admin user then cannot be removed. This file runs only when
- * BETK_ALLOW_MODLOG_CLEANUP=1, after that rule has been disabled for the
- * cleanup and will be re-enabled afterwards. The 2026-10-04 run did that.
+ *
+ * Q1: no rule is disabled. fixture-admin@betk.test approves
+ * fixture-seller@betk.test. That seller's agreement acceptance and the
+ * moderation_logs rows (admin_id = fixture-admin) stay. The incomplete
+ * buyer path still uses a throwaway account. Its acceptance has no
+ * immutability rule, so the service role removes that one row and then
+ * the throwaway user. The fixture rows are not removed.
  */
 
 import { randomUUID } from "node:crypto";
@@ -16,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Database } from "@/lib/supabase/types";
 import type { ListingRefusalCode } from "@/features/listings/publishRefusal";
+import { FIXTURE_ADMIN_EMAIL, FIXTURE_SELLER_EMAIL } from "./expectedResidue";
 
 const h = vi.hoisted(() => ({ client: null as unknown }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -41,6 +44,11 @@ const STAGING_ALLOWLIST = (process.env.RLS_ALLOW_PROJECT_REF ?? "sojmjvohiziapiw
 
 const RUN = randomUUID().slice(0, 8);
 const PASSWORD = `Betk_T08_${RUN}!`;
+const FIXTURE_SLUG = "fixture-seller-t08";
+const FIXTURE_PHONES: Record<string, string> = {
+  [FIXTURE_ADMIN_EMAIL]: "+201555510801",
+  [FIXTURE_SELLER_EMAIL]: "+201555510802",
+};
 const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET ?? "docs";
 const TINY_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -49,6 +57,7 @@ const TINY_PNG = Buffer.from(
 
 type Db = SupabaseClient<Database, "betk">;
 type Service = ReturnType<typeof createServiceClient>;
+type SignedIn = { id: string; client: Db; email: string };
 
 const createdAuthIds: string[] = [];
 const uploadedPaths: string[] = [];
@@ -97,6 +106,25 @@ async function residue(service: Service) {
   return { ...counts, betkTest };
 }
 
+async function findAuthUser(service: Service, email: string) {
+  for (let page = 1; page <= 10; page++) {
+    const listed = await service.auth.admin.listUsers({ page, perPage: 200 });
+    if (listed.error) throw new Error(listed.error.message);
+    const users = listed.data?.users ?? [];
+    const found = users.find((user) => user.email === email);
+    if (found) return found;
+    if (users.length < 200) return null;
+  }
+  return null;
+}
+
+async function signIn(email: string): Promise<Db> {
+  const client = userClient();
+  const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (error) throw new Error(`signIn ${email}: ${error.message}`);
+  return client;
+}
+
 async function createUser(service: Service, label: string, role: "buyer" | "seller" | "admin" = "buyer") {
   const email = `betk-t08-${label}-${RUN}@betk.test`;
   const { data, error } = await service.auth.admin.createUser({
@@ -115,25 +143,110 @@ async function createUser(service: Service, label: string, role: "buyer" | "sell
     status: "active",
   });
   if (insertError) throw new Error(`users ${label}: ${insertError.message}`);
-  const client = userClient();
-  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
-  if (signInError) throw new Error(`signIn ${label}: ${signInError.message}`);
+  const client = await signIn(email);
   return { id, client, email };
+}
+
+async function ensureFixture(
+  service: Service,
+  email: string,
+  role: "admin" | "seller",
+): Promise<SignedIn> {
+  let authUser = await findAuthUser(service, email);
+  if (!authUser) {
+    const created = await service.auth.admin.createUser({
+      email,
+      password: PASSWORD,
+      email_confirm: true,
+    });
+    if (created.error || !created.data.user) {
+      throw new Error(`fixture create ${email}: ${created.error?.message}`);
+    }
+    authUser = created.data.user;
+    const inserted = await service.schema("betk").from("users").insert({
+      id: authUser.id,
+      phone_number: FIXTURE_PHONES[email],
+      auth_provider: "phone",
+      role,
+      status: "active",
+    });
+    if (inserted.error) throw new Error(`fixture users ${email}: ${inserted.error.message}`);
+  } else {
+    const refreshed = await service.auth.admin.updateUserById(authUser.id, { password: PASSWORD });
+    if (refreshed.error) throw new Error(`fixture password ${email}: ${refreshed.error.message}`);
+    const roleRow = await service.schema("betk").from("users").update({ role, status: "active" }).eq("id", authUser.id);
+    if (roleRow.error) throw new Error(`fixture role ${email}: ${roleRow.error.message}`);
+  }
+  const client = await signIn(email);
+  return { id: authUser.id, client, email };
+}
+
+async function ensureSellerApplication(service: Service, seller: SignedIn, foodId: string) {
+  const existing = await service.schema("betk").from("stores").select("id").eq("seller_id", seller.id).maybeSingle();
+  if (existing.error) throw new Error(existing.error.message);
+  if (!existing.data) {
+    h.client = seller.client;
+    const submitted = await submitSellerApplication({
+      nameAr: "متجر",
+      slug: FIXTURE_SLUG,
+      categoryIds: [foodId],
+      governorate: "cairo",
+      pickup: { city: "Nasr", streetAddress: "8 Street" },
+      sellerAgreementAccepted: true,
+      docFrontPath: `${seller.id}/front.png`,
+      docBackPath: `${seller.id}/back.png`,
+      food: {
+        packagingPath: `${seller.id}/pack.png`,
+        labelPath: `${seller.id}/label.png`,
+        expiryPath: `${seller.id}/expiry.png`,
+        socialUrl: "https://example.invalid/t08",
+      },
+    });
+    if (!submitted.ok) throw new Error(`submit ${submitted.reason}`);
+  }
+  for (const name of ["front.png", "back.png", "pack.png", "label.png", "expiry.png"]) {
+    const path = `${seller.id}/${name}`;
+    const uploaded = await seller.client.storage.from(DOCS_BUCKET).upload(path, TINY_PNG, {
+      contentType: "image/png",
+      upsert: true,
+    });
+    if (uploaded.error) throw new Error(uploaded.error.message);
+    uploadedPaths.push(path);
+  }
+}
+
+async function resetApprovalState(service: Service, sellerId: string) {
+  const profile = await service
+    .schema("betk")
+    .from("seller_profiles")
+    .update({ status: "pending", approved_at: null, rejected_reason: null })
+    .eq("id", sellerId);
+  if (profile.error) throw new Error(profile.error.message);
+  const store = await service.schema("betk").from("stores").update({ status: "pending" }).eq("seller_id", sellerId).select("id").single();
+  if (store.error || !store.data) throw new Error(store.error?.message ?? "fixture store");
+  const categories = await service.schema("betk").from("store_categories").update({ approved_at: null }).eq("store_id", store.data.id);
+  if (categories.error) throw new Error(categories.error.message);
+  const docs = await service
+    .schema("betk")
+    .from("seller_documents")
+    .update({ review_status: "pending", reviewed_at: null })
+    .eq("seller_id", sellerId);
+  if (docs.error) throw new Error(docs.error.message);
 }
 
 function assertRefusal(result: { ok: boolean; reason?: string; code?: string }, code: ListingRefusalCode) {
   expect(result).toEqual({ ok: false, reason: "refused", code });
 }
 
-const describeOrSkip = HAS_CREDS && process.env.BETK_ALLOW_MODLOG_CLEANUP === "1" ? describe : describe.skip;
+const describeOrSkip = HAS_CREDS ? describe : describe.skip;
 
 describeOrSkip("P09 T08 — seller approval (staging)", () => {
   let service: Service;
   let before: Awaited<ReturnType<typeof residue>>;
-  let admin: Awaited<ReturnType<typeof createUser>>;
+  let admin: SignedIn;
   let buyer: Awaited<ReturnType<typeof createUser>>;
   let incomplete: Awaited<ReturnType<typeof createUser>>;
-  let seller: Awaited<ReturnType<typeof createUser>>;
+  let seller: SignedIn;
   let foodId = "";
   let incompleteStoreId = "";
 
@@ -148,7 +261,11 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
     if (food.error || !food.data?.[0]) throw new Error(food.error?.message ?? "food-beverages missing");
     foodId = food.data[0].id;
 
-    admin = await createUser(service, "admin", "admin");
+    admin = await ensureFixture(service, FIXTURE_ADMIN_EMAIL, "admin");
+    seller = await ensureFixture(service, FIXTURE_SELLER_EMAIL, "seller");
+    await ensureSellerApplication(service, seller, foodId);
+    await resetApprovalState(service, seller.id);
+
     buyer = await createUser(service, "buyer");
     incomplete = await createUser(service, "incomplete", "seller");
     const profile = await service.schema("betk").from("seller_profiles").insert({
@@ -166,40 +283,15 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
     }).select("id").single();
     if (store.error || !store.data) throw new Error(store.error?.message ?? "store");
     incompleteStoreId = store.data.id;
-
-    seller = await createUser(service, "seller");
-    h.client = seller.client;
-    const submitted = await submitSellerApplication({
-      nameAr: "متجر",
-      slug: makeSlug(),
-      categoryIds: [foodId],
-      governorate: "cairo",
-      pickup: { city: "Nasr", streetAddress: "8 Street" },
-      sellerAgreementAccepted: true,
-      docFrontPath: `${seller.id}/front.png`,
-      docBackPath: `${seller.id}/back.png`,
-      food: {
-        packagingPath: `${seller.id}/pack.png`,
-        labelPath: `${seller.id}/label.png`,
-        expiryPath: `${seller.id}/expiry.png`,
-        socialUrl: "https://example.invalid/t08",
-      },
-    });
-    if (!submitted.ok) throw new Error(`submit ${submitted.reason}`);
-    for (const name of ["front.png", "back.png", "pack.png", "label.png", "expiry.png"]) {
-      const path = `${seller.id}/${name}`;
-      const uploaded = await seller.client.storage.from(DOCS_BUCKET).upload(path, TINY_PNG, {
-        contentType: "image/png",
-        upsert: true,
-      });
-      if (uploaded.error) throw new Error(uploaded.error.message);
-      uploadedPaths.push(path);
-    }
-  }, 120_000);
+  }, 180_000);
 
   afterAll(async () => {
     if (!service) return;
-    const stores = await service.schema("betk").from("stores").select("id").in("seller_id", createdAuthIds);
+    const ephemeralIds = [...createdAuthIds];
+    const listingOwnerIds = [...ephemeralIds];
+    if (seller?.id) listingOwnerIds.push(seller.id);
+    const stores = await service.schema("betk").from("stores").select("id, seller_id").in("seller_id", listingOwnerIds);
+    if (stores.error) throw new Error(stores.error.message);
     const storeIds = (stores.data ?? []).map((row) => row.id);
     if (storeIds.length > 0) {
       const listings = await service.schema("betk").from("listings").select("id").in("store_id", storeIds);
@@ -211,22 +303,14 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
     }
     if (uploadedPaths.length > 0) await service.storage.from(DOCS_BUCKET).remove(uploadedPaths);
 
-    const logs = await service.schema("betk").from("moderation_logs").select("id").eq("admin_id", admin?.id ?? "");
-    const logIds = (logs.data ?? []).map((row) => row.id);
-    if (logIds.length > 0) {
-      const removed = await service.schema("betk").from("moderation_logs").delete().in("id", logIds).select("id");
-      if (removed.error || (removed.data ?? []).length !== logIds.length) {
-        throw new Error(
-          "no_delete_mod_log blocked fixture cleanup. The @betk.test admin is still referenced.",
-        );
-      }
-    }
-
-    for (const id of createdAuthIds) {
+    const ephemeralStores = (stores.data ?? []).filter((row) => ephemeralIds.includes(row.seller_id)).map((row) => row.id);
+    for (const id of ephemeralIds) {
       await service.schema("betk").from("agreement_acceptances").delete().eq("user_id", id);
       await service.schema("betk").from("seller_documents").delete().eq("seller_id", id);
-      await service.schema("betk").from("store_categories").delete().in("store_id", storeIds);
-      await service.schema("betk").from("store_pickup_addresses").delete().in("store_id", storeIds);
+      if (ephemeralStores.length > 0) {
+        await service.schema("betk").from("store_categories").delete().in("store_id", ephemeralStores);
+        await service.schema("betk").from("store_pickup_addresses").delete().in("store_id", ephemeralStores);
+      }
       await service.schema("betk").from("stores").delete().eq("seller_id", id);
       await service.schema("betk").from("seller_profiles").delete().eq("id", id);
       await service.schema("betk").from("users").delete().eq("id", id);
@@ -236,8 +320,11 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
 
     const after = await residue(service);
     console.log("[t08 residue after]", JSON.stringify(after));
-    expect(after).toEqual(before);
-  }, 120_000);
+    expect(after.seller_orders).toBe(before.seller_orders);
+    expect(after.master_orders).toBe(before.master_orders);
+    expect(after.order_status_history).toBe(before.order_status_history);
+    expect(after.payouts).toBe(before.payouts);
+  }, 180_000);
 
   it("a non-admin cannot approve", async () => {
     h.client = buyer.client;
@@ -381,7 +468,9 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
       .select("action, target_type, admin_id")
       .eq("target_id", seller.id)
       .eq("action", "approve_seller")
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     expect(log.data).toMatchObject({ action: "approve_seller", target_type: "seller", admin_id: admin.id });
 
     h.client = seller.client;

@@ -39,7 +39,13 @@ Phase 08 lessons, binding here:
 - Before every `apply_migration`, state the query argument's md5 and byte length and show they equal the bound file (`PRECEDENTS.md`, apply_migration gets the bound text).
 - Shared close: every task after T00 commits on `feature/phase-09-surfaces` and pushes (`git push -u origin HEAD`). The pull request stays deferred to T11 (E3, amended by E1 on 2026-10-03). T11 opens the one PR. See the block below.
 - No prompt wording that contradicts a binding in this pack, in `BETK_PHASES.md`, or in a pinned REG.
-- Smoke and integration fixtures satisfy Phase 08 constraints: an active listing has shipping dimensions; a payout fixture has an eligible balance under the cap. Guard G's residue set is unchanged: 7 `seller_orders`, 7 `master_orders`, 12 `order_status_history`. The detector reports anything outside that set and never deletes it.
+- Smoke and integration fixtures satisfy Phase 08 constraints: an active listing has shipping dimensions; a payout fixture has an eligible balance under the cap. Guard G's expected residue is decision Q1.
+
+**Decision (human, 2026-10-04), verbatim.**
+
+Q1 Append-only and evidence protections (no_delete_mod_log, the history rules, any immutability on agreement_acceptances) are never disabled outside an approved migration. Tests issue no DDL.
+   Tests that must create append-only or evidence rows on staging use permanent, labelled fixture accounts — fixture-admin@betk.test and fixture-seller@betk.test (create them once if missing; never delete them).
+   Guard G's expected residue = the N27 set + those fixture accounts + the append-only/evidence rows they own. It reports those counts at suite start and fails only on rows outside that set.
 - Types come from the CI Types drift diff, applied verbatim. No hand edit. No bridge cast left.
 - A visual gap goes to Claude Design. Cursor does not restyle the kit.
 - The human acts only by merging, typing GO for an irreversible step, pasting to Claude Design, and answering a decision. This pack does not merge and does not bypass checks.
@@ -546,6 +552,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 | T08-DB | done 2026-10-04 | `P09M2.sql` LF blob `ba7f823db4295d6b4017708bf8114f886ae6cff4`, SHA256 `ec63f6e0eae0506e7411386f82dee3f20b7b43fdfe6270ccf27a07ee67910ec3`; REG-106; green run [37210944666](https://github.com/Jovo-Jovi/betk/actions/runs/37210944666) on `cc2c798` (60 rows, every pass t, `all_pass` `true\|59`); ledger 40; no pull request |
 | T08-APPLY | applied 2026-10-04 | `20261004172620` / `v2_09_approval_state_actor`; query md5 `d74202b62279731e2f36c201355f52ab`, 6737 bytes; ledger 41; food upsert sets `reviewed_at` null; REG-106 closed; REG-107 minted; green run [37221001414](https://github.com/Jovo-Jovi/betk/actions/runs/37221001414) on `0efa84f`, all eight required checks |
 | T08 | resumed 2026-10-04 | P49 queue. Guard F pin 31. Signed URL expiry 60s. Integration 4/4. Green run [37222984871](https://github.com/Jovo-Jovi/betk/actions/runs/37222984871) on `bb57fbf`, all eight required checks |
+| T08-FIX | in progress 2026-10-04 | Q1 recorded. Approval scenario uses fixture-admin and fixture-seller. Guard G expected set is N27 plus those accounts, the append-only rows they own, and the known buyer_terms acceptance. CI watch follows the push |
 | T09 | | |
 | T10 | | |
 | T11 | | |

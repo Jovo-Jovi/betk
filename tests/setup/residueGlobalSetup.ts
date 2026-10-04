@@ -2,8 +2,10 @@
  * Guard G (REG-74) — suite-start residue detector.
  *
  * Runs only when this Vitest invocation includes tests/integration.
- * Reads staging. Reports anything outside the N27 expected set.
- * Does not delete that set, and does not delete anything else.
+ * Reads staging. Reports anything outside the Q1 expected set:
+ * the N27 orders, the two permanent fixture accounts, the append-only
+ * rows those accounts own, and the one known acceptance.
+ * Does not remove that set, and does not remove anything else.
  */
 
 import { readFileSync } from "node:fs";
@@ -11,6 +13,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import {
+  FIXTURE_EMAILS,
+  residueCounts,
   residueProblems,
   type ResidueObservation,
 } from "../integration/expectedResidue";
@@ -101,13 +105,34 @@ async function readObservation(
   const masterRows = (masters.data ?? []) as { id: string }[];
   const historyRows = (history.data ?? []) as { order_id: string }[];
 
+  const logs = await db.from("moderation_logs").select("id, admin_id").limit(1000);
+  if (logs.error) {
+    throw new Error(`Guard G moderation_logs: ${logs.error.message}`);
+  }
+  const acceptances = await db
+    .from("agreement_acceptances")
+    .select("user_id, document, version_label")
+    .limit(1000);
+  if (acceptances.error) {
+    throw new Error(`Guard G agreement_acceptances: ${acceptances.error.message}`);
+  }
+  const logRows = (logs.data ?? []) as { id: string; admin_id: string }[];
+  const acceptanceRows = (acceptances.data ?? []) as {
+    user_id: string;
+    document: string;
+    version_label: string;
+  }[];
+
   const emails: string[] = [];
+  const fixtureUserIds: string[] = [];
   for (let page = 1; page <= 10; page++) {
     const listed = await client.auth.admin.listUsers({ page, perPage: 200 });
     if (listed.error) throw new Error(`Guard G listUsers: ${listed.error.message}`);
     const users = listed.data?.users ?? [];
     for (const user of users) {
-      if (user.email?.endsWith("@betk.test")) emails.push(user.email);
+      if (!user.email?.endsWith("@betk.test")) continue;
+      emails.push(user.email);
+      if (FIXTURE_EMAILS.includes(user.email)) fixtureUserIds.push(user.id);
     }
     if (users.length < 200) break;
   }
@@ -120,6 +145,13 @@ async function readObservation(
     masterIds: masterRows.map((row) => row.id),
     historyOrderIds: historyRows.map((row) => row.order_id),
     betkTestEmails: emails,
+    fixtureUserIds,
+    moderationLogs: logRows.map((row) => ({ id: row.id, adminId: row.admin_id })),
+    acceptances: acceptanceRows.map((row) => ({
+      userId: row.user_id,
+      document: row.document,
+      versionLabel: row.version_label,
+    })),
   };
 }
 
@@ -147,14 +179,15 @@ export async function setup(): Promise<void> {
   }
 
   const observed = await readObservation(url, serviceKey);
+  const counts = residueCounts(observed);
   const problems = residueProblems(observed);
   if (problems.length > 0) {
     throw new Error(
-      `Guard G (REG-74): staging residue outside the N27 set. ` +
-        `Nothing was deleted.\n${problems.map((line) => `  - ${line}`).join("\n")}`,
+      `Guard G (REG-74): staging residue outside the expected set (${counts}). ` +
+        `Nothing was removed.\n${problems.map((line) => `  - ${line}`).join("\n")}`,
     );
   }
   console.log(
-    "Guard G (REG-74): staging residue matches the N27 set (7 seller_orders, 7 master_orders, 12 history rows, no @betk.test users).",
+    `Guard G (REG-74): staging residue is inside the expected set (${counts}).`,
   );
 }

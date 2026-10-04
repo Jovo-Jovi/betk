@@ -17,6 +17,9 @@ import {
 import {
   EXPECTED_HISTORY_ROWS,
   EXPECTED_SELLER_ORDERS,
+  FIXTURE_ADMIN_EMAIL,
+  FIXTURE_SELLER_EMAIL,
+  KNOWN_ACCEPTANCE_RESIDUE,
   residueProblems,
   type ResidueObservation,
 } from "../integration/expectedResidue";
@@ -61,6 +64,9 @@ function cleanResidue(): ResidueObservation {
     masterIds: EXPECTED_SELLER_ORDERS.map((row) => row.masterOrderId),
     historyOrderIds,
     betkTestEmails: [],
+    fixtureUserIds: [],
+    moderationLogs: [],
+    acceptances: [],
   };
 }
 
@@ -212,6 +218,57 @@ describe("Guard G (REG-74)", () => {
       betkTestEmails: ["rls-smoke-buyerA-deadbeef@betk.test"],
     };
     expect(residueProblems(leakedUser).join("\n")).toMatch(/@betk\.test/);
+
+    const fixtures: ResidueObservation = {
+      ...clean,
+      betkTestEmails: [FIXTURE_ADMIN_EMAIL, FIXTURE_SELLER_EMAIL],
+      fixtureUserIds: [
+        "10000000-0000-0000-0000-000000000001",
+        "10000000-0000-0000-0000-000000000002",
+      ],
+      moderationLogs: [
+        {
+          id: "10000000-0000-0000-0000-000000000011",
+          adminId: "10000000-0000-0000-0000-000000000001",
+        },
+      ],
+      acceptances: [
+        {
+          userId: "10000000-0000-0000-0000-000000000002",
+          document: "seller_agreement",
+          versionLabel: "STAGING-DRAFT-1",
+        },
+        {
+          userId: KNOWN_ACCEPTANCE_RESIDUE[0]!.userId,
+          document: KNOWN_ACCEPTANCE_RESIDUE[0]!.document,
+          versionLabel: KNOWN_ACCEPTANCE_RESIDUE[0]!.versionLabel,
+        },
+      ],
+    };
+    expect(residueProblems(fixtures)).toEqual([]);
+
+    const unknownLog: ResidueObservation = {
+      ...clean,
+      moderationLogs: [
+        {
+          id: "20000000-0000-0000-0000-000000000011",
+          adminId: "20000000-0000-0000-0000-000000000001",
+        },
+      ],
+    };
+    expect(residueProblems(unknownLog).join("\n")).toMatch(/moderation_logs row outside/);
+
+    const unknownAcceptance: ResidueObservation = {
+      ...clean,
+      acceptances: [
+        {
+          userId: "20000000-0000-0000-0000-000000000099",
+          document: "buyer_terms",
+          versionLabel: "STAGING-DRAFT-1",
+        },
+      ],
+    };
+    expect(residueProblems(unknownAcceptance).join("\n")).toMatch(/agreement_acceptances row outside/);
   });
 
   it("does not delete: the detector source has no delete", () => {
