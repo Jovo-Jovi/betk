@@ -9,11 +9,9 @@
  * URL-invisible). Middleware gates it to authenticated users only and bounces
  * existing sellers away per status (T02).
  *
- * The RSC resolves the session uid (storage own-prefix + resume key), the
- * verified-phone status (OD-4 non-blocking pointer), the bilingual category
- * pickers, and the private docs bucket name, then hands them to the client
- * wizard. The phone gate itself is enforced in the T03 submit action
- * (requireVerifiedPhone) + RLS — this page only surfaces the capture pointer.
+ * The RSC resolves the session uid, the verified-phone pointer, the category
+ * limit, the food-requirements label, and the private docs bucket, then hands
+ * them to the client wizard. Delivery modes are not collected.
  */
 
 import type { Metadata } from "next";
@@ -22,9 +20,12 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRowById } from "@/services/authUsers";
+import { readOnboardingSettings } from "@/services/onboardingSettings";
 import { getCategoryTree } from "@/features/discovery";
+import { ErrorRetryCard } from "@/components/shared";
 import { OnboardingWizard } from "./_components/OnboardingWizard";
 import type { CategoryOption } from "./_components/wizardShared";
+import type { CategoryNode } from "@/features/discovery/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("seller.onboarding");
@@ -35,6 +36,23 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET ?? "docs";
+const FOOD_SLUG = "food-beverages";
+
+function flattenCategories(nodes: CategoryNode[], ancestorFood: boolean): CategoryOption[] {
+  const out: CategoryOption[] = [];
+  for (const node of nodes) {
+    const food = ancestorFood || node.slug === FOOD_SLUG;
+    out.push({
+      id: node.id,
+      slug: node.slug,
+      labelAr: node.nameAr,
+      labelEn: node.nameEn ?? node.nameAr,
+      food,
+    });
+    out.push(...flattenCategories(node.children, food));
+  }
+  return out;
+}
 
 export default async function SellerOnboardingPage() {
   const supabase = await createClient();
@@ -53,20 +71,18 @@ export default async function SellerOnboardingPage() {
   const row = await getUserRowById(user.id);
   const phoneRequired = !row || row.phone_number === null;
 
-  // Bilingual category pickers — flatten the active taxonomy (parents + children)
-  // into value(slug)/labelAr/labelEn options (stored as text per the schema).
-  const tree = await getCategoryTree(supabase);
-  const categories: CategoryOption[] = [];
-  for (const node of tree) {
-    categories.push({ value: node.slug, labelAr: node.nameAr, labelEn: node.nameEn ?? node.nameAr });
-    for (const child of node.children) {
-      categories.push({
-        value: child.slug,
-        labelAr: child.nameAr,
-        labelEn: child.nameEn ?? child.nameAr,
-      });
-    }
+  const settings = await readOnboardingSettings();
+  const t = await getTranslations("seller.onboarding");
+  if (!settings.ok) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-4 py-10">
+        <ErrorRetryCard message={t("errors.submitFailed")} />
+      </main>
+    );
   }
+
+  const tree = await getCategoryTree(supabase);
+  const categories = flattenCategories(tree, false);
 
   return (
     <main
@@ -77,6 +93,8 @@ export default async function SellerOnboardingPage() {
         uid={user.id}
         docsBucket={DOCS_BUCKET}
         categories={categories}
+        categoryLimit={settings.categoryLimit}
+        foodLabel={settings.foodLabel}
         phoneRequired={phoneRequired}
       />
     </main>

@@ -1,3 +1,4 @@
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +16,7 @@ import { fileURLToPath } from "node:url";
  * .env.local + Zod-loader placeholders are wired in tests/setup/env.ts.
  */
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

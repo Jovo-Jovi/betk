@@ -1,20 +1,20 @@
 /**
- * Seller-onboarding submit schemas (Zod) — Phase 04 / T03 (FR-SEL-1).
+ * Seller-onboarding submit schemas (Zod) — Phase 04 / T03, Phase 09 / T06.
  *
- * The full-payload schema validates every field of the become-seller
- * application BEFORE the `submitSellerApplication` Server Action touches the DB
- * (CI `check-zod-coverage`). Shapes mirror the DB columns (BETK_DATABASE_SCHEMA
- * `betk.stores` / `betk.seller_documents`) and the typed JSONB interfaces in
- * `@/types/jsonb` (`StorePaymentMethods` / `StoreDeliveryOptions`). Delivery
- * modes are the 3 live-schema values `{delivery, pickup, remote}` (REG-14), NOT
- * four.
+ * The full-payload schema validates every field BEFORE `submitSellerApplication`
+ * touches the DB. P23 collects store identity, category ids (the cap is the
+ * database trigger, not this schema), the seller's pickup street, the seller
+ * agreement e-sign, national-id paths, and the four food artefacts when a food
+ * category is chosen.
+ *
+ * `storeDeliveryOptionsSchema` stays for listing overrides (P31). The onboarding
+ * submit schema does not accept it (REG-65, OD-10). `stores.delivery_options`
+ * is written by the RPC as `{}`.
  *
  * The result type lives here (not in the `"use server"` action file, which may
- * only export async functions) so the action and its T04 client consumer share
- * it. Each `reason` maps to a client route: `unauthenticated` → /auth/login,
- * `phone_required` → /auth/phone, `blocked` → /blocked, `application_exists`
- * (R-S01) → /seller/status, `slug_taken` → field-level error, `invalid` /
- * `error` → inline form error.
+ * only export async functions). `agreement_required` is the RPC token
+ * `BETK_SELLER_AGREEMENT_REQUIRED` (AC-AGR-3). A missing acceptance is not a
+ * disabled button.
  */
 
 import { z } from "zod";
@@ -52,11 +52,16 @@ export const storePaymentMethodsSchema = z
   })
   .strict();
 
+/** Listing delivery-override JSONB. Not accepted by the onboarding submit. */
+export const DELIVERY_MODES = ["delivery", "pickup", "remote"] as const;
+export type DeliveryMode = (typeof DELIVERY_MODES)[number];
+
 /** stores.delivery_options JSONB — mirrors `StoreDeliveryOptions` (@/types/jsonb).
- * modes = the 3 live `betk.delivery_preference` values (REG-14), not four. */
+ * modes = the 3 live `betk.delivery_preference` values (REG-14), not four.
+ * P23 and P27 do not send this object. */
 export const storeDeliveryOptionsSchema = z
   .object({
-    modes: z.array(z.enum(["delivery", "pickup", "remote"])).max(3).optional(),
+    modes: z.array(z.enum(DELIVERY_MODES)).max(3).optional(),
     min_delivery_days: z.number().int().min(0).max(365).optional(),
     max_delivery_days: z.number().int().min(0).max(365).optional(),
     delivery_fee_egp: z.number().nonnegative().max(100000).optional(),
@@ -66,29 +71,49 @@ export const storeDeliveryOptionsSchema = z
   })
   .strict();
 
+/** `categories.id`. The store-category cap is `enforce_store_category_cap`, not this bound. */
+export const categoryIdSchema = z.string().uuid();
+
+/** Pickup street collected on P23. Governorate is the store's public governorate. */
+export const onboardingPickupSchema = z
+  .object({
+    city: z.string().trim().min(1).max(100),
+    streetAddress: z.string().trim().min(1).max(2000),
+    buildingNotes: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+/** Four R-S10 artefacts. The social value is a URL stored on `seller_documents`, not a file. */
+export const foodArtefactsSchema = z
+  .object({
+    packagingPath: storageObjectPathSchema,
+    labelPath: storageObjectPathSchema,
+    expiryPath: storageObjectPathSchema,
+    socialUrl: z.string().trim().url().max(500),
+  })
+  .strict();
+
 /**
- * Full become-seller application payload. `name_ar` required / `name_en`
- * optional (COALESCE display set); `bio_ar` optional; `category_primary`
- * required + `category_secondary` optional (free-text picker values stored as
- * text per schema); `governorate` required + `city` optional; both national-ID
- * document storage paths required (R-S05 front + back).
+ * Full become-seller application. Category ids are inserted into
+ * `store_categories` by the action. The RPC still receives the primary slug as
+ * non-authoritative text. No delivery modes and no delivery fee.
  */
-export const submitSellerApplicationSchema = z.object({
-  nameAr: z.string().trim().min(2).max(100),
-  nameEn: z.string().trim().min(2).max(100).optional(),
-  bioAr: z.string().trim().max(200).optional(),
-  slug: storeSlugInputSchema,
-  categoryPrimary: z.string().trim().min(1).max(50),
-  categorySecondary: z.string().trim().min(1).max(50).optional(),
-  governorate: z.string().trim().min(1).max(50),
-  city: z.string().trim().min(1).max(100).optional(),
-  paymentMethods: storePaymentMethodsSchema.default({}),
-  deliveryOptions: storeDeliveryOptionsSchema.default({}),
-  returnPolicy: z.string().trim().max(2000).optional(),
-  minOrderEgp: z.number().nonnegative().max(1000000).optional(),
-  docFrontPath: storageObjectPathSchema,
-  docBackPath: storageObjectPathSchema,
-});
+export const submitSellerApplicationSchema = z
+  .object({
+    nameAr: z.string().trim().min(2).max(100),
+    nameEn: z.string().trim().min(2).max(100).optional(),
+    bioAr: z.string().trim().max(200).optional(),
+    slug: storeSlugInputSchema,
+    categoryIds: z.array(categoryIdSchema).min(1).max(12),
+    governorate: z.string().trim().min(1).max(50),
+    city: z.string().trim().min(1).max(100).optional(),
+    pickup: onboardingPickupSchema,
+    sellerAgreementAccepted: z.boolean(),
+    docFrontPath: storageObjectPathSchema,
+    docBackPath: storageObjectPathSchema,
+    food: foodArtefactsSchema.optional(),
+  })
+  .strict();
 
 export type SubmitSellerApplicationInput = z.input<typeof submitSellerApplicationSchema>;
 export type SubmitSellerApplicationParsed = z.infer<typeof submitSellerApplicationSchema>;
@@ -101,6 +126,7 @@ export type SubmitSellerApplicationParsed = z.infer<typeof submitSellerApplicati
  *   - blocked             → /blocked (R-A05 deactivated/suspended)
  *   - application_exists  → /seller/status (R-S01, one store per seller)
  *   - slug_taken          → field-level "slug taken" error (R-S02)
+ *   - agreement_required  → the RPC refused (AC-AGR-3); the acceptance row is missing
  *   - invalid             → inline validation error (Zod / path ownership)
  *   - error               → generic inline error
  */
@@ -114,6 +140,7 @@ export type SubmitSellerApplicationResult =
         | "blocked"
         | "application_exists"
         | "slug_taken"
+        | "agreement_required"
         | "invalid"
         | "error";
     };

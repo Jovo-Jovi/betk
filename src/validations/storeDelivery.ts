@@ -1,44 +1,34 @@
 /**
- * Delivery-settings schema (Zod) — Phase 04 / T07 (FR-SEL-5).
+ * Pickup-address schema (Zod) — Phase 09 / T06 (FR-SEL-5, P27).
  *
- * Validates the /seller/store/delivery form BEFORE the `updateStoreDelivery`
- * Server Action touches the DB (CI `check-zod-coverage`). The schema is the
- * SAME `storeDeliveryOptionsSchema` the T03/T04 submit path already validates
- * against (`@/validations/sellerOnboarding`) — reused verbatim, not
- * redefined, so the typed `StoreDeliveryOptions` shape (@/types/jsonb, REG-14)
- * is consumed identically everywhere and never reshaped. `.strict()` means an
- * unknown key fails validation — the round-trip test asserts exactly this
- * shape, no extra/missing keys.
- *
- * `modes` may legitimately be empty (all 3 delivery methods disabled) — the
- * UI_SPEC Delivery Settings edge case says this warrants a warning, NOT a
- * save-block (no spec line forbids saving); the page still calls this action.
+ * Validates `/seller/store/delivery` BEFORE the action writes. The table is
+ * `store_pickup_addresses` (governorate, city, street_address, building_notes).
+ * This schema has no delivery mode, no delivery fee, and no `delivery_options`
+ * key (REG-65, OD-10). `.strict()` rejects a client that still sends those.
  */
 
 import { z } from "zod";
-import { storeDeliveryOptionsSchema } from "@/validations/sellerOnboarding";
-import type { StoreDeliveryOptions } from "@/types/jsonb";
 
-/** The 3 live `betk.delivery_preference` modes (REG-14) — not four. */
-export type DeliveryMode = NonNullable<StoreDeliveryOptions["modes"]>[number];
-export const DELIVERY_MODES: readonly DeliveryMode[] = ["delivery", "pickup", "remote"];
+export const updateStorePickupSchema = z
+  .object({
+    governorate: z.string().trim().min(1).max(50),
+    city: z.string().trim().min(1).max(100),
+    streetAddress: z.string().trim().min(1).max(2000),
+    buildingNotes: z.string().trim().max(2000).optional(),
+  })
+  .strict();
 
-export const updateStoreDeliverySchema = storeDeliveryOptionsSchema;
-
-export type UpdateStoreDeliveryInput = z.input<typeof updateStoreDeliverySchema>;
-export type UpdateStoreDeliveryParsed = z.infer<typeof updateStoreDeliverySchema>;
+export type UpdateStorePickupInput = z.input<typeof updateStorePickupSchema>;
+export type UpdateStorePickupParsed = z.infer<typeof updateStorePickupSchema>;
 
 /**
- * Discriminated result of `updateStoreDelivery`. Never throws to the client:
- *   - unauthenticated → /auth/login
- *   - blocked         → /blocked (R-A05 deactivated/not-active)
- *   - no_store        → defensive (a seller should always have a store)
- *   - invalid         → inline validation error (Zod)
- *   - error           → generic inline error
+ * Discriminated result of `updateStorePickup`. Never throws to the client.
+ * `mismatch` is `BETK_PICKUP_GOVERNORATE_MISMATCH` when the row's governorate
+ * does not equal the store's.
  */
-export type UpdateStoreDeliveryResult =
+export type UpdateStorePickupResult =
   | { ok: true }
   | {
       ok: false;
-      reason: "unauthenticated" | "blocked" | "no_store" | "invalid" | "error";
+      reason: "unauthenticated" | "blocked" | "no_store" | "invalid" | "mismatch" | "error";
     };

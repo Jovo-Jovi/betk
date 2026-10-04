@@ -151,6 +151,8 @@ async function createActor(
   return { id, email, client };
 }
 
+let categoryId = "";
+
 /** A valid full-payload application for `uid`, with own-prefix doc paths. */
 function makePayload(uid: string, slug: string): SubmitSellerApplicationInput {
   return {
@@ -158,14 +160,11 @@ function makePayload(uid: string, slug: string): SubmitSellerApplicationInput {
     nameEn: "T03 Test Store",
     bioAr: "نبذة عن المتجر",
     slug,
-    categoryPrimary: "handmade",
-    categorySecondary: "accessories",
+    categoryIds: [categoryId],
     governorate: "cairo",
     city: "Nasr City",
-    paymentMethods: { instapay_handle: "01000000000", cod_enabled: true },
-    deliveryOptions: { modes: ["delivery", "pickup"], delivery_fee_egp: 40 },
-    returnPolicy: "14-day returns.",
-    minOrderEgp: 100,
+    pickup: { city: "Nasr", streetAddress: "1 Street" },
+    sellerAgreementAccepted: true,
     docFrontPath: `${uid}/national_id_front-${RUN}.png`,
     docBackPath: `${uid}/national_id_back-${RUN}.png`,
   };
@@ -188,7 +187,7 @@ async function roleOf(uid: string): Promise<string | null> {
 const describeOrSkip = HAS_CREDS ? describe : describe.skip;
 
 describeOrSkip("Phase 04 / T03 — seller-application submit (staging)", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     const ref = new URL(clientEnv.NEXT_PUBLIC_SUPABASE_URL).host.split(".")[0]!;
     if (!STAGING_ALLOWLIST.includes(ref)) {
       throw new Error(
@@ -196,6 +195,14 @@ describeOrSkip("Phase 04 / T03 — seller-application submit (staging)", () => {
           `Allowed: ${STAGING_ALLOWLIST.join(", ")}. Set RLS_ALLOW_PROJECT_REF to override.`,
       );
     }
+    const { data, error } = await svc()
+      .from("categories")
+      .select("id")
+      .eq("slug", "arts-crafts")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error || !data) throw new Error("arts-crafts category is missing");
+    categoryId = data.id;
   });
 
   afterAll(async () => {
@@ -203,6 +210,7 @@ describeOrSkip("Phase 04 / T03 — seller-application submit (staging)", () => {
       await service.storage.from(DOCS_BUCKET).remove(uploadedDocs);
     }
     for (const id of createdAuthIds) {
+      await svc().from("agreement_acceptances").delete().eq("user_id", id);
       await svc().from("users").delete().eq("id", id);
       await service.auth.admin.deleteUser(id).catch(() => undefined);
     }

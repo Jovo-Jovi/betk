@@ -70,7 +70,7 @@ import { publishListing } from "@/features/listings/actions/publishListing";
 import type { PublishRequirement } from "@/features/listings/listingRules";
 import type { OwnListingDetail } from "@/features/listings/types";
 import type { CategoryNode } from "@/features/discovery";
-import { DELIVERY_MODES, type DeliveryMode } from "@/validations/storeDelivery";
+import { DELIVERY_MODES, type DeliveryMode } from "@/validations/sellerOnboarding";
 import type { StoreDeliveryOptions } from "@/types/jsonb";
 import { Alert, Toggle } from "@/components/shared";
 import { Input } from "@/components/ui/input";

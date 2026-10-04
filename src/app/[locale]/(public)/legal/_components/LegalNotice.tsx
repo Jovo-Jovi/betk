@@ -3,7 +3,8 @@ import { LegalError } from "./LegalError";
 
 /**
  * P67–P70 body. The public layout already mounts AppTopbar and Footer.
- * The body is the pending-review notice plus the version label (F3).
+ * The body is the pending-review notice. The version line renders only when
+ * the label is non-empty (returns and privacy stay blank until REG-98/99).
  * It does not render the E-1 drafts.
  */
 export function LegalNotice({
@@ -36,12 +37,14 @@ export function LegalNotice({
       ) : (
         <>
           <Alert variant="warning" title={pendingTitle} message={pendingBody} />
-          <p className="text-sm text-muted-foreground">
-            {versionCaption}{" "}
-            <span dir="ltr" data-slot="legal-version" className="font-mono text-foreground">
-              {versionLabel}
-            </span>
-          </p>
+          {versionLabel.trim() !== "" && (
+            <p className="text-sm text-muted-foreground">
+              {versionCaption}{" "}
+              <span dir="ltr" data-slot="legal-version" className="font-mono text-foreground">
+                {versionLabel}
+              </span>
+            </p>
+          )}
         </>
       )}
     </article>

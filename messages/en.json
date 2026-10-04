@@ -42,7 +42,7 @@
       "inbox": "Inbox",
       "status": "Application status",
       "store": "Store profile",
-      "delivery": "Delivery",
+      "delivery": "Pickup address",
       "returns": "Returns",
       "payments": "Payments"
     },
@@ -740,15 +740,14 @@
     },
     "onboarding": {
       "metaTitle": "Become a seller — BETK",
-      "metaDescription": "Set up your BETK store in five steps and start selling.",
+      "metaDescription": "Set up your BETK store and submit it for review.",
       "title": "Open your store on BETK",
-      "subtitle": "Complete the five steps to submit your store for review.",
+      "subtitle": "Complete the steps to submit your store for review.",
       "stepCounter": "Step {current} of {total}",
       "steps": {
         "identity": "Identity",
         "category": "Category",
-        "payment": "Payment",
-        "delivery": "Delivery",
+        "pickup": "Pickup address",
         "documents": "Documents"
       },
       "nav": {
@@ -780,41 +779,53 @@
         "slugTaken": "This link is already in use"
       },
       "category": {
-        "primaryLabel": "Primary category",
-        "primaryPlaceholder": "Choose a category",
-        "secondaryLabel": "Secondary category",
-        "secondaryHint": "Optional",
-        "secondaryPlaceholder": "None",
+        "hint": "Choose up to {limit} categories. Approval happens after review.",
+        "slotLabel": "Category {n}",
+        "placeholder": "Choose a category",
+        "none": "None",
         "governorateLabel": "Governorate",
         "governoratePlaceholder": "Choose a governorate",
         "cityLabel": "City",
         "cityPlaceholder": "Optional"
       },
-      "payment": {
-        "note": "These are the handles BETK uses to send your money to you — they are not shown to buyers. Never enter them as secrets in any other field.",
-        "instapayLabel": "InstaPay handle",
-        "instapayPlaceholder": "Username or number",
-        "vodafoneLabel": "Vodafone Cash",
-        "vodafonePlaceholder": "01xxxxxxxxx",
-        "orangeLabel": "Orange Cash",
-        "orangePlaceholder": "01xxxxxxxxx",
-        "codLabel": "Cash on delivery",
-        "atLeastOneHint": "At least one settlement method is required so BETK can pay you, before publishing your first listing (you can add it later)."
+      "pickup": {
+        "intro": "This is the address the courier collects from. Buyers do not see it.",
+        "governorateNote": "Governorate: {governorate}. It matches your store.",
+        "streetLabel": "Street address",
+        "cityLabel": "City",
+        "notesLabel": "Building notes",
+        "notesHint": "Optional. Floor, landmark, or door."
       },
-      "delivery": {
-        "intro": "Choose how buyers receive their orders.",
-        "modes": {
-          "delivery": "Delivery",
-          "pickup": "Pickup from store",
-          "remote": "Remote service"
+      "agreement": {
+        "label": "I accept the seller agreement",
+        "link": "Read the seller agreement",
+        "required": "Accept the seller agreement to submit."
+      },
+      "food": {
+        "food-v1": {
+          "intro": "Food and beverages need these four items before a food listing can be published.",
+          "packagingLabel": "Packaging photo",
+          "packagingHint": "A photo of the packaging.",
+          "labelLabel": "Label photo",
+          "labelHint": "A photo of the product label.",
+          "expiryLabel": "Expiry photo",
+          "expiryHint": "A photo that shows the expiry.",
+          "socialLabel": "Social page URL",
+          "socialHint": "Only you and BETK admin can read this URL.",
+          "socialPlaceholder": "https://"
         },
-        "minDaysLabel": "Min delivery time (days)",
-        "maxDaysLabel": "Max delivery time (days)",
-        "feeLabel": "Default delivery fee (EGP)",
-        "feeHint": "Leave empty if delivery is free.",
-        "pickupGovLabel": "Pickup governorate",
-        "pickupGovHint": "For pickup from your store.",
-        "pickupGovPlaceholder": "Choose a governorate"
+        "fallback": {
+          "intro": "Food and beverages need these four items before a food listing can be published.",
+          "packagingLabel": "Packaging photo",
+          "packagingHint": "A photo of the packaging.",
+          "labelLabel": "Label photo",
+          "labelHint": "A photo of the product label.",
+          "expiryLabel": "Expiry photo",
+          "expiryHint": "A photo that shows the expiry.",
+          "socialLabel": "Social page URL",
+          "socialHint": "Only you and BETK admin can read this URL.",
+          "socialPlaceholder": "https://"
+        }
       },
       "documents": {
         "intro": "Upload your national ID (front and back) to verify your identity. Your documents stay strictly private.",
@@ -941,30 +952,21 @@
         "uploadFailed": "Upload failed, please try again."
       },
       "delivery": {
-        "metaTitle": "Delivery settings",
-        "title": "Delivery settings",
-        "intro": "Choose the delivery methods available for your store and their default fees.",
-        "modesTitle": "Delivery methods",
-        "modes": {
-          "delivery": "Delivery",
-          "pickup": "Pickup from store",
-          "remote": "Remote service"
-        },
-        "minDaysLabel": "Min delivery time (days)",
-        "maxDaysLabel": "Max delivery time (days)",
-        "feeLabel": "Default delivery fee (EGP)",
-        "feeHint": "Leave empty if delivery is free.",
-        "freeThresholdLabel": "Free delivery threshold (EGP)",
-        "freeThresholdHint": "Delivery becomes free once the order total passes this amount. Optional.",
-        "pickupGovLabel": "Pickup governorate",
-        "pickupGovHint": "For pickup from your store.",
-        "pickupGovPlaceholder": "Choose a governorate",
-        "shipsNationwideLabel": "Ships to all governorates",
-        "allModesOffWarning": "No delivery method is enabled — buyers won't be able to receive their orders. You can still save now and enable a method later.",
+        "metaTitle": "Pickup address",
+        "title": "Pickup address",
+        "intro": "The courier collects orders from this address. Buyers never see it.",
+        "governorateLabel": "Governorate",
+        "governorateHint": "Choosing another governorate updates your store's public governorate so the address stays valid.",
+        "governoratePlaceholder": "Choose a governorate",
+        "cityLabel": "City",
+        "streetLabel": "Street address",
+        "notesLabel": "Building notes",
+        "notesHint": "Optional. Floor, landmark, or door.",
         "save": "Save changes",
         "saving": "Saving…",
-        "saved": "Delivery settings saved",
+        "saved": "Pickup address saved",
         "saveFailed": "Couldn't save your changes, please try again.",
+        "mismatch": "The pickup governorate has to match the store.",
         "errors": {
           "invalid": "Invalid value"
         }

@@ -8,12 +8,9 @@
  * cascades seller_profiles → stores). Zero residue.
  *
  * Proves, per form:
- *   1. delivery JSONB round-trips EXACTLY the `StoreDeliveryOptions` shape
- *      (@/types/jsonb, REG-14) — every key the client sent is present, no
- *      extra key appears (the `.strict()` Zod schema + a plain JSONB column
- *      write can't introduce one) — and `modes` is exactly the 3-value
- *      REG-14 set {delivery,pickup,remote}, not the pack's stale 4-value
- *      wording.
+ *   1. P27 writes store_pickup_addresses and leaves stores.delivery_options
+ *      untouched (REG-65). A payload that still carries delivery modes is
+ *      rejected by the strict pickup schema.
  *   2. payments JSONB round-trips EXACTLY the `StorePaymentMethods` shape.
  *   3. return_policy TEXT round-trips: a real string persists verbatim; an
  *      empty/omitted policy persists as true DB NULL (never `""`).
@@ -42,7 +39,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => h.client,
 }));
 
-import { updateStoreDelivery } from "@/features/store-management/actions/updateStoreDelivery";
+import { updateStorePickup } from "@/features/store-management/actions/updateStorePickup";
 import { updateStoreReturns } from "@/features/store-management/actions/updateStoreReturns";
 import { updateStorePayments } from "@/features/store-management/actions/updateStorePayments";
 
@@ -155,48 +152,52 @@ describeOrSkip("Phase 04 / T07 — store settings (delivery/returns/payments, st
   });
 
   // -------------------------------------------------------------------------
-  // 1. delivery — round-trips the EXACT StoreDeliveryOptions shape (REG-14)
+  // 1. P27 pickup — does not write stores.delivery_options (REG-65)
   // -------------------------------------------------------------------------
-  it("delivery JSONB round-trips exactly the StoreDeliveryOptions shape (3 modes, no extra/missing keys)", async () => {
-    const a = await createActor("delivery-persist");
+  it("pickup address is stored and delivery_options stays empty", async () => {
+    const a = await createActor("pickup-persist");
     await seedSellerStore(a.id, makeSlug());
 
-    const payload = {
-      modes: ["delivery", "pickup", "remote"] as Array<"delivery" | "pickup" | "remote">,
-      min_delivery_days: 1,
-      max_delivery_days: 5,
-      delivery_fee_egp: 30,
-      free_delivery_threshold_egp: 500,
-      pickup_governorate: "giza",
-      ships_nationwide: true,
-    };
-
     h.client = a.client;
-    const res = await updateStoreDelivery(payload);
+    const res = await updateStorePickup({
+      governorate: "cairo",
+      city: "Nasr",
+      streetAddress: "1 Street",
+      buildingNotes: "floor 2",
+    });
     expect(res).toEqual({ ok: true });
 
     const { data: store } = await svc()
       .from("stores")
-      .select("delivery_options")
+      .select("id, delivery_options, governorate")
       .eq("seller_id", a.id)
       .single();
+    expect(store?.delivery_options).toEqual({});
+    expect(store?.governorate).toBe("cairo");
 
-    expect(store?.delivery_options).toEqual(payload);
-    // Exactly the 7 typed keys — no extra, none missing.
-    expect(Object.keys(store?.delivery_options as object).sort()).toEqual(Object.keys(payload).sort());
-    // Exactly the REG-14 3-mode set — never the pack's stale 4-value wording.
-    expect((store?.delivery_options as { modes: string[] }).modes.sort()).toEqual(
-      ["delivery", "pickup", "remote"].sort(),
-    );
+    const { data: pickup } = await svc()
+      .from("store_pickup_addresses")
+      .select("governorate, city, street_address, building_notes")
+      .eq("store_id", store!.id)
+      .single();
+    expect(pickup).toEqual({
+      governorate: "cairo",
+      city: "Nasr",
+      street_address: "1 Street",
+      building_notes: "floor 2",
+    });
   });
 
-  it("delivery: disabling ALL modes is a valid, saveable payload (warning-only edge, not a save-block)", async () => {
-    const a = await createActor("delivery-allOff");
+  it("a delivery-mode payload is rejected and does not write delivery_options", async () => {
+    const a = await createActor("pickup-modes");
     await seedSellerStore(a.id, makeSlug());
 
     h.client = a.client;
-    const res = await updateStoreDelivery({});
-    expect(res).toEqual({ ok: true });
+    const res = await updateStorePickup({
+      modes: ["delivery", "pickup", "remote"],
+      delivery_fee_egp: 30,
+    } as never);
+    expect(res).toEqual({ ok: false, reason: "invalid" });
 
     const { data: store } = await svc()
       .from("stores")
