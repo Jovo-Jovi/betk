@@ -107,6 +107,7 @@ async function writeFollowUps(
           document_type: documentType,
           storage_path: app.food[field],
           review_status: "pending",
+          reviewed_at: null,
         },
         { onConflict: "seller_id,document_type" },
       );

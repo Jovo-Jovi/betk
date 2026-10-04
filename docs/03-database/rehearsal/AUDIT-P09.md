@@ -90,7 +90,7 @@ The three live active staging listings are not fixtures. This trigger does not s
 
 # AUDIT — authored P09M2 (T08-DB)
 
-Audited text: `docs/03-database/rehearsal/staging-text/P09M2.sql`. T08-DB authored it. It is not applied. Sources: decision S1 (human, 2026-10-04), the column classification below, live `information_schema` / `pg_enum` / `pg_policy` / `column_privileges` / `pg_get_functiondef` (SELECT 2026-10-04), and the executed seller probes the same day. Staging DDL was not written. `list_migrations` is 40, last `20261003214258` / `v2_09_publish_and_submit`. No `apply_migration`. No policy. No GRANT. No `admin_settings` UPDATE.
+Audited text: `docs/03-database/rehearsal/staging-text/P09M2.sql`. T08-DB authored it. T08-APPLY (2026-10-04) applied that blob as `20261004172620` / `v2_09_approval_state_actor`. At authoring it was not applied. Sources: decision S1 (human, 2026-10-04), the column classification below, live `information_schema` / `pg_enum` / `pg_policy` / `column_privileges` / `pg_get_functiondef` (SELECT 2026-10-04), and the executed seller probes the same day. Staging DDL was not written. `list_migrations` is 40, last `20261003214258` / `v2_09_publish_and_submit`. No `apply_migration`. No policy. No GRANT. No `admin_settings` UPDATE.
 
 Verdicts are the same scale as the P09M1 audit above: **MATCH**, **BROADER**, **NARROWER**, **AUTHORED**, **MISMATCH**, **FINDING**.
 
@@ -206,6 +206,6 @@ End-user writes that stay legal. They match S1's exceptions. Do not change them:
 | `tests/integration/seller.rls.test.ts` REG-10 | user-client insert `status` pending, `level` bronze (and the pending insert that omits `level`) | Initial profile state. Defaults keep the other approval columns at 0, false, or null |
 | `submit_seller_application` | profile pending / bronze, store pending, two documents pending | S1 submit exception |
 | `resubmit_seller_application` | `rejected_reason` null, `submitted_at` now(), documents pending with `reviewed_at` null | S1 resubmit exception |
-| `src/features/seller-onboarding/actions/submitSellerApplication.ts` food upsert | user client, `review_status` pending on INSERT | The trigger forces pending and null `reviewed_at` |
+| `src/features/seller-onboarding/actions/submitSellerApplication.ts` food upsert | user client, `review_status` pending and `reviewed_at` null on INSERT and on `ON CONFLICT` | S1's document reset. T08-APPLY sets `reviewed_at: null` in the upsert payload so a re-upload of a rejected row matches the exception |
 
-App impact, not a test switch. The same food upsert's `ON CONFLICT` sets `review_status` to pending and does not set `reviewed_at` null. After P09M2, that update raises `BETK_APPROVAL_STATE_ACTOR` when the existing row is not already pending with `reviewed_at` null. No committed test covers that conflict against an approved row. This task does not edit the action.
+T08-APPLY edit: the food upsert object in `submitSellerApplication.ts` adds `reviewed_at: null` next to `review_status: "pending"`. The `ON CONFLICT` update then resets `reviewed_at`, which is the S1 exception (`pending` and `reviewed_at` null).

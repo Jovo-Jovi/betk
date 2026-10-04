@@ -4458,3 +4458,117 @@ begin
   where seller_id = v_uid and document_type = 'national_id_back';
 end;
 $function$;
+
+-- P09M2, applied 20261004172620 / v2_09_approval_state_actor.
+-- Approval-state columns are admin-only for end users (S1).
+-- EXECUTE revoked from PUBLIC, anon, and authenticated.
+CREATE OR REPLACE FUNCTION betk.enforce_approval_state_actor()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'betk', 'public'
+AS $function$
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'authenticated' OR betk.is_admin() THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_TABLE_NAME = 'seller_documents' THEN
+    IF TG_OP = 'INSERT' THEN
+      NEW.review_status := 'pending'::betk.doc_review_status;
+      NEW.reviewed_at := NULL;
+      RETURN NEW;
+    END IF;
+    IF NEW.review_status IS DISTINCT FROM OLD.review_status
+       OR NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at THEN
+      IF NEW.review_status = 'pending'::betk.doc_review_status
+         AND NEW.reviewed_at IS NULL THEN
+        RETURN NEW;
+      END IF;
+      RAISE EXCEPTION 'BETK_APPROVAL_STATE_ACTOR';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_TABLE_NAME = 'seller_profiles' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF NEW.status IS DISTINCT FROM 'pending'::betk.seller_status
+         OR NEW.level IS DISTINCT FROM 'bronze'::betk.seller_level
+         OR NEW.level_score IS DISTINCT FROM 0
+         OR NEW.is_verified
+         OR NEW.suspension_ends_at IS NOT NULL
+         OR NEW.approved_at IS NOT NULL
+         OR NEW.rejected_reason IS NOT NULL
+         OR NEW.strike_count IS DISTINCT FROM 0
+         OR NEW.total_orders_completed IS DISTINCT FROM 0
+         OR NEW.total_reviews_count IS DISTINCT FROM 0 THEN
+        RAISE EXCEPTION 'BETK_APPROVAL_STATE_ACTOR';
+      END IF;
+      RETURN NEW;
+    END IF;
+    IF NEW.status IS DISTINCT FROM OLD.status
+       OR NEW.suspension_ends_at IS DISTINCT FROM OLD.suspension_ends_at
+       OR NEW.level IS DISTINCT FROM OLD.level
+       OR NEW.level_score IS DISTINCT FROM OLD.level_score
+       OR NEW.is_verified IS DISTINCT FROM OLD.is_verified
+       OR NEW.total_orders_completed IS DISTINCT FROM OLD.total_orders_completed
+       OR NEW.total_reviews_count IS DISTINCT FROM OLD.total_reviews_count
+       OR NEW.strike_count IS DISTINCT FROM OLD.strike_count
+       OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
+       OR NEW.rejected_reason IS DISTINCT FROM OLD.rejected_reason
+       OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at THEN
+      IF NEW.rejected_reason IS NULL
+         AND OLD.rejected_reason IS NOT NULL
+         AND NEW.submitted_at IS DISTINCT FROM OLD.submitted_at
+         AND NEW.status IS NOT DISTINCT FROM OLD.status
+         AND NEW.suspension_ends_at IS NOT DISTINCT FROM OLD.suspension_ends_at
+         AND NEW.level IS NOT DISTINCT FROM OLD.level
+         AND NEW.level_score IS NOT DISTINCT FROM OLD.level_score
+         AND NEW.is_verified IS NOT DISTINCT FROM OLD.is_verified
+         AND NEW.total_orders_completed IS NOT DISTINCT FROM OLD.total_orders_completed
+         AND NEW.total_reviews_count IS NOT DISTINCT FROM OLD.total_reviews_count
+         AND NEW.strike_count IS NOT DISTINCT FROM OLD.strike_count
+         AND NEW.approved_at IS NOT DISTINCT FROM OLD.approved_at THEN
+        RETURN NEW;
+      END IF;
+      RAISE EXCEPTION 'BETK_APPROVAL_STATE_ACTOR';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_TABLE_NAME = 'stores' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF NEW.status IS DISTINCT FROM 'pending'::betk.store_status THEN
+        RAISE EXCEPTION 'BETK_APPROVAL_STATE_ACTOR';
+      END IF;
+      RETURN NEW;
+    END IF;
+    IF NEW.status IS DISTINCT FROM OLD.status THEN
+      RAISE EXCEPTION 'BETK_APPROVAL_STATE_ACTOR';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION betk.enforce_approval_state_actor() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_enforce_seller_document_approval_state ON betk.seller_documents;
+CREATE TRIGGER trg_enforce_seller_document_approval_state
+  BEFORE INSERT OR UPDATE ON betk.seller_documents
+  FOR EACH ROW
+  EXECUTE FUNCTION betk.enforce_approval_state_actor();
+
+DROP TRIGGER IF EXISTS trg_enforce_seller_profile_approval_state ON betk.seller_profiles;
+CREATE TRIGGER trg_enforce_seller_profile_approval_state
+  BEFORE INSERT OR UPDATE ON betk.seller_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION betk.enforce_approval_state_actor();
+
+DROP TRIGGER IF EXISTS trg_enforce_store_approval_state ON betk.stores;
+CREATE TRIGGER trg_enforce_store_approval_state
+  BEFORE INSERT OR UPDATE ON betk.stores
+  FOR EACH ROW
+  EXECUTE FUNCTION betk.enforce_approval_state_actor();
