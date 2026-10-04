@@ -114,6 +114,23 @@ async function createBuyer(label: string): Promise<Buyer> {
     .insert({ id, phone_number: makePhone(), auth_provider: "phone", role: "buyer" });
   if (uErr) throw new Error(`users seed(${label}): ${uErr.message}`);
 
+  // REG-75 B: buyer actions refuse until the current buyer_terms row exists.
+  // Service-role seed. status defaults to accepted. Deleted in afterAll.
+  const { data: version, error: versionErr } = await svc()
+    .from("admin_settings")
+    .select("value")
+    .eq("key", "agreement_buyer_terms_version")
+    .single();
+  if (versionErr || !version?.value) {
+    throw new Error(`buyer terms version: ${versionErr?.message}`);
+  }
+  const { error: acceptErr } = await svc().from("agreement_acceptances").insert({
+    user_id: id,
+    document: "buyer_terms",
+    version_label: version.value,
+  });
+  if (acceptErr) throw new Error(`buyer terms seed(${label}): ${acceptErr.message}`);
+
   return { id, client: await signIn(email) };
 }
 
@@ -249,6 +266,9 @@ describeOrSkip("Phase 06 / T02 — messaging write layer (staging)", () => {
 
   afterAll(async () => {
     await svc().from("inquiries").delete().in("buyer_id", createdAuthIds);
+    if (createdAuthIds.length > 0) {
+      await svc().from("agreement_acceptances").delete().in("user_id", createdAuthIds);
+    }
     for (const id of createdAuthIds) {
       await svc().from("users").delete().eq("id", id);
       await service.auth.admin.deleteUser(id).catch(() => undefined);

@@ -1,9 +1,10 @@
 /**
  * Stock path after M4 — plan §2.3.
  *
- * `trg_decrement_stock_on_confirm` is dropped. Stock moves at checkout, not on
- * a transition into `confirmed`. This file does not update `status` to
- * `confirmed`. Each case reads the seeded listing and expects the seed stock.
+ * `trg_decrement_stock_on_confirm` is dropped from the confirm path (M4).
+ * M8 attaches that function to `trg_decrement_stock_on_checkout` (AFTER INSERT
+ * on order_items). Seeding an item is the decrement. This file does not update
+ * `status` to `confirmed`. The seller order stays `pending`.
  *
  * Seeds via the service-role client. Cleans up to zero residue.
  *
@@ -61,7 +62,6 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
   let orderC = "";
   let orderD = "";
   let orderE = "";
-  let orderF = "";
   const listingIds: string[] = [];
   const orderIds: string[] = [];
 
@@ -213,7 +213,6 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     listingC2 = await seedListing("C2", 8);
     listingD = await seedListing("D", null); // untracked stock (service / made-to-order)
     listingE = await seedListing("E", 7); // idempotency
-    listingF = await seedListing("F", 2); // oversell → CHECK guard
 
     orderA = await seedOrder("A", [{ listingId: listingA, qty: 3 }]);
     orderB = await seedOrder("B", [{ listingId: listingB, qty: 4 }]);
@@ -223,7 +222,6 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
     ]);
     orderD = await seedOrder("D", [{ listingId: listingD, qty: 2 }]);
     orderE = await seedOrder("E", [{ listingId: listingE, qty: 1 }]);
-    orderF = await seedOrder("F", [{ listingId: listingF, qty: 5 }]);
   });
 
   afterAll(async () => {
@@ -248,15 +246,18 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
 
   it("exact stock stays at the seed; status is not updated to confirmed", async () => {
     const row = await readListing(listingA);
-    expect(row.stock_qty).toBe(3);
-    expect(row.status).toBe("active");
+    // M8 trg_decrement_stock_on_checkout: qty 3 against stock 3 lands at 0 and sold_out.
+    // Confirm is not issued.
+    expect(row.stock_qty).toBe(0);
+    expect(row.status).toBe("sold_out");
     const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderA).single();
     expect(order?.status).toBe("pending");
   });
 
   it("partial stock stays at the seed; status is not updated to confirmed", async () => {
     const row = await readListing(listingB);
-    expect(row.stock_qty).toBe(10);
+    // M8 trg_decrement_stock_on_checkout: qty 4 against stock 10 lands at 6 and stays active.
+    expect(row.stock_qty).toBe(6);
     expect(row.status).toBe("active");
     const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderB).single();
     expect(order?.status).toBe("pending");
@@ -265,8 +266,9 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
   it("multi-item stocks stay at the seed; status is not updated to confirmed", async () => {
     const c1 = await readListing(listingC1);
     const c2 = await readListing(listingC2);
-    expect(c1.stock_qty).toBe(5);
-    expect(c2.stock_qty).toBe(8);
+    // M8 trg_decrement_stock_on_checkout: 5−2 and 8−3. Neither hits zero.
+    expect(c1.stock_qty).toBe(3);
+    expect(c2.stock_qty).toBe(5);
     expect(c1.status).toBe("active");
     expect(c2.status).toBe("active");
     const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderC).single();
@@ -283,15 +285,28 @@ describeOrSkip("R2 — stock does not move on confirm (trigger detached, staging
 
   it("seed stock stays put; there is no confirmed to preparing update", async () => {
     const row = await readListing(listingE);
-    expect(row.stock_qty).toBe(7);
+    // M8 trg_decrement_stock_on_checkout: qty 1 against stock 7 lands at 6.
+    // There is still no confirmed→preparing update.
+    expect(row.stock_qty).toBe(6);
     const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderE).single();
     expect(order?.status).toBe("pending");
   });
 
   it("oversell confirm is not issued; stock and pending status stay as seeded", async () => {
+    // Checkout oversell is fail-closed (M8 trg_decrement_stock_on_checkout):
+    // quantity above stock raises BETK_CHECKOUT_OUT_OF_STOCK and does not decrement.
+    listingF = await seedListing("F", 2);
+    await expect(seedOrder("F", [{ listingId: listingF, qty: 5 }])).rejects.toThrow(
+      "BETK_CHECKOUT_OUT_OF_STOCK",
+    );
     const row = await readListing(listingF);
     expect(row.stock_qty).toBe(2);
-    const { data: order } = await svc().from("seller_orders").select("status").eq("id", orderF).single();
+    expect(row.status).toBe("active");
+    const { data: order } = await svc()
+      .from("seller_orders")
+      .select("status")
+      .eq("betk_ref", `R2-F-${RUN}`)
+      .single();
     expect(order?.status).toBe("pending");
   });
 });

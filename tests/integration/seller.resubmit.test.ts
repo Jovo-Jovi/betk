@@ -147,6 +147,23 @@ async function createActor(
   });
   if (signInErr) throw new Error(`signIn(${label}) failed: ${signInErr.message}`);
 
+  // AC-AGR-3: resubmit_seller_application raises BETK_SELLER_AGREEMENT_REQUIRED
+  // before the not-rejected guard. Service-role seed; status defaults to accepted.
+  const { data: version, error: versionErr } = await svc()
+    .from("admin_settings")
+    .select("value")
+    .eq("key", "agreement_seller_agreement_version")
+    .single();
+  if (versionErr || !version?.value) {
+    throw new Error(`seller agreement version: ${versionErr?.message}`);
+  }
+  const { error: acceptErr } = await svc().from("agreement_acceptances").insert({
+    user_id: id,
+    document: "seller_agreement",
+    version_label: version.value,
+  });
+  if (acceptErr) throw new Error(`seller agreement seed(${label}): ${acceptErr.message}`);
+
   return { id, email, client };
 }
 
@@ -244,6 +261,9 @@ describeOrSkip("Phase 04 / T05 — seller-application resubmit (staging)", () =>
   afterAll(async () => {
     if (uploadedDocs.length) {
       await service.storage.from(DOCS_BUCKET).remove(uploadedDocs);
+    }
+    if (createdAuthIds.length > 0) {
+      await svc().from("agreement_acceptances").delete().in("user_id", createdAuthIds);
     }
     for (const id of createdAuthIds) {
       await svc().from("users").delete().eq("id", id);

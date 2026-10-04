@@ -5,16 +5,21 @@
 # Stage order per CICD_PIPELINE.md:
 #   install → lint → typecheck → vitest (unit) → guards → types-drift → build
 #
-# Integration tests (tests/integration/rls.smoke.test.ts) hit live staging and
-# create/teardown auth users — they MUST NOT run in the default CI job silently.
-# They are gated behind the separate `rls-smoke` job, which runs the staging
-# suite when triggered on develop push or workflow_dispatch (explicit opt-in),
-# AND — as a BLOCKING gate — on any pull_request whose diff touches
-# supabase/migrations/** (RLS is the sole authz boundary, so a policy change
-# must be smoke-tested before merge). On non-migration PRs the job still runs but
-# short-circuits with an explicit "no migration changes" log line (never a silent
-# absence), so it can be marked "required" in branch protection and act as a
-# conditional gate. It fails loudly when secrets are absent — never a silent skip.
+# Integration tests hit live staging and create/teardown auth users — they MUST
+# NOT run in the default CI job silently. `rls-smoke` runs
+# tests/integration/rls.smoke.test.ts when triggered on develop push or
+# workflow_dispatch (explicit opt-in), AND — as a BLOCKING gate — on any
+# pull_request whose diff touches supabase/migrations/** (RLS is the sole authz
+# boundary, so a policy change must be smoke-tested before merge). On
+# non-migration PRs that job still runs but short-circuits with an explicit
+# "no migration changes" log line (never a silent absence), so it can be marked
+# "required" in branch protection and act as a conditional gate. It fails loudly
+# when secrets are absent — never a silent skip.
+#
+# `integration-staging` runs the full tests/integration suite on a pull_request
+# whose diff touches src/, tests/, or supabase/. It needs rls-smoke so the two
+# jobs never write staging at the same time. It is not a required check.
+# Phase 10 T00 decides that.
 
 name: CI
 
@@ -518,3 +523,88 @@ jobs:
           WHATSAPP_PHONE_ID: ci-phone-id
           SMS_PROVIDER_KEY: ci-sms-key
         run: pnpm exec vitest run tests/integration/rls.smoke.test.ts --reporter=verbose
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Full integration suite against staging.
+# Needs rls-smoke so the two jobs never write staging at the same time.
+# Runs on a pull_request that changes src/, tests/, or supabase/.
+# Not a required check. Phase 10 T00 decides that.
+# ─────────────────────────────────────────────────────────────────────────────
+  integration-staging:
+    name: Integration (staging)
+    needs: [install, rls-smoke]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect integration paths
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- src/ tests/ supabase/)"
+          if [ -n "$changed" ]; then
+            echo "src/, tests/, or supabase/ changed — running the integration suite against staging:"
+            echo "$changed" | sed 's/^/  - /'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No src/, tests/, or supabase/ changes — skipping the integration suite."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      - name: Verify staging secrets are present
+        if: steps.detect.outputs.run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          missing=()
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]      && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          [ -z "$SUPABASE_SERVICE_KEY" ]           && missing+=("SUPABASE_SERVICE_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Integration suite requires secrets: ${missing[*]}"
+            echo "::error::Add them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Integration tests (staging)
+        if: steps.detect.outputs.run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: phc_ci_placeholder
+          NEXT_PUBLIC_POSTHOG_HOST: https://posthog.invalid
+          NEXT_PUBLIC_SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          GOOGLE_CLIENT_ID: ci-client-id
+          GOOGLE_CLIENT_SECRET: ci-client-secret
+          RESEND_API_KEY: re_ci_placeholder
+          RESEND_FROM_ADDRESS: noreply@betk.invalid
+          SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          SUPABASE_DOCS_BUCKET: seller-documents
+          SUPABASE_MEDIA_BUCKET: listing-media
+          WHATSAPP_API_TOKEN: ci-whatsapp-token
+          WHATSAPP_PHONE_ID: ci-phone-id
+          SMS_PROVIDER_KEY: ci-sms-key
+        run: pnpm exec vitest run tests/integration --reporter=verbose

@@ -152,9 +152,15 @@ async function seedListing(
       price: 100,
       price_type: "fixed",
       status: "draft",
-      ...((overrides.status ?? "draft") === "active"
-        ? { prep_days: 1, weight_g: 1, length_mm: 1, width_mm: 1, height_mm: 1 }
-        : {}),
+      // F-P1 prep cap and M3 chk_active_listing_shipping. A draft publish
+      // hits the BEFORE trigger (BETK_PREP_CAP) before the CHECK. A
+      // sold_out→active restock is not a publish, so the NOT VALID check
+      // refuses the updated row (code SHIPPING) unless these are already set.
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
       ...overrides,
     })
     .select("id")

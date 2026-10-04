@@ -139,6 +139,21 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
       const uid = data.user.id;
       createdAuthIds.push(uid);
       await svc().from("users").insert({ id: uid, phone_number: null, auth_provider: "google", role: "buyer" } as never);
+      // REG-75 B: buyer actions refuse until the current buyer_terms row exists.
+      const { data: version, error: versionErr } = await svc()
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "agreement_buyer_terms_version")
+        .single();
+      if (versionErr || !version?.value) {
+        throw new Error(`[storefront.test] buyer terms version: ${versionErr?.message}`);
+      }
+      const { error: acceptErr } = await svc().from("agreement_acceptances").insert({
+        user_id: uid,
+        document: "buyer_terms",
+        version_label: version.value,
+      });
+      if (acceptErr) throw new Error(`[storefront.test] buyer terms seed: ${acceptErr.message}`);
       if (label === "a") buyerAId = uid;
       else buyerBId = uid;
     }
@@ -239,6 +254,9 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
     if (categoryId) await svc().from("categories").delete().eq("id", categoryId);
     for (const sid of [sellerId, suspSellerId]) {
       if (sid) await svc().from("seller_profiles").delete().eq("id", sid);
+    }
+    if (createdAuthIds.length > 0) {
+      await svc().from("agreement_acceptances").delete().in("user_id", createdAuthIds);
     }
     for (const id of createdAuthIds) {
       await svc().from("users").delete().eq("id", id);
