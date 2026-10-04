@@ -14,7 +14,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCategoryTree } from "@/features/discovery";
+import { getOwnApprovedCategories } from "@/features/listings";
 import { routes } from "@/constants/routes";
 import { ListingForm } from "../_components/ListingForm";
 
@@ -37,7 +37,7 @@ export default async function NewListingPage() {
     redirect(routes.auth.login as Route);
   }
 
-  const categories = await getCategoryTree(supabase);
+  const categories = await getOwnApprovedCategories(supabase);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">

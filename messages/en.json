@@ -641,6 +641,31 @@
         },
         "priceLabel": "Price (EGP)",
         "pricePlaceholder": "0.00",
+        "weightLabel": "Weight (g)",
+        "lengthLabel": "Length (mm)",
+        "widthLabel": "Width (mm)",
+        "heightLabel": "Height (mm)",
+        "shippingHint": "Weight and the three dimensions are required to publish. A draft can leave them empty.",
+        "prepLabel": "Preparation days",
+        "prepHint": "Days you need before the order is ready.",
+        "categoryEmpty": "No approved category yet",
+        "markSoldOut": "Mark sold out",
+        "markAvailable": "Mark available",
+        "markSoldOutDone": "Marked sold out",
+        "markAvailableDone": "Marked available",
+        "availabilityFailed": "Couldn't update availability, try again",
+        "refusal": {
+          "BETK_LISTING_TYPE": "Only a product can be published.",
+          "BETK_PRICE_TYPE": "A published listing needs a fixed price.",
+          "BETK_PREP_CAP": "Preparation days are above the allowed maximum.",
+          "BETK_PREP_CAP_UNCONFIGURED": "Publishing is closed until the preparation limit is set.",
+          "BETK_PRICE_BAND": "This price is outside the allowed range.",
+          "BETK_PRICE_BAND_UNCONFIGURED": "Publishing is closed until the price range is set.",
+          "BETK_CATEGORY_NOT_APPROVED": "This category is not approved for your store.",
+          "BETK_FOOD_APPROVAL_REQUIRED": "Food listings stay unpublished until the food documents are approved.",
+          "BETK_FOOD_REQUIREMENTS_UNCONFIGURED": "Food publishing is closed until food requirements are set.",
+          "SHIPPING": "An active listing needs a weight and length, width, and height."
+        },
         "priceHiddenHint": "Price is hidden — buyers will request a quote directly",
         "stockQtyLabel": "Stock quantity",
         "stockQtyHint": "Leave empty for unlimited stock",
@@ -722,7 +747,16 @@
       "metaTitle": "Inventory",
       "title": "Inventory",
       "columns": {
-        "threshold": "Threshold"
+        "threshold": "Threshold",
+        "touched": "Stock updated"
+      },
+      "table": {
+        "caption": "Inventory",
+        "empty": "No stock to track",
+        "error": "Couldn't load inventory",
+        "retry": "Try again",
+        "previous": "Previous",
+        "next": "Next"
       },
       "actions": {
         "save": "Save",

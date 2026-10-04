@@ -17,7 +17,7 @@ import { resolveCallerStoreId, type ListingsClient } from "./_shared";
 
 const INVENTORY_SELECT = `
   id, type, title_ar, title_en, status, stock_qty, low_stock_threshold,
-  is_made_to_order,
+  is_made_to_order, stock_touched_at,
   listing_images ( url, sort_order )
 `;
 
@@ -30,6 +30,7 @@ interface RawInventoryRow {
   stock_qty: number | null;
   low_stock_threshold: number;
   is_made_to_order: boolean;
+  stock_touched_at: string | null;
   listing_images: { url: string; sort_order: number }[] | null;
 }
 
@@ -70,6 +71,7 @@ export async function getOwnInventory(client?: ListingsClient): Promise<OwnInven
     stockQty: row.stock_qty,
     lowStockThreshold: row.low_stock_threshold,
     isMadeToOrder: row.is_made_to_order,
+    stockTouchedAt: row.stock_touched_at,
     heroImageUrl: pickHero(row.listing_images),
   }));
 }

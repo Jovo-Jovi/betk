@@ -42,7 +42,7 @@ import type { Database, Json } from "@/lib/supabase/types";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 import { resolveCallerStoreId } from "../queries/_shared";
-import { syncListingTags } from "./_shared";
+import { catalogueWrite, refusalFromDb, syncListingTags } from "./_shared";
 
 type ListingInsert = Database["betk"]["Tables"]["listings"]["Insert"];
 
@@ -97,6 +97,7 @@ export async function createListing(
     accepts_custom_orders: p.acceptsCustomOrders ?? false,
     custom_order_notes: p.customOrderNotes ?? null,
     status: "draft",
+    ...catalogueWrite(p),
   };
   if (p.lowStockThreshold !== undefined && p.type !== "service") {
     insert.low_stock_threshold = p.lowStockThreshold;
@@ -116,7 +117,7 @@ export async function createListing(
     captureTaggedError(error ?? new Error("createListing: no row"), "listing", {
       extra: { step: "insertListing" },
     });
-    return { ok: false, reason: "error" };
+    return refusalFromDb(error?.message);
   }
 
   // Independent child write (ADR-013). A tag failure doesn't invalidate the

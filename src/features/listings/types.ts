@@ -58,6 +58,11 @@ export interface OwnListingDetail {
   viewCount: number;
   inquiryCount: number;
   createdAt: string;
+  weightG: number | null;
+  lengthMm: number | null;
+  widthMm: number | null;
+  heightMm: number | null;
+  prepDays: number | null;
   images: { id: string; url: string; sortOrder: number }[];
   tags: string[];
 }
@@ -72,6 +77,15 @@ export interface OwnInventoryItem {
   stockQty: number | null;
   lowStockThreshold: number;
   isMadeToOrder: boolean;
+  stockTouchedAt: string | null;
   /** Hero image (sort_order 0), or null. */
   heroImageUrl: string | null;
+}
+
+/** An approved store category the seller may publish into. */
+export interface ApprovedStoreCategory {
+  id: string;
+  nameAr: string;
+  nameEn: string | null;
+  parentId: string | null;
 }

@@ -31,6 +31,7 @@
 import { z } from "zod";
 import { storeDeliveryOptionsSchema } from "@/validations/sellerOnboarding";
 import type { PublishRequirement } from "@/features/listings/listingRules";
+import type { ListingRefusalCode } from "@/features/listings/publishRefusal";
 
 /** NUMERIC(10,2): ≤ 99,999,999.99 and > 0 (price CHECK). */
 const priceSchema = z.number().positive().max(99_999_999.99);
@@ -38,6 +39,10 @@ const priceSchema = z.number().positive().max(99_999_999.99);
 const stockQtySchema = z.number().int().min(0).max(1_000_000);
 /** SMALLINT low_stock_threshold (NOT NULL DEFAULT 3). */
 const lowStockThresholdSchema = z.number().int().min(0).max(32_767);
+/** Shipping integers. Each CHECK is > 0 when not null. Draft may omit them. */
+const shippingIntSchema = z.number().int().positive().max(1_000_000);
+/** SMALLINT prep_days. The cap is the database, not this bound. */
+const prepDaysSchema = z.number().int().min(0).max(32_767);
 
 export const listingTypeSchema = z.enum(["product", "service"]);
 export const priceTypeSchema = z.enum(["fixed", "per_hour", "starting_from", "quote_only"]);
@@ -63,6 +68,11 @@ const listingContentShape = {
   customOrderNotes: z.string().trim().max(2000).optional(),
   deliveryOptions: storeDeliveryOptionsSchema.optional(),
   tags: z.array(listingTagSchema).max(5).optional(),
+  weightG: shippingIntSchema.nullish(),
+  lengthMm: shippingIntSchema.nullish(),
+  widthMm: shippingIntSchema.nullish(),
+  heightMm: shippingIntSchema.nullish(),
+  prepDays: prepDaysSchema.nullish(),
 } as const;
 
 /** Shared cross-field validation for create + update. */
@@ -128,6 +138,13 @@ export type ReorderListingImagesInput = z.input<typeof reorderListingImagesSchem
 export const listingIdInputSchema = z.object({ listingId: z.string().uuid() });
 export type ListingIdInput = z.input<typeof listingIdInputSchema>;
 
+/** active ↔ sold_out. Status only. F-P1 does not treat this as a publish. */
+export const setListingSoldOutSchema = z.object({
+  listingId: z.string().uuid(),
+  soldOut: z.boolean(),
+});
+export type SetListingSoldOutInput = z.input<typeof setListingSoldOutSchema>;
+
 /** updateStock (T05 consumer). Sets stock_qty; R-L07 restock flip is derived. */
 export const updateStockSchema = z.object({
   listingId: z.string().uuid(),
@@ -171,18 +188,24 @@ type BaseFailReason =
   | "invalid"
   | "error";
 
+/** A database refusal. `code` is an i18n key. There is no raw database sentence. */
+export type ListingRefusal = { ok: false; reason: "refused"; code: ListingRefusalCode };
+
 export type CreateListingResult =
   | { ok: true; listingId: string }
+  | ListingRefusal
   | { ok: false; reason: Exclude<BaseFailReason, "not_found"> };
 
 export type UpdateListingResult =
   | { ok: true }
+  | ListingRefusal
   | { ok: false; reason: BaseFailReason };
 
 /** publishListing — a blocked publish returns the UNMET requirements checklist. */
 export type PublishListingResult =
   | { ok: true }
   | { ok: false; reason: "unmet_requirements"; unmet: PublishRequirement[] }
+  | ListingRefusal
   | { ok: false; reason: BaseFailReason | "invalid_state" };
 
 export type SetPauseResult =
@@ -196,7 +219,14 @@ export type SoftDeleteListingResult =
 /** updateStock — `restocked` true when a sold_out listing was flipped to active (R-L07). */
 export type UpdateStockResult =
   | { ok: true; restocked: boolean }
+  | ListingRefusal
   | { ok: false; reason: BaseFailReason };
+
+/** setListingSoldOut — status only, active ↔ sold_out. */
+export type SetListingSoldOutResult =
+  | { ok: true }
+  | ListingRefusal
+  | { ok: false; reason: BaseFailReason | "invalid_state" };
 
 export type AddListingImageResult =
   | { ok: true; imageId: string }

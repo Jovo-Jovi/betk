@@ -641,6 +641,31 @@
         },
         "priceLabel": "السعر (ج.م)",
         "pricePlaceholder": "0.00",
+        "weightLabel": "الوزن (غ)",
+        "lengthLabel": "الطول (مم)",
+        "widthLabel": "العرض (مم)",
+        "heightLabel": "الارتفاع (مم)",
+        "shippingHint": "الوزن والأبعاد الثلاثة لازمة للنشر. المسودة يمكن أن تتركها فارغة.",
+        "prepLabel": "أيام التجهيز",
+        "prepHint": "الأيام التي تحتاجها قبل أن يصبح الطلب جاهزًا.",
+        "categoryEmpty": "لا يوجد تصنيف معتمد بعد",
+        "markSoldOut": "تعليم كنافد",
+        "markAvailable": "تعليم كمتاح",
+        "markSoldOutDone": "تم التعليم كنافد",
+        "markAvailableDone": "تم التعليم كمتاح",
+        "availabilityFailed": "تعذر تحديث التوفر، حاول مرة أخرى",
+        "refusal": {
+          "BETK_LISTING_TYPE": "لا يُنشر إلا منتج.",
+          "BETK_PRICE_TYPE": "الإعلان المنشور يحتاج سعرًا ثابتًا.",
+          "BETK_PREP_CAP": "أيام التجهيز أعلى من الحد المسموح.",
+          "BETK_PREP_CAP_UNCONFIGURED": "النشر مغلق حتى يُضبط حد التجهيز.",
+          "BETK_PRICE_BAND": "هذا السعر خارج النطاق المسموح.",
+          "BETK_PRICE_BAND_UNCONFIGURED": "النشر مغلق حتى يُضبط نطاق السعر.",
+          "BETK_CATEGORY_NOT_APPROVED": "هذا التصنيف غير معتمد لمتجرك.",
+          "BETK_FOOD_APPROVAL_REQUIRED": "إعلانات الأغذية تبقى غير منشورة حتى تُعتمد مستندات الغذاء.",
+          "BETK_FOOD_REQUIREMENTS_UNCONFIGURED": "نشر الأغذية مغلق حتى تُضبط متطلبات الغذاء.",
+          "SHIPPING": "الإعلان النشط يحتاج وزنًا وطولًا وعرضًا وارتفاعًا."
+        },
         "priceHiddenHint": "السعر مخفي — سيطلب العملاء عرض سعر منك مباشرة",
         "stockQtyLabel": "الكمية المتوفرة",
         "stockQtyHint": "اتركه فارغًا لكمية غير محدودة",
@@ -722,7 +747,16 @@
       "metaTitle": "المخزون",
       "title": "المخزون",
       "columns": {
-        "threshold": "حد التنبيه"
+        "threshold": "حد التنبيه",
+        "touched": "تحديث المخزون"
+      },
+      "table": {
+        "caption": "المخزون",
+        "empty": "لا يوجد مخزون لمتابعته",
+        "error": "تعذر تحميل المخزون",
+        "retry": "حاول مرة أخرى",
+        "previous": "السابق",
+        "next": "التالي"
       },
       "actions": {
         "save": "حفظ",
