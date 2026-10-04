@@ -602,8 +602,10 @@ jobs:
           RESEND_API_KEY: re_ci_placeholder
           RESEND_FROM_ADDRESS: noreply@betk.invalid
           SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
-          SUPABASE_DOCS_BUCKET: seller-documents
-          SUPABASE_MEDIA_BUCKET: listing-media
+          # Live staging buckets (storage.buckets). The smoke job's
+          # seller-documents / listing-media placeholders are not buckets.
+          SUPABASE_DOCS_BUCKET: docs
+          SUPABASE_MEDIA_BUCKET: media
           WHATSAPP_API_TOKEN: ci-whatsapp-token
           WHATSAPP_PHONE_ID: ci-phone-id
           SMS_PROVIDER_KEY: ci-sms-key
