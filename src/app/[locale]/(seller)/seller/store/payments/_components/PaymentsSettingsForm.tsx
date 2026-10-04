@@ -6,16 +6,10 @@
  * DS components — a genuinely new component/state → STOP-and-flag to Claude
  * Design.
  *
- * Handles are DISPLAY values surfaced to buyers at checkout, NOT secrets —
- * the UI_SPEC note is rendered up top (info Alert).
- *
- * ⚠️ REG-64 (flagged, NOT fixed here — out of CORRECTION-02B's explicit
- * scope, which named only the storefront render + publish gate + onboarding
- * step 3): under OD-8 §7 this column — and this page's copy — describe the
- * BETK→seller SETTLEMENT destination, not a buyer-facing pay-to surface. The
- * `t("payments.note")` string below is stale (still says "shown to buyers at
- * checkout"). A dedicated task should reword it the same way StepPayment's
- * i18n was reworded.
+ * Handles are the BETK→seller settlement destination (OD-8 §7), not a
+ * buyer-facing pay-to surface. The info Alert is that wording (REG-64).
+ * `cod_enabled` stays in the JSON and on this form. It is not a publish gate
+ * (REG-63). Do not drop it.
  *
  * R-S09 ENFORCEMENT NOTE (read before touching this banner): the warning
  * below is CONFIG + BANNER ONLY. It never blocks this save, and this page/

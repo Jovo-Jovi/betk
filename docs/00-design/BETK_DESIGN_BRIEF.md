@@ -337,6 +337,7 @@ Dimensions/padding/radius reference the scales above. Every component must rende
 ### 5.27 FilterChips (`.chip`) & FilterSheet
 - **Chip:** `inline-flex gap --space-1`, padding `.25rem .75rem`, radius **full**, `1px --border`, `--text-xs` 500, `--card` bg; hover border `--primary`; `.active` → `hsl(primary/.1)` bg + `--primary` border + `--primary` text; `.chip-remove` 14×14 @ .6 opacity (× icon).
 - **FilterSheet:** composed on mobile from the Sheet primitive (categories tree + governorate/city + price + type); on desktop an inline panel. States: default/active-filters/cleared; empty result → EmptyState "clear filters". RTL: chips wrap start→end; remove-× on inline-end.
+- sanctioned CD-DELTA-6 (FilterSheet products-only, 024520a, Claude Design 2026-10-05)
 
 ### 5.28 Accordion (`.accordion-item/-trigger/-content`)
 - Item bottom hairline. Trigger full-width flex space-between, padding `--space-4 0`, **600** `--text-sm`, **`text-align:start`**, chevron `.arrow` (muted) rotates 180° when `.open`. Content hidden→block on `.open`, `padding-bottom --space-4`, `--text-sm` muted `line-height 1.8`. States: closed/open. RTL: text-align start + chevron mirror.

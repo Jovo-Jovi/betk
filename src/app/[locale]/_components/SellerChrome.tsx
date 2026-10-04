@@ -133,7 +133,14 @@ export function SellerChrome() {
         >
           <Menu className="size-5" />
         </button>
-        <span className="font-display text-base font-extrabold text-primary">BETK</span>
+        <button
+          type="button"
+          onClick={() => startRouteTransition(() => router.push(routes.home))}
+          aria-label="BETK"
+          className="font-display text-base font-extrabold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          BETK
+        </button>
         <div className="ms-auto flex items-center gap-1">
           <button
             type="button"
@@ -165,6 +172,7 @@ export function SellerChrome() {
         }}
         open={open}
         onClose={() => setOpen(false)}
+        onLogoClick={() => startRouteTransition(() => router.push(routes.home))}
       />
     </>
   );

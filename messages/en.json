@@ -50,7 +50,7 @@
       "store": "Store profile",
       "delivery": "Pickup address",
       "returns": "Returns",
-      "payments": "Payments"
+      "payments": "Settlement"
     },
     "landing": {
       "title": "Dashboard",
@@ -1024,9 +1024,9 @@
         }
       },
       "payments": {
-        "metaTitle": "Payment methods",
-        "title": "Payment methods",
-        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "metaTitle": "Settlement",
+        "title": "Settlement",
+        "note": "These handles are where BETK pays you, after commission. Buyers pay BETK, not you. Do not enter them as secrets in any other field.",
         "instapayLabel": "InstaPay handle",
         "instapayPlaceholder": "Username or number",
         "vodafoneLabel": "Vodafone Cash",
@@ -1034,10 +1034,10 @@
         "orangeLabel": "Orange Cash",
         "orangePlaceholder": "01xxxxxxxxx",
         "codLabel": "Cash on delivery",
-        "emptyWarning": "Add at least one payment method to start selling.",
+        "emptyWarning": "Add at least one settlement handle so BETK can pay you.",
         "save": "Save changes",
         "saving": "Saving…",
-        "saved": "Payment methods saved",
+        "saved": "Settlement handles saved",
         "saveFailed": "Couldn't save your changes, please try again.",
         "errors": {
           "invalid": "Invalid value"
