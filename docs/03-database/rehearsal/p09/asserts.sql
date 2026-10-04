@@ -1,6 +1,9 @@
--- T03 CI proof of P09M1. One result set: name, expected, actual, pass.
--- CASE_COUNT 26. all_pass checks that count. Do not change an expected
--- value to match a wrong actual.
+-- T03 CI proof of P09M1, plus T08-DB proof of P09M2.
+-- One result set: name, expected, actual, pass.
+-- CASE_COUNT is 59 pg_temp.rec calls. all_pass checks that count.
+-- Do not change an expected value to match a wrong actual.
+-- P09M2 cases cite S1 (human, 2026-10-04), the live enum labels
+-- (SELECT 2026-10-04), and the writer named on each case.
 --
 -- Sources on each case: pack PHASE_09_V2_SURFACES.md §5, F-P1, F-P2,
 -- plan §8.2.5, R-S10, REG-65, AC-CAT-2, the category-cap function.
@@ -98,6 +101,11 @@ DECLARE
   v_n integer;
   v_reason text;
   v_opts text;
+  v_gate uuid := 'b1000000-0000-4000-8000-000000000007';
+  v_reset uuid := 'b1000000-0000-4000-8000-000000000008';
+  v_extra uuid := 'b1000000-0000-4000-8000-000000000009';
+  v_gate_store uuid := 'b2000000-0000-4000-8000-000000000005';
+  v_reset_store uuid := 'b2000000-0000-4000-8000-000000000006';
 BEGIN
   INSERT INTO betk.users (id, role, status, phone_number) VALUES
     (v_seller, 'seller', 'active', '01090000001'),
@@ -574,15 +582,478 @@ BEGIN
     END IF;
   END IF;
   PERFORM pg_temp.rec('resubmit_accepted', 'ok', v_msg);
+
+  -- P09M2. S1. Postgres inserts (no JWT) are allowed. The seller cases
+  -- below use auth.role() = authenticated and users.role = seller.
+  INSERT INTO betk.users (id, role, status, phone_number) VALUES
+    (v_gate, 'seller', 'active', '01090000007'),
+    (v_reset, 'seller', 'active', '01090000008'),
+    (v_extra, 'seller', 'active', '01090000009');
+
+  INSERT INTO betk.seller_profiles (id, status, level) VALUES
+    (v_gate, 'pending', 'bronze');
+
+  INSERT INTO betk.seller_profiles (id, status, rejected_reason, submitted_at)
+  VALUES (v_reset, 'pending', 'ci', timestamptz '2026-01-01 00:00:00+00');
+
+  INSERT INTO betk.stores (
+    id, seller_id, name_ar, slug, governorate, city, category_primary, status
+  ) VALUES
+    (v_gate_store, v_gate, 'CI Gate', 'ci-p09-gate', 'Cairo', 'Cairo', 'ci', 'pending'),
+    (v_reset_store, v_reset, 'CI Reset', 'ci-p09-reset', 'Cairo', 'Cairo', 'ci', 'pending');
+
+  INSERT INTO betk.seller_documents (
+    seller_id, document_type, storage_path, review_status
+  ) VALUES
+    (v_gate, 'national_id_front', 'ci/gate-front', 'pending');
+
+  INSERT INTO betk.seller_documents (
+    seller_id, document_type, storage_path, review_status, reviewed_at
+  ) VALUES
+    (v_reset, 'national_id_front', 'ci/reset-front', 'rejected', timestamptz '2026-01-01 00:00:00+00'),
+    (v_reset, 'national_id_back', 'ci/reset-back', 'rejected', timestamptz '2026-01-01 00:00:00+00');
+
+  INSERT INTO betk.agreement_acceptances (user_id, document, version_label)
+  SELECT v_reset, 'seller_agreement', s.value
+  FROM betk.admin_settings AS s
+  WHERE s.key = 'agreement_seller_agreement_version';
+
+  -- S1. doc_review_status labels approved and rejected (SELECT 2026-10-04).
+  -- Probe 2be9f88 stored approved. P09M2 must refuse both.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_documents SET review_status = %L::betk.doc_review_status
+       WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+      'approved', v_gate, 'national_id_front'
+    )
+  );
+  PERFORM pg_temp.rec('gate_doc_approved', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_documents SET review_status = %L::betk.doc_review_status
+       WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+      'rejected', v_gate, 'national_id_front'
+    )
+  );
+  PERFORM pg_temp.rec('gate_doc_rejected', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. reviewed_at is the review stamp. No seller writer except the resubmit null.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_documents SET reviewed_at = %L::timestamptz
+       WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+      '2026-03-01 00:00:00+00', v_gate, 'national_id_front'
+    )
+  );
+  PERFORM pg_temp.rec('gate_reviewed_at', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. seller_status real labels other than the initial pending
+  -- (SELECT 2026-10-04: pending, active, suspended, banned). FR-ADM-2 / R-S04.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET status = %L::betk.seller_status WHERE id = %L',
+      'active', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_status_active', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET status = %L::betk.seller_status WHERE id = %L',
+      'suspended', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_status_suspended', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET status = %L::betk.seller_status WHERE id = %L',
+      'banned', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_status_banned', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. seller_level gold (SELECT 2026-10-04: bronze, silver, gold).
+  -- Cron recalculate-seller-levels is the writer. Submit inserts bronze.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET level = %L::betk.seller_level WHERE id = %L',
+      'gold', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_level_gold', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. store_status real labels other than pending
+  -- (SELECT 2026-10-04: pending, active, suspended).
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.stores SET status = %L::betk.store_status WHERE seller_id = %L',
+      'active', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_store_active', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.stores SET status = %L::betk.store_status WHERE seller_id = %L',
+      'suspended', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_store_suspended', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. Flag found: seller_profiles.is_verified (UI spec VerifiedBadge).
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET is_verified = true WHERE id = %L', v_gate)
+  );
+  PERFORM pg_temp.rec('gate_is_verified', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- FR-ADM-2 approved_at stamp. Probe 2026-10-04 stored the timestamp.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET approved_at = %L::timestamptz WHERE id = %L',
+      '2026-03-01 00:00:00+00', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_approved_at', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- Cron lift-temp-suspensions writes suspension_ends_at. No seller writer.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET suspension_ends_at = %L::timestamptz WHERE id = %L',
+      '2026-03-01 00:00:00+00', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_suspension_ends_at', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. rejected_reason is admin text. The seller exception is NULL on resubmit, not a reason.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET rejected_reason = %L WHERE id = %L',
+      'self', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_rejected_reason', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. submitted_at changes only with the resubmit clear. A lone stamp is refused.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles SET submitted_at = %L::timestamptz WHERE id = %L',
+      '2026-03-01 00:00:00+00', v_gate
+    )
+  );
+  PERFORM pg_temp.rec('gate_submitted_at', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- Cron recalculate-seller-levels writes level_score. Probe 2026-10-04 stored 80.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET level_score = 40 WHERE id = %L', v_gate)
+  );
+  PERFORM pg_temp.rec('gate_level_score', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- UI spec admin suspension data. No seller writer. Probe stored 2.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET strike_count = 1 WHERE id = %L', v_gate)
+  );
+  PERFORM pg_temp.rec('gate_strike_count', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- Cron reads total_orders_completed to assign level. Probe stored 50.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET total_orders_completed = 50 WHERE id = %L', v_gate)
+  );
+  PERFORM pg_temp.rec('gate_orders_completed', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- Cron reads total_reviews_count for level_score. Probe stored 9.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET total_reviews_count = 9 WHERE id = %L', v_gate)
+  );
+  PERFORM pg_temp.rec('gate_reviews_count', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. A seller INSERT that asks for a non-pending profile is refused.
+  -- submit's insert is the pending exception, proved by submit_accepted plus the reads below.
+  v_msg := pg_temp.exec_as(
+    v_extra, 'authenticated',
+    format(
+      'INSERT INTO betk.seller_profiles (id, status, level) VALUES (%L, %L::betk.seller_status, %L::betk.seller_level)',
+      v_extra, 'active', 'gold'
+    )
+  );
+  PERFORM pg_temp.rec('gate_profile_insert_active', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  INSERT INTO betk.seller_profiles (id, status, level) VALUES
+    (v_extra, 'pending', 'bronze');
+
+  v_msg := pg_temp.exec_as(
+    v_extra, 'authenticated',
+    format(
+      'INSERT INTO betk.stores (
+         seller_id, name_ar, slug, governorate, category_primary, status
+       ) VALUES (%L, %L, %L, %L, %L, %L::betk.store_status)',
+      v_extra, 'CI Extra', 'ci-p09-extra', 'Cairo', 'ci', 'active'
+    )
+  );
+  PERFORM pg_temp.rec('gate_store_insert_active', 'BETK_APPROVAL_STATE_ACTOR', v_msg);
+
+  -- S1. Seller INSERT of seller_documents asking for approved is stored pending,
+  -- and reviewed_at is stored null. Same shape as the approved_at stamp.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'INSERT INTO betk.seller_documents (
+         seller_id, document_type, storage_path, review_status, reviewed_at
+       ) VALUES (%L, %L::betk.doc_type, %L, %L::betk.doc_review_status, %L::timestamptz)',
+      v_gate, 'food_packaging', 'ci/force', 'approved', '2026-03-01 00:00:00+00'
+    )
+  );
+  IF v_msg <> 'ok' THEN
+    v_opts := v_msg;
+  ELSE
+    SELECT review_status::text || '|' || CASE WHEN reviewed_at IS NULL THEN 'null' ELSE 'set' END
+    INTO v_opts
+    FROM betk.seller_documents
+    WHERE seller_id = v_gate AND document_type = 'food_packaging';
+    v_opts := coalesce(v_opts, 'norow');
+  END IF;
+  PERFORM pg_temp.rec('doc_insert_forced_pending', 'pending|null', v_opts);
+
+  -- S1. submit inserts seller_profiles and stores pending, and documents pending.
+  -- submit_accepted already requires the RPC to return ok. These reads are the stored state.
+  SELECT status::text INTO v_opts FROM betk.seller_profiles WHERE id = v_submit;
+  PERFORM pg_temp.rec('onboard_profile_pending', 'pending', coalesce(v_opts, 'norow'));
+
+  SELECT status::text INTO v_opts FROM betk.stores WHERE seller_id = v_submit;
+  PERFORM pg_temp.rec('onboard_store_pending', 'pending', coalesce(v_opts, 'norow'));
+
+  SELECT CASE
+    WHEN count(*) = 2 AND bool_and(review_status = 'pending') AND bool_and(reviewed_at IS NULL)
+      THEN 'pending'
+    ELSE 'other'
+  END
+  INTO v_opts
+  FROM betk.seller_documents
+  WHERE seller_id = v_submit;
+  PERFORM pg_temp.rec('onboard_docs_pending', 'pending', coalesce(v_opts, 'norow'));
+
+  -- S1. resubmit resets review_status to pending, reviewed_at to null,
+  -- rejected_reason to null, and submitted_at to now(). Live function body.
+  v_msg := pg_temp.exec_as(
+    v_reset, 'authenticated',
+    $sql$SELECT betk.resubmit_seller_application('ci/reset-front-2', 'ci/reset-back-2')$sql$
+  );
+  IF v_msg <> 'ok' THEN
+    v_opts := v_msg;
+  ELSE
+    SELECT CASE
+      WHEN rejected_reason IS NULL AND submitted_at IS DISTINCT FROM timestamptz '2026-01-01 00:00:00+00'
+        THEN 'cleared'
+      ELSE 'kept'
+    END
+    INTO v_opts
+    FROM betk.seller_profiles
+    WHERE id = v_reset;
+    v_opts := coalesce(v_opts, 'norow');
+  END IF;
+  PERFORM pg_temp.rec('resubmit_profile_cleared', 'cleared', v_opts);
+
+  IF v_msg <> 'ok' THEN
+    v_opts := v_msg;
+  ELSE
+    SELECT CASE
+      WHEN count(*) = 2
+       AND bool_and(review_status = 'pending')
+       AND bool_and(reviewed_at IS NULL)
+        THEN 'pending'
+      ELSE 'other'
+    END
+    INTO v_opts
+    FROM betk.seller_documents
+    WHERE seller_id = v_reset;
+    v_opts := coalesce(v_opts, 'norow');
+  END IF;
+  PERFORM pg_temp.rec('resubmit_docs_pending', 'pending', v_opts);
+
+  -- Seller-editable. recomputeSellerAvgResponseHours writes this column
+  -- on the seller session. The trigger must not refuse it.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.seller_profiles SET avg_response_hours = 1.25 WHERE id = %L', v_gate)
+  );
+  IF v_msg = 'ok' THEN
+    SELECT CASE
+      WHEN avg_response_hours = 1.25 THEN '1.25'
+      ELSE coalesce(avg_response_hours::text, 'null')
+    END
+    INTO v_opts
+    FROM betk.seller_profiles WHERE id = v_gate;
+    IF v_opts IS DISTINCT FROM '1.25' THEN
+      v_msg := v_opts;
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('seller_avg_response', 'ok', v_msg);
+
+  -- updateStoreProfile writes name_ar and does not write status.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format('UPDATE betk.stores SET name_ar = %L WHERE seller_id = %L', 'CI renamed', v_gate)
+  );
+  IF v_msg = 'ok' THEN
+    SELECT name_ar INTO v_opts FROM betk.stores WHERE seller_id = v_gate;
+    IF v_opts IS DISTINCT FROM 'CI renamed' THEN
+      v_msg := coalesce(v_opts, 'null');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('seller_store_name', 'ok', v_msg);
+
+  -- Resubmit and the food upsert write storage_path. Pending/null stays pending/null.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'authenticated',
+    format(
+      'UPDATE betk.seller_documents SET storage_path = %L
+       WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+      'ci/gate-front-2', v_gate, 'national_id_front'
+    )
+  );
+  IF v_msg = 'ok' THEN
+    SELECT review_status::text INTO v_opts
+    FROM betk.seller_documents
+    WHERE seller_id = v_gate AND document_type = 'national_id_front';
+    IF v_opts IS DISTINCT FROM 'pending' THEN
+      v_msg := coalesce(v_opts, 'null');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('seller_doc_path', 'ok', v_msg);
+
+  -- S1. Admin approve. users.role admin, JWT role authenticated, is_admin() true.
+  v_msg := pg_temp.exec_as(
+    v_admin, 'authenticated',
+    format(
+      'UPDATE betk.seller_profiles
+       SET status = %L::betk.seller_status, approved_at = %L::timestamptz
+       WHERE id = %L',
+      'active', '2026-04-01 00:00:00+00', v_gate
+    )
+  );
+  IF v_msg = 'ok' THEN
+    v_msg := pg_temp.exec_as(
+      v_admin, 'authenticated',
+      format(
+        'UPDATE betk.stores SET status = %L::betk.store_status WHERE seller_id = %L',
+        'active', v_gate
+      )
+    );
+  END IF;
+  IF v_msg = 'ok' THEN
+    v_msg := pg_temp.exec_as(
+      v_admin, 'authenticated',
+      format(
+        'UPDATE betk.seller_documents
+         SET review_status = %L::betk.doc_review_status, reviewed_at = %L::timestamptz
+         WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+        'approved', '2026-04-01 00:00:00+00', v_gate, 'national_id_front'
+      )
+    );
+  END IF;
+  IF v_msg = 'ok' THEN
+    SELECT p.status::text || '|' || s.status::text || '|' || d.review_status::text
+    INTO v_opts
+    FROM betk.seller_profiles AS p
+    JOIN betk.stores AS s ON s.seller_id = p.id
+    JOIN betk.seller_documents AS d
+      ON d.seller_id = p.id AND d.document_type = 'national_id_front'
+    WHERE p.id = v_gate;
+    IF v_opts IS DISTINCT FROM 'active|active|approved' THEN
+      v_msg := coalesce(v_opts, 'norow');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('admin_approve', 'ok', v_msg);
+
+  -- S1. Admin reject. Document rejected, and the profile reason is stored.
+  v_msg := pg_temp.exec_as(
+    v_admin, 'authenticated',
+    format(
+      'UPDATE betk.seller_documents
+       SET review_status = %L::betk.doc_review_status, reviewed_at = %L::timestamptz
+       WHERE seller_id = %L AND document_type = %L::betk.doc_type',
+      'rejected', '2026-04-02 00:00:00+00', v_gate, 'national_id_front'
+    )
+  );
+  IF v_msg = 'ok' THEN
+    v_msg := pg_temp.exec_as(
+      v_admin, 'authenticated',
+      format(
+        'UPDATE betk.seller_profiles
+         SET status = %L::betk.seller_status, rejected_reason = %L
+         WHERE id = %L',
+        'pending', 'no', v_gate
+      )
+    );
+  END IF;
+  IF v_msg = 'ok' THEN
+    SELECT d.review_status::text || '|' || coalesce(p.rejected_reason, 'null')
+    INTO v_opts
+    FROM betk.seller_profiles AS p
+    JOIN betk.seller_documents AS d
+      ON d.seller_id = p.id AND d.document_type = 'national_id_front'
+    WHERE p.id = v_gate;
+    IF v_opts IS DISTINCT FROM 'rejected|no' THEN
+      v_msg := coalesce(v_opts, 'norow');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('admin_reject', 'ok', v_msg);
+
+  -- S1. Service role JWT is not 'authenticated'. SET ROLE service_role.
+  v_msg := pg_temp.exec_as(
+    v_gate, 'service_role',
+    format('UPDATE betk.seller_profiles SET is_verified = true WHERE id = %L', v_gate)
+  );
+  IF v_msg = 'ok' THEN
+    SELECT CASE WHEN is_verified THEN 'true' ELSE 'false' END
+    INTO v_opts
+    FROM betk.seller_profiles WHERE id = v_gate;
+    IF v_opts IS DISTINCT FROM 'true' THEN
+      v_msg := coalesce(v_opts, 'null');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('service_role_verify', 'ok', v_msg);
+
+  -- S1. No JWT. This DO block runs as postgres. auth.role() is null.
+  v_msg := pg_temp.try_exec(format(
+    'UPDATE betk.seller_profiles SET level = %L::betk.seller_level WHERE id = %L',
+    'silver', v_gate
+  ));
+  IF v_msg = 'ok' THEN
+    SELECT level::text INTO v_opts FROM betk.seller_profiles WHERE id = v_gate;
+    IF v_opts IS DISTINCT FROM 'silver' THEN
+      v_msg := coalesce(v_opts, 'null');
+    END IF;
+  END IF;
+  PERFORM pg_temp.rec('postgres_level', 'ok', v_msg);
 END;
 $cases$;
 
 INSERT INTO p09_results (name, expected, actual, pass)
 SELECT
   'all_pass',
-  'true|26',
+  'true|59',
   bool_and(pass)::text || '|' || count(*)::text,
-  bool_and(pass) AND count(*) = 26
+  bool_and(pass) AND count(*) = 59
 FROM p09_results;
 
 SELECT name, expected, actual, pass

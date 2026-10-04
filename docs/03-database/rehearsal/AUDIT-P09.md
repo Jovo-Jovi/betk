@@ -87,3 +87,125 @@ The three live active staging listings are not fixtures. This trigger does not s
 ### RPC callers (not the publish trigger, not the required smoke)
 
 `seller.submit.test.ts` happy paths (`ok: true`) and `seller.resubmit.test.ts` happy paths call the replaced functions with no `seller_agreement` acceptance row. After apply, those calls raise `BETK_SELLER_AGREEMENT_REQUIRED` (staging version is `STAGING-DRAFT-1`, so the empty-version raise does not fire). The phone-null RPC test only asserts that `error` is not null and that the row counts stay zero; that assertion still holds. No listed expect reads `delivery_options`. T04's required smoke does not call these RPCs. T06 is the AC-AGR-3 evidence. A later run of these two files needs, as a fixture only, an `agreement_acceptances` row for that user, document `seller_agreement`, version label equal to the current `agreement_seller_agreement_version`. Assertions stay unchanged.
+
+# AUDIT — authored P09M2 (T08-DB)
+
+Audited text: `docs/03-database/rehearsal/staging-text/P09M2.sql`. T08-DB authored it. It is not applied. Sources: decision S1 (human, 2026-10-04), the column classification below, live `information_schema` / `pg_enum` / `pg_policy` / `column_privileges` / `pg_get_functiondef` (SELECT 2026-10-04), and the executed seller probes the same day. Staging DDL was not written. `list_migrations` is 40, last `20261003214258` / `v2_09_publish_and_submit`. No `apply_migration`. No policy. No GRANT. No `admin_settings` UPDATE.
+
+Verdicts are the same scale as the P09M1 audit above: **MATCH**, **BROADER**, **NARROWER**, **AUTHORED**, **MISMATCH**, **FINDING**.
+
+**Zero MISMATCH. Zero FINDING. No policy or grant change, so no FLAG.**
+
+## Decision S1 (human, 2026-10-04), verbatim
+
+S1 Approval-state columns are admin-only for end users.
+   - On seller_documents, seller_profiles and stores, a BEFORE INSERT OR UPDATE trigger raises BETK_APPROVAL_STATE_ACTOR when the caller is an end user (JWT role 'authenticated') who is not betk.is_admin(), and the row writes an approval-state column. The only exceptions are the app's documented seller writes:
+     • a seller INSERT of seller_documents is forced to review_status 'pending' with reviewed_at NULL (like the approved_at stamp);
+     • resubmit resets review_status to 'pending' and reviewed_at to NULL, and seller_profiles rejected_reason to NULL and submitted_at to now();
+     • submit inserts seller_profiles and stores in their initial 'pending' state.
+   - The service role and server-side roles with no end-user JWT (cron, migrations) are allowed. Admins are allowed.
+   - Read the role from the request JWT claim (auth.role() or request.jwt.claims; cite which). Do not use current_user: it's the owner inside a SECURITY DEFINER function.
+
+Actor read: `auth.role()` (SELECT 2026-10-04), schema-qualified. Its body is `coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'))`. The function does not read `current_user`. End user means `auth.role() = 'authenticated'` and `betk.is_admin()` is false. `service_role`, `anon`, and a null role return NEW.
+
+## Counts by verdict
+
+| Part | MATCH | BROADER | NARROWER | AUTHORED | MISMATCH | FINDING |
+|---|---:|---:|---:|---:|---:|---:|
+| a Grants | 1 | 0 | 0 | 0 | 0 | 0 |
+| b Policies | 1 | 0 | 0 | 0 | 0 | 0 |
+| c Functions and triggers | 0 | 0 | 0 | 1 | 0 | 0 |
+
+## a. Grants
+
+| Object | Kit | Source | Verdict | Note |
+|---|---|---|---|---|
+| `REVOKE EXECUTE` on `enforce_approval_state_actor()` | `P09M2.sql` after the function | P09M1 / M8 revoke pattern | MATCH | PUBLIC, anon, authenticated. Not a table GRANT. SECURITY DEFINER so the body still reads `auth.role()` after `SET ROLE`. Direct call is not granted. No column privilege changes. `authenticated` keeps INSERT, SELECT, and UPDATE on every column of the three tables (SELECT 2026-10-04) |
+
+## b. Policies
+
+| Object | Kit | Source | Verdict | Note |
+|---|---|---|---|---|
+| No `CREATE` / `ALTER` / `DROP POLICY` | the file has none | live `sdoc_own`, `sp_insert`, `seller_profiles_phone_gate`, `sp_select`, `sp_update`, `stores_insert`, `stores_manage`, `stores_public` (SELECT 2026-10-04) | MATCH | Untouched. The closer is the trigger, which is what S1 names. No FLAG |
+
+## c. Functions and triggers
+
+| Object | Kit | Source | Verdict | Note |
+|---|---|---|---|---|
+| `enforce_approval_state_actor` + the three BEFORE INSERT OR UPDATE triggers | `seller_documents`, `seller_profiles`, `stores` | S1; classification below | AUTHORED | `search_path` pinned to `betk, public`. One function. A non-end-user returns NEW. A seller document INSERT is stored `review_status = pending` and `reviewed_at` null, including when the statement asked for `approved`. A seller document UPDATE that changes `review_status` or `reviewed_at` is allowed only when the new status is `pending` and `reviewed_at` is null. A seller profile INSERT is allowed only at the initial state (`status` pending, `level` bronze, `level_score` 0, `is_verified` false, suspension / `approved_at` / `rejected_reason` null, strike and both totals 0). `submitted_at` may be any value, including null. A seller profile UPDATE that changes an approval column is allowed only when `rejected_reason` becomes null from a non-null value, `submitted_at` changes, and every other approval column is unchanged. A seller store INSERT is allowed only when `status` is `pending`. A seller store UPDATE that changes `status` raises. Seller content columns are not in the checks. `avg_response_hours` is one of those |
+
+## Classification (one row per column)
+
+Enum labels (SELECT 2026-10-04): `doc_review_status` pending, approved, rejected. `seller_status` pending, active, suspended, banned. `seller_level` bronze, silver, gold. `store_status` pending, active, suspended. There is no `approved` member of `seller_status`.
+
+| Table | Column | Class | Basis |
+|---|---|---|---|
+| seller_documents | id | SELLER-EDITABLE | Primary key default. Not an approval decision |
+| seller_documents | seller_id | SELLER-EDITABLE | Submit and the food upsert set the caller. `sdoc_own` requires `seller_id = auth.uid()` |
+| seller_documents | document_type | SELLER-EDITABLE | Submit and the food upsert choose the type the seller uploaded |
+| seller_documents | storage_path | SELLER-EDITABLE | Resubmit and the food upsert write it |
+| seller_documents | uploaded_at | SELLER-EDITABLE | Resubmit sets `now()`; insert default otherwise |
+| seller_documents | reviewed_at | APPROVAL-STATE | Admin review stamp. S1 lets resubmit set it null. Probe 2026-10-04 stored the timestamp |
+| seller_documents | review_status | APPROVAL-STATE | Admin review. Probe `2be9f88` and the 2026-10-04 probe stored `approved` and `rejected`. Default `pending` |
+| seller_profiles | id | SELLER-EDITABLE | `sp_insert` requires `id = auth.uid()`. Submit sets that id |
+| seller_profiles | status | APPROVAL-STATE | `seller_status`. Submit inserts `pending`. Admin and the suspension cron change it. Probe stored `active`, `suspended`, and `banned` |
+| seller_profiles | suspension_ends_at | APPROVAL-STATE | Cron `lift-temp-suspensions` clears it. No seller writer. Probe stored the timestamp |
+| seller_profiles | level | APPROVAL-STATE | Cron `recalculate-seller-levels`. Submit inserts `bronze`. Probe stored `silver` and `gold` |
+| seller_profiles | level_score | APPROVAL-STATE | Same cron writes it. No seller writer. Probe stored 80 |
+| seller_profiles | is_verified | APPROVAL-STATE | The verified flag. No seller writer. Probe stored true |
+| seller_profiles | avg_response_hours | SELLER-EDITABLE | `recomputeSellerAvgResponseHours` writes it on the seller session |
+| seller_profiles | total_orders_completed | APPROVAL-STATE | Cron input to level. No seller writer. Probe stored 50 |
+| seller_profiles | total_reviews_count | APPROVAL-STATE | Cron input to `level_score`. No seller writer. Probe stored 9 |
+| seller_profiles | strike_count | APPROVAL-STATE | Admin suspension data. No seller writer. Probe stored 2 |
+| seller_profiles | approved_at | APPROVAL-STATE | Admin approval stamp. Probe stored the timestamp |
+| seller_profiles | rejected_reason | APPROVAL-STATE | Admin text. S1 lets resubmit set it null. Probe stored `probe` |
+| seller_profiles | submitted_at | APPROVAL-STATE | Submit and resubmit set it. A lone seller stamp is not a documented write. Probe stored the timestamp |
+| seller_profiles | created_at | SELLER-EDITABLE | Row default. Not an approval decision |
+| stores | id | SELLER-EDITABLE | Primary key default |
+| stores | seller_id | SELLER-EDITABLE | `stores_insert` requires `seller_id = auth.uid()`. Submit sets that id |
+| stores | name_ar | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | name_en | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | slug | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | slug_changed_at | SELLER-EDITABLE | `updateStoreProfile` |
+| stores | bio_ar | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | avatar_url | SELLER-EDITABLE | `updateStoreProfile` |
+| stores | cover_url | SELLER-EDITABLE | `updateStoreProfile` |
+| stores | category_primary | SELLER-EDITABLE | `updateStoreProfile` and submit. Not matched to `categories.id` |
+| stores | category_secondary | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | governorate | SELLER-EDITABLE | `updateStoreProfile`, `updateStorePickup`, and submit |
+| stores | city | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | payment_methods | SELLER-EDITABLE | `updateStorePayments` and submit |
+| stores | delivery_options | SELLER-EDITABLE | Submit writes `'{}'` (REG-65). Not an approval column |
+| stores | return_policy | SELLER-EDITABLE | `updateStoreReturns` and submit |
+| stores | min_order_egp | SELLER-EDITABLE | `updateStoreProfile` and submit |
+| stores | status | APPROVAL-STATE | `store_status`. Submit inserts `pending`. Probe stored `active` and `suspended` |
+| stores | created_at | SELLER-EDITABLE | Row default |
+| stores | updated_at | SELLER-EDITABLE | Row default |
+
+No other `betk` function writes these three tables. `checkout_from_cart`, `enforce_listing_publish`, `enforce_pickup_governorate`, and `my_store_id` only read them. The only non-internal trigger on the three tables before P09M2 is `trg_store_governorate_eq` (AFTER UPDATE OF `governorate`).
+
+## Fixture impact
+
+T08-DB edits no test file.
+
+No committed test writes a non-exception approval value as an end user. Nothing in this list has to switch to the service role.
+
+Already the service role, and still legal after P09M2 because the JWT role is not `authenticated`:
+
+| File | Write | Switch |
+|---|---|---|
+| `tests/integration/discovery.search.test.ts`, `discovery.category.test.ts`, `discovery.storefront.test.ts`, `discovery.queries.test.ts` | service-role profile insert of `status` active, `is_verified` true, `level` silver or gold | No |
+| `tests/integration/seller.resubmit.test.ts` `seedApplication` | service-role profile status, store status, and document `review_status` approved or rejected | No |
+| `tests/integration/listings.publish.t07.test.ts` | service-role food documents inserted `review_status` pending | No |
+| `tests/integration/rls.smoke.test.ts`, `order.rls.test.ts`, `store.profile.test.ts`, `inquiry.writeLayer.test.ts`, and the other service-role seller seeds | service-role `status` active or pending | No |
+
+End-user writes that stay legal. They match S1's exceptions. Do not change them:
+
+| File or writer | Write | Why it stays |
+|---|---|---|
+| `tests/integration/seller.rls.test.ts` REG-10 | user-client insert `status` pending, `level` bronze (and the pending insert that omits `level`) | Initial profile state. Defaults keep the other approval columns at 0, false, or null |
+| `submit_seller_application` | profile pending / bronze, store pending, two documents pending | S1 submit exception |
+| `resubmit_seller_application` | `rejected_reason` null, `submitted_at` now(), documents pending with `reviewed_at` null | S1 resubmit exception |
+| `src/features/seller-onboarding/actions/submitSellerApplication.ts` food upsert | user client, `review_status` pending on INSERT | The trigger forces pending and null `reviewed_at` |
+
+App impact, not a test switch. The same food upsert's `ON CONFLICT` sets `review_status` to pending and does not set `reviewed_at` null. After P09M2, that update raises `BETK_APPROVAL_STATE_ACTOR` when the existing row is not already pending with `reviewed_at` null. No committed test covers that conflict against an approved row. This task does not edit the action.

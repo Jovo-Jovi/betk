@@ -1,4 +1,4 @@
-# T03. P09M1 on a local Supabase stack. Not a required check.
+# T03 plus T08-DB. P09M1 then P09M2 on a local Supabase stack. Not a required check.
 # No secrets. Staging is not written. This file does not change branch protection.
 #
 # Migrations: delete supabase/migrations, then git checkout aeb6c5b --
@@ -16,6 +16,7 @@ on:
       - feature/phase-09-surfaces
     paths:
       - "docs/03-database/rehearsal/staging-text/P09M1.sql"
+      - "docs/03-database/rehearsal/staging-text/P09M2.sql"
       - "docs/03-database/rehearsal/p09/asserts.sql"
       - ".github/workflows/p09-db.yml"
   workflow_dispatch:
@@ -118,7 +119,7 @@ jobs:
           set -euo pipefail
           supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
-      - name: Apply P09M1, then the asserts
+      - name: Apply P09M1, then P09M2, then the asserts
         run: |
           set -euo pipefail
           db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
@@ -153,6 +154,18 @@ jobs:
           {
             printf 'BEGIN;\n'
             cat docs/03-database/rehearsal/staging-text/P09M1.sql
+            printf '\nCOMMIT;\n'
+          } | docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -f -
+          echo "===== P09M2 ====="
+          {
+            printf 'BEGIN;\n'
+            cat docs/03-database/rehearsal/staging-text/P09M2.sql
             printf '\nCOMMIT;\n'
           } | docker exec -i "$db" psql \
             -U postgres \
@@ -197,7 +210,7 @@ jobs:
               name, expected, actual, passed = parsed
               row_fail = passed != "t"
               if index == len(rows) and (
-                  name != "all_pass" or actual != "true|26" or passed != "t"
+                  name != "all_pass" or actual != "true|59" or passed != "t"
               ):
                   row_fail = True
               if row_fail and first_fail is None:
@@ -210,19 +223,19 @@ jobs:
               )
           last = rows[-1] if rows else ("", "", "", "")
           if (
-              len(rows) != 27
+              len(rows) != 60
               or any(parsed[3] != "t" for parsed in rows)
               or last[0] != "all_pass"
-              or last[2] != "true|26"
+              or last[2] != "true|59"
               or last[3] != "t"
           ):
               print(
-                  f"FAIL expected 27 rows, every pass=t, "
-                  f"last all_pass actual=true|26 pass=t; "
+                  f"FAIL expected 60 rows, every pass=t, "
+                  f"last all_pass actual=true|59 pass=t; "
                   f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
               )
               sys.exit(1)
-          print("PASS: 27 rows, every pass = t, last row all_pass actual=true|26 pass=t")
+          print("PASS: 60 rows, every pass = t, last row all_pass actual=true|59 pass=t")
           PY
 
       - name: Stop local Supabase

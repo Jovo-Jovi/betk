@@ -93,6 +93,16 @@ F3 = pending. P67–P70 render a "pending legal review" notice (i18n ar/en) plus
 
 F4 = drop GO. Pack T04 no longer waits for "GO P09-T04". The planning-chat review of T02 and T03 is the gate. GO stays reserved for irreversible steps.
 
+**Decision (human, 2026-10-04), verbatim.**
+
+S1 Approval-state columns are admin-only for end users.
+   - On seller_documents, seller_profiles and stores, a BEFORE INSERT OR UPDATE trigger raises BETK_APPROVAL_STATE_ACTOR when the caller is an end user (JWT role 'authenticated') who is not betk.is_admin(), and the row writes an approval-state column. The only exceptions are the app's documented seller writes:
+     • a seller INSERT of seller_documents is forced to review_status 'pending' with reviewed_at NULL (like the approved_at stamp);
+     • resubmit resets review_status to 'pending' and reviewed_at to NULL, and seller_profiles rejected_reason to NULL and submitted_at to now();
+     • submit inserts seller_profiles and stores in their initial 'pending' state.
+   - The service role and server-side roles with no end-user JWT (cron, migrations) are allowed. Admins are allowed.
+   - Read the role from the request JWT claim (auth.role() or request.jwt.claims; cite which). Do not use current_user: it's the owner inside a SECURITY DEFINER function.
+
 **Register status after T01.** REG-75 and REG-88 are `PINNED 2026-10-03 (B)`. They close at the consuming exit with evidence. REG-95 is pinned `food-v1` and **closed** on T01's post-check. REG-96 and REG-97 stay OPEN for the production value. The staging placeholder is written.
 
 **T01 is the named staging write.** One guarded `execute_sql` of exactly these five keys, and no others (E2):
@@ -533,6 +543,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 | T06 | done 2026-10-04 | P23 pickup, categories, seller agreement, food artefacts; P27 pickup address; mode controls deleted; Guard F pin stays 30; staging `sellerOnboarding.t06.test.ts` 2/2; DOM `p09t06.surfaces.unit.test.ts` 4/4; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; no new page.tsx; no pull request; green run [37199953776](https://github.com/Jovo-Jovi/betk/actions/runs/37199953776) all eight required checks |
 | T07 | done 2026-10-04 | P31 and P32 send product, fixed price, shipping, prep, and an approved category; P33 `DataTable` `rowHref`; staging `listings.publish.t07.test.ts` 8/8; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; no pull request; green run [37203067000](https://github.com/Jovo-Jovi/betk/actions/runs/37203067000) on `cc809ff`, all eight required checks |
 | T08 | STOP 2026-10-04 | E1 FINDING: a seller session set `seller_documents.review_status` to `approved` on its own `food_packaging` and `national_id_front` rows (policy `sdoc_own`, `authenticated` UPDATE on `review_status`). `store_categories.approved_at` stayed null. `seller_profiles.status = 'approved'` raised `22P02`. No P49. No patch. Database fix is P09M2. Finding commit `2be9f88`; green run [37204528145](https://github.com/Jovo-Jovi/betk/actions/runs/37204528145) all eight required checks |
+| T08-DB | authored 2026-10-04 | `P09M2.sql` LF blob `ba7f823db4295d6b4017708bf8114f886ae6cff4`, SHA256 `ec63f6e0eae0506e7411386f82dee3f20b7b43fdfe6270ccf27a07ee67910ec3`; REG-106; CI applies P09M1 then P09M2; ledger stays 40; no pull request |
 | T09 | | |
 | T10 | | |
 | T11 | | |
