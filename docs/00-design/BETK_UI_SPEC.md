@@ -188,6 +188,14 @@ Guard F's built-file pin moves **26 → 30** in the same commit as these four `p
 | `/legal/returns` | P69 | `src/app/[locale]/(public)/legal/returns/page.tsx` |
 | `/legal/privacy` | P70 | `src/app/[locale]/(public)/legal/privacy/page.tsx` |
 
+#### Phase 09 T08 reconciliation (2026-10-04)
+
+Guard F's built-file pin moves **30 → 31** in the same commit as P49. OD-21 stays **79**. The new file is the route pattern already in §5.1. Locales count once.
+
+| Built route (locale stripped) | P-number | File |
+|---|---|---|
+| `/admin/sellers/approvals` | P49 | `src/app/[locale]/(admin)/admin/sellers/approvals/page.tsx` |
+
 ---
 
 ## 2. Page disposition

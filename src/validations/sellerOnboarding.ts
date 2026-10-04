@@ -83,13 +83,23 @@ export const onboardingPickupSchema = z
   })
   .strict();
 
+/** `http:` or `https:` only. `javascript:` and other schemes are rejected. */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /** Four R-S10 artefacts. The social value is a URL stored on `seller_documents`, not a file. */
 export const foodArtefactsSchema = z
   .object({
     packagingPath: storageObjectPathSchema,
     labelPath: storageObjectPathSchema,
     expiryPath: storageObjectPathSchema,
-    socialUrl: z.string().trim().url().max(500),
+    socialUrl: z.string().trim().max(500).refine(isHttpUrl),
   })
   .strict();
 

@@ -1082,5 +1082,49 @@
         }
       }
     }
+  },
+  "admin": {
+    "approvals": {
+      "metaTitle": "اعتماد البائعين",
+      "title": "اعتماد البائعين",
+      "nav": "الاعتمادات",
+      "consoleSubtitle": "الإدارة",
+      "openNav": "فتح القائمة",
+      "theme": "تبديل المظهر",
+      "language": "تغيير اللغة",
+      "columnStore": "المتجر",
+      "columnStatus": "الحالة",
+      "caption": "بائعون بانتظار الاعتماد",
+      "empty": "القائمة فارغة",
+      "loadError": "تعذّر تحميل القائمة. حاول مرة أخرى.",
+      "retry": "حاول مرة أخرى",
+      "previous": "السابق",
+      "next": "التالي",
+      "missingApplication": "هذا الطلب ليس في القائمة.",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "reason": "السبب",
+      "incomplete": "هذا الطلب غير مكتمل.",
+      "forbidden": "لا يمكنك اعتماد هذا الطلب.",
+      "refused": "تعذّر حفظ القرار. حاول مرة أخرى.",
+      "signedUrlError": "تعذّر فتح هذا المستند.",
+      "foodSocial": "رابط التواصل",
+      "proofLoading": "جارٍ تحميل المستند",
+      "proofEmpty": "لا يوجد مستند",
+      "proofError": "تعذّر عرض هذا المستند.",
+      "proofUnsupported": "لا يمكن عرض هذا الملف.",
+      "status": {
+        "pending": "قيد المراجعة",
+        "rejected": "مرفوض"
+      },
+      "documents": {
+        "national_id_front": "الهوية، الوجه",
+        "national_id_back": "الهوية، الظهر",
+        "food_packaging": "عبوة الغذاء",
+        "food_label": "بطاقة الغذاء",
+        "food_expiry": "صلاحية الغذاء",
+        "food_social_url": "رابط تواصل الغذاء"
+      }
+    }
   }
 }

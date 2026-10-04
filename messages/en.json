@@ -1082,5 +1082,49 @@
         }
       }
     }
+  },
+  "admin": {
+    "approvals": {
+      "metaTitle": "Seller approvals",
+      "title": "Seller approvals",
+      "nav": "Approvals",
+      "consoleSubtitle": "Admin",
+      "openNav": "Open navigation",
+      "theme": "Toggle theme",
+      "language": "Change language",
+      "columnStore": "Store",
+      "columnStatus": "Status",
+      "caption": "Sellers waiting for approval",
+      "empty": "The queue is clear",
+      "loadError": "Couldn't load the queue. Try again.",
+      "retry": "Try again",
+      "previous": "Previous",
+      "next": "Next",
+      "missingApplication": "This application is not in the queue.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "reason": "Reason",
+      "incomplete": "This application is incomplete.",
+      "forbidden": "You can't approve this application.",
+      "refused": "Couldn't save the decision. Try again.",
+      "signedUrlError": "Couldn't open this document.",
+      "foodSocial": "Social link",
+      "proofLoading": "Loading document",
+      "proofEmpty": "No document",
+      "proofError": "Couldn't show this document.",
+      "proofUnsupported": "This file can't be shown.",
+      "status": {
+        "pending": "Pending",
+        "rejected": "Rejected"
+      },
+      "documents": {
+        "national_id_front": "National ID, front",
+        "national_id_back": "National ID, back",
+        "food_packaging": "Food packaging",
+        "food_label": "Food label",
+        "food_expiry": "Food expiry",
+        "food_social_url": "Food social link"
+      }
+    }
   }
 }
