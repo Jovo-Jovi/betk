@@ -532,7 +532,7 @@ REG-75 closes when row 1's gate evidence is pasted. REG-88 stays pinned for Phas
 | T05 | done 2026-10-04 | signup gate in `src/services/agreementVersions.ts`; P67–P70 pending notice plus version label; Guard F pin 30; staging integration `buyerTerms.gate.test.ts` 3/3; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; ip and user_agent not captured — counsel question pending (E-1); no pull request; green run [37158686070](https://github.com/Jovo-Jovi/betk/actions/runs/37158686070) all eight required checks |
 | T06 | done 2026-10-04 | P23 pickup, categories, seller agreement, food artefacts; P27 pickup address; mode controls deleted; Guard F pin stays 30; staging `sellerOnboarding.t06.test.ts` 2/2; DOM `p09t06.surfaces.unit.test.ts` 4/4; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; no new page.tsx; no pull request; green run [37199953776](https://github.com/Jovo-Jovi/betk/actions/runs/37199953776) all eight required checks |
 | T07 | done 2026-10-04 | P31 and P32 send product, fixed price, shipping, prep, and an approved category; P33 `DataTable` `rowHref`; staging `listings.publish.t07.test.ts` 8/8; residue 7/7/12, payouts 0, acceptances 0, `@betk.test` 0; no pull request; green run [37203067000](https://github.com/Jovo-Jovi/betk/actions/runs/37203067000) on `cc809ff`, all eight required checks |
-| T08 | | |
+| T08 | STOP 2026-10-04 | E1 FINDING: a seller session set `seller_documents.review_status` to `approved` on its own `food_packaging` and `national_id_front` rows (policy `sdoc_own`, `authenticated` UPDATE on `review_status`). `store_categories.approved_at` stayed null. `seller_profiles.status = 'approved'` raised `22P02`. No P49. No patch. Database fix is P09M2. |
 | T09 | | |
 | T10 | | |
 | T11 | | |
