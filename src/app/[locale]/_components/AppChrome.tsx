@@ -28,7 +28,7 @@
  * at rest.
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import { Home, Search, Heart, MessageSquare, User } from "lucide-react";
@@ -72,12 +72,19 @@ export function AppChrome() {
   const locale = useLocale() as AppLocale;
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
+  const [themeMounted, setThemeMounted] = useState(false);
   const [isLocalePending, startLocaleTransition] = useTransition();
   const [isRoutePending, startRouteTransition] = useTransition();
   const t = useTranslations("chrome");
   const tCommon = useTranslations("common");
 
-  const isDark = resolvedTheme === "dark";
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  // Server and the first client render both pass false. next-themes resolves
+  // the real theme only after mount, and that swap was a hydration mismatch.
+  const isDark = themeMounted && resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
   const otherLocale: AppLocale = locale === "ar" ? "en" : "ar";
 
