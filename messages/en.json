@@ -407,6 +407,9 @@
     "boosted": {
       "title": "Featured"
     },
+    "stores": {
+      "title": "Stores"
+    },
     "error": {
       "message": "This section couldn't load."
     },

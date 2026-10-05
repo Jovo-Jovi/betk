@@ -214,3 +214,21 @@ export interface StoreDetail {
   listings: ListingSummary[];
   reviews: ListingReview[];
 }
+
+/**
+ * One homepage StoreCard. No listing count — the card has no slot for it
+ * (D2 / REG-111: cards show no listing count).
+ */
+export interface FeaturedStore {
+  id: string;
+  name: string;
+  storeHref: string;
+  avatar?: string;
+  cover?: string;
+  level?: E["seller_level"];
+  verified: boolean;
+  rating?: number;
+  reviews?: number;
+  governorate: string;
+  hideFollow: true;
+}

@@ -34,7 +34,8 @@ import { HeroSection } from "@/features/discovery/components/HeroSection";
 import { CategoriesSection } from "@/features/discovery/components/CategoriesSection";
 import { HomeStripsSection } from "@/features/discovery/components/HomeStripsSection";
 import { catalogSearchBarLabels } from "@/i18n/catalogLabels";
-import { CategoryGridSkeleton, SkeletonGrid } from "@/components/shared";
+import { HomeStoresSection } from "@/features/discovery/components/HomeStoresSection";
+import { CategoryGridSkeleton, SkeletonGrid, StoreCardSkeleton } from "@/components/shared";
 
 export const revalidate = 60;
 
@@ -51,6 +52,19 @@ function HomeStripsSkeleton() {
     <div className="flex flex-col gap-10">
       <SkeletonGrid count={4} />
       <SkeletonGrid count={8} />
+    </div>
+  );
+}
+
+/** Horizontal row, same scroll track as CollectionStrip.tsx. */
+function StoresRowSkeleton() {
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="shrink-0" style={{ flexBasis: 240, width: 240 }}>
+          <StoreCardSkeleton />
+        </div>
+      ))}
     </div>
   );
 }
@@ -78,6 +92,10 @@ export default async function HomePage() {
 
         <Suspense fallback={<HomeStripsSkeleton />}>
           <HomeStripsSection />
+        </Suspense>
+
+        <Suspense fallback={<StoresRowSkeleton />}>
+          <HomeStoresSection />
         </Suspense>
       </div>
     </div>

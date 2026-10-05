@@ -92,6 +92,7 @@ import {
   catalogRatingReviewsLabel,
   catalogSellerResponseLabel,
   catalogListingBoostLabel,
+  catalogLevelLabels,
 } from "@/i18n/catalogLabels";
 import {
   PriceBlock,
@@ -268,6 +269,7 @@ export default async function ListingDetailPage({
             reviews={listing.store.rating?.totalReviews}
             responseHours={avgResponseHours}
             responseLabel={responseLabel}
+            levelLabels={catalogLevelLabels(catalogT)}
             governorate={
               governorateLabel(listing.store.governorate, locale) +
               (listing.store.city ? ` · ${listing.store.city}` : "")
