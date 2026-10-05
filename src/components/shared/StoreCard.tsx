@@ -29,10 +29,20 @@ export interface StoreCardProps {
   listingCountLabel?: string;
   following?: boolean;
   onToggleFollow?: (next: boolean) => void;
+  /** CD-DELTA-6 W3-8: FollowButton label when not following. Absent → FollowButton default. */
+  followLabel?: string;
+  /** CD-DELTA-6 W3-8: FollowButton label when following. Absent → FollowButton default. */
+  followingLabel?: string;
+  /** CD-DELTA-6 W3-8: VerifiedBadge label (its title). Absent → VerifiedBadge default. */
+  verifiedLabel?: string;
+  /** CD-DELTA-6 W3-8: LevelBadge tier labels. Absent → LevelBadge default. */
+  levelLabels?: Partial<Record<SellerLevel, string>>;
+  /** CD-DELTA-6 W3-8: true → no FollowButton (e.g. cached P01 home row). Default false. */
+  hideFollow?: boolean;
   className?: string;
 }
 
-export function StoreCard({ name, storeHref, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, className }: StoreCardProps) {
+export function StoreCard({ name, storeHref, avatar, cover, level, verified, rating, reviews, governorate, listingCount, listingCountLabel = "{count} إعلان", following, onToggleFollow, followLabel, followingLabel, verifiedLabel, levelLabels, hideFollow = false, className }: StoreCardProps) {
   return (
     <div className={cn("flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm", className)}>
       <div
@@ -49,8 +59,8 @@ export function StoreCard({ name, storeHref, avatar, cover, level, verified, rat
             {storeHref
               ? <a href={storeHref} className="rounded-sm font-display text-base font-bold text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{name}</a>
               : <span className="font-display text-base font-bold text-foreground">{name}</span>}
-            {verified && <VerifiedBadge showLabel={false} size={16} />}
-            {level && <LevelBadge level={level} showLabel={false} />}
+            {verified && <VerifiedBadge showLabel={false} size={16} label={verifiedLabel} />}
+            {level && <LevelBadge level={level} showLabel={false} labels={levelLabels} />}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {typeof rating === "number" && <StarRating value={rating} size={13} count={reviews} />}
@@ -58,7 +68,7 @@ export function StoreCard({ name, storeHref, avatar, cover, level, verified, rat
             {typeof listingCount === "number" && <span>{listingCountLabel.replace("{count}", String(listingCount))}</span>}
           </div>
         </div>
-        <FollowButton following={following} onToggle={onToggleFollow} size="sm" />
+        {!hideFollow && <FollowButton following={following} onToggle={onToggleFollow} size="sm" followLabel={followLabel} followingLabel={followingLabel} />}
       </div>
     </div>
   );

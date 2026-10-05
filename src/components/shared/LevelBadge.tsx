@@ -26,7 +26,7 @@ export interface LevelBadgeProps {
 export function LevelBadge({ level = "bronze", showLabel = true, labels, className }: LevelBadgeProps) {
   const text = labels?.[level] ?? DEFAULT_LABELS[level];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full text-xs font-bold leading-tight ring-1 ring-inset", CLS[level] ?? CLS.bronze, showLabel ? "px-2 py-0.5" : "p-1", className)}>
+    <span role={showLabel ? undefined : "img"} aria-label={showLabel ? undefined : text} className={cn("inline-flex items-center gap-1.5 rounded-full text-xs font-bold leading-tight ring-1 ring-inset", CLS[level] ?? CLS.bronze, showLabel ? "px-2 py-0.5" : "p-1", className)}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M12 2l2.2 4.5 5 .7-3.6 3.5.85 4.95L12 17.8l-4.45 2.35.85-4.95L4.8 7.2l5-.7z" fill="currentColor" />
       </svg>

@@ -26,10 +26,12 @@ export interface SellerMiniCardProps {
   responseLabel?: string;
   governorate?: string;
   action?: React.ReactNode;
+  /** CD-DELTA-6 W3 r3 (R6): LevelBadge tier labels (its accessible name). Absent → LevelBadge default. */
+  levelLabels?: Partial<Record<SellerLevel, string>>;
   className?: string;
 }
 
-export function SellerMiniCard({ name, storeHref, avatar, level, verified, rating, reviews, responseHours, responseLabel = "يرد خلال {hours} ساعة", governorate, action, className }: SellerMiniCardProps) {
+export function SellerMiniCard({ name, storeHref, avatar, level, verified, rating, reviews, responseHours, responseLabel = "يرد خلال {hours} ساعة", governorate, action, levelLabels, className }: SellerMiniCardProps) {
   return (
     <div className={cn("flex items-center gap-3 rounded-lg border border-border bg-card p-3", className)}>
       <Avatar className="size-12">
@@ -42,7 +44,7 @@ export function SellerMiniCard({ name, storeHref, avatar, level, verified, ratin
             ? <a href={storeHref} className="rounded-sm font-display text-[0.9375rem] font-bold text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{name}</a>
             : <span className="font-display text-[0.9375rem] font-bold text-foreground">{name}</span>}
           {verified && <VerifiedBadge showLabel={false} size={15} />}
-          {level && <LevelBadge level={level} showLabel={false} />}
+          {level && <LevelBadge level={level} showLabel={false} labels={levelLabels} />}
         </div>
         <div className="flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground">
           {typeof rating === "number" && <StarRating value={rating} size={13} count={reviews} />}
