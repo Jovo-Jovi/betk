@@ -388,7 +388,7 @@ jobs:
             kill "$pid" || true
             exit 1
           fi
-          pnpm exec playwright test tests/e2e/searchbar-contrast.spec.ts --project=chromium
+          pnpm exec playwright test tests/e2e/searchbar-contrast.spec.ts tests/e2e/public-not-found.spec.ts --project=chromium
           status=$?
           kill "$pid" || true
           exit $status

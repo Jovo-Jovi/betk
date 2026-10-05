@@ -70,9 +70,11 @@ export default async function HomePage() {
       />
 
       <div className="mx-auto flex w-full max-w-container flex-col gap-10 px-4">
-        <Suspense fallback={<CategoryGridSkeleton />}>
-          <CategoriesSection />
-        </Suspense>
+        <div id="categories" className="scroll-mt-[var(--topbar-height)]">
+          <Suspense fallback={<CategoryGridSkeleton />}>
+            <CategoriesSection />
+          </Suspense>
+        </div>
 
         <Suspense fallback={<HomeStripsSkeleton />}>
           <HomeStripsSection />

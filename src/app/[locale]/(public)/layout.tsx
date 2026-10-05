@@ -15,11 +15,11 @@ import type { AppLocale } from "@/i18n/routing";
  * CD-DELTA-1: mounts <Footer /> below the content slot (public shell only —
  * no seller/admin wiring). Labels come from the `footer` next-intl namespace;
  * hrefs use `routes.*` + `withLocale()` where a frozen-scope page exists
- * (seller onboarding/dashboard, home). "Categories"/"Stores"/"Help
- * center"/"Contact us" have no corresponding page in the frozen UI Spec
- * inventory (§6) — left without an href (Footer renders them as
- * non-navigating per its own contract) rather than inventing a page; flagged
- * for a future Design/product decision.
+ * (seller onboarding/dashboard, home). D2 (2026-10-05): "Categories" href is
+ * `withLocale(routes.home, locale) + "#categories"` (the home category
+ * section). "Stores" stays without an href until the home stores row lands
+ * (REG-111 — kit gap, Claude Design W3-8, then Cursor composes). "Help
+ * center" and "Contact us" stay without an href (REG-50).
  *
  * PERF-02: this layout wraps ISR routes (`/category/[slug]`, `/listing/[id]`).
  * Next.js renders layouts and pages independently, so — per next-intl's
@@ -48,7 +48,10 @@ export default async function PublicLayout({
     {
       title: t("columns.market.title"),
       links: [
-        { label: t("columns.market.links.categories") },
+        {
+          label: t("columns.market.links.categories"),
+          href: `${withLocale(routes.home, locale)}#categories`,
+        },
         { label: t("columns.market.links.stores") },
         { label: t("columns.market.links.featured"), href: withLocale(routes.home, locale) },
       ],
