@@ -17,13 +17,19 @@
  *
  * Persistence: next-themes' localStorage — no DB column (OD-7).
  *
- * Phase 02 / OD-7 BL-03.
- * TODO(Phase DS): restyle with Claude Design system components.
+ * REG-59 compose (decision 2026-10-05).
  */
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const THEME_OPTIONS = ["light", "dark", "system"] as const;
 type ThemeOption = (typeof THEME_OPTIONS)[number];
@@ -37,26 +43,31 @@ export function ThemeSwitcher() {
     setMounted(true);
   }, []);
 
-  function handleChange(event: ChangeEvent<HTMLSelectElement>) {
-    setTheme(event.target.value as ThemeOption);
+  function handleChange(next: string) {
+    setTheme(next as ThemeOption);
   }
 
   return (
-    <div data-slot="field">
-      <label htmlFor="theme-switcher">{t("themeLabel")}</label>
-      <select
-        id="theme-switcher"
-        name="theme"
+    <div data-slot="field" className="flex flex-col gap-1.5">
+      <label htmlFor="theme-switcher" className="text-sm font-medium text-foreground">
+        {t("themeLabel")}
+      </label>
+      <Select
         value={mounted ? (theme ?? "system") : "system"}
-        onChange={handleChange}
+        onValueChange={handleChange}
         disabled={!mounted}
       >
-        {THEME_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {t(`themeOptions.${option}`)}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id="theme-switcher">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {THEME_OPTIONS.map((option) => (
+            <SelectItem key={option} value={option}>
+              {t(`themeOptions.${option}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
