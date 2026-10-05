@@ -117,3 +117,10 @@ export { DataTable } from "./DataTable";
 export type { DataTableProps, DataTableColumn, DataTableSort } from "./DataTable";
 export { ProofViewer } from "./ProofViewer";
 export type { ProofViewerProps } from "./ProofViewer";
+
+// ── CD-DELTA-6 Wave 2 (Phases 10–11 kit gate; decisions 2026-09-25) ───
+// No ui base added: CheckoutSellerSections uses the existing ui/skeleton.
+export { CartLine } from "./CartLine";
+export type { CartLineProps, CartLineBlockedReason } from "./CartLine";
+export { CheckoutSellerSections } from "./CheckoutSellerSections";
+export type { CheckoutSellerSectionsProps, CheckoutSellerSection, CheckoutSellerSectionLine } from "./CheckoutSellerSections";
