@@ -16,6 +16,7 @@
 export { getActiveListings } from "./queries/getActiveListings";
 export { getCategoryTree } from "./queries/getCategoryTree";
 export { getHomepageData } from "./queries/getHomepageData";
+export { getFeaturedStores } from "./queries/getFeaturedStores";
 export { getListingById } from "./queries/getListingById";
 export { getStoreBySlug } from "./queries/getStoreBySlug";
 // T03 — search & filter (/search).
@@ -45,6 +46,7 @@ export type {
   ListingSummary,
   SearchListingItem,
   SearchResultPage,
+  FeaturedStore,
   StoreDetail,
   StoreRatingSummary,
   StoreSummary,

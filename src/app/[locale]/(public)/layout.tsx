@@ -17,9 +17,11 @@ import type { AppLocale } from "@/i18n/routing";
  * hrefs use `routes.*` + `withLocale()` where a frozen-scope page exists
  * (seller onboarding/dashboard, home). D2 (2026-10-05): "Categories" href is
  * `withLocale(routes.home, locale) + "#categories"` (the home category
- * section). "Stores" stays without an href until the home stores row lands
- * (REG-111 — kit gap, Claude Design W3-8, then Cursor composes). "Help
- * center" and "Contact us" stay without an href (REG-50).
+ * section). "Stores" href is that same home path + "#stores" (D2, REG-111,
+ * the home stores row). When the row is hidden because no store qualifies,
+ * the link lands at the top of the home page — the accepted consequence of
+ * the hide rule. "Help center" and "Contact us" stay without an href
+ * (REG-50).
  *
  * PERF-02: this layout wraps ISR routes (`/category/[slug]`, `/listing/[id]`).
  * Next.js renders layouts and pages independently, so — per next-intl's
@@ -52,7 +54,10 @@ export default async function PublicLayout({
           label: t("columns.market.links.categories"),
           href: `${withLocale(routes.home, locale)}#categories`,
         },
-        { label: t("columns.market.links.stores") },
+        {
+          label: t("columns.market.links.stores"),
+          href: `${withLocale(routes.home, locale)}#stores`,
+        },
         { label: t("columns.market.links.featured"), href: withLocale(routes.home, locale) },
       ],
     },
