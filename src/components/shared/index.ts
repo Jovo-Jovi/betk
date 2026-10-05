@@ -124,3 +124,14 @@ export { CartLine } from "./CartLine";
 export type { CartLineProps, CartLineBlockedReason } from "./CartLine";
 export { CheckoutSellerSections } from "./CheckoutSellerSections";
 export type { CheckoutSellerSectionsProps, CheckoutSellerSection, CheckoutSellerSectionLine } from "./CheckoutSellerSections";
+
+// ── CD-DELTA-6 Wave 3 (last planned v2 delta; decisions 2026-09-25) ───
+// No ui base added: all four use the existing ui/skeleton; no chart library.
+export { SellerOrderMoney } from "./SellerOrderMoney";
+export type { SellerOrderMoneyProps } from "./SellerOrderMoney";
+export { RateMatrixEditor } from "./RateMatrixEditor";
+export type { RateMatrixEditorProps, RateRow, GovernorateOption } from "./RateMatrixEditor";
+export { CourierLabelSheet } from "./CourierLabelSheet";
+export type { CourierLabelSheetProps } from "./CourierLabelSheet";
+export { ChartSeries } from "./ChartSeries";
+export type { ChartSeriesProps, ChartSeriesPoint } from "./ChartSeries";

@@ -65,7 +65,7 @@ Legend: **RE-VALUE** = design supplies a new value for this token · **UNCHANGED
 | `--primary-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | **0 0% 100%** | RE-VALUE (dark) | `--primary-foreground` |
 | `--accent` | 28 92% 54% | 28 92% 54% | **32 85% 45%** | **32 85% 52%** | RE-VALUE | `--accent` |
 | `--accent-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | *(not re-authored)* | RETAINED (dark) | `--accent-foreground` |
-| `--destructive` | 0 72% 48% | 0 72% 52% | 0 72% 48% | **0 72% 55%** | RE-VALUE (dark) | `--destructive` |
+| `--destructive` | 0 72% 48% | 0 72% 52% | **0 72% 45%** | **0 72% 70%** | RE-VALUE (light + dark) — CD-DELTA-6 W3, REG-110 (TOKEN-DELTA) | `--destructive` |
 | `--destructive-foreground` | 0 0% 100% | 0 0% 4% | 0 0% 100% | *(not re-authored)* | RETAINED (dark) | `--destructive-foreground` |
 | `--secondary` | 40 14% 93% | 40 14% 15% | *(not authored)* | *(not authored)* | RETAINED (§2.0) | — |
 | `--secondary-foreground` | 222 22% 14% | 222 22% 90% | *(not authored)* | *(not authored)* | RETAINED (§2.0) | — |
