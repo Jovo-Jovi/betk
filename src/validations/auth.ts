@@ -171,6 +171,13 @@ export const completeProfileSchema = z.object({
     .max(100, { message: "cityTooLong" })
     .optional()
     .or(z.literal("")),
+  /**
+   * Present only when the buyer checked the Buyer Terms box in this request.
+   * A missing or other value is a refusal — the action writes nothing.
+   */
+  acceptBuyerTerms: z.literal("accepted", {
+    errorMap: () => ({ message: "buyerTermsRequired" }),
+  }),
   returnUrl: z.string().optional(),
 });
 

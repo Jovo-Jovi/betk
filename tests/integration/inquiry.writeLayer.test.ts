@@ -114,6 +114,23 @@ async function createBuyer(label: string): Promise<Buyer> {
     .insert({ id, phone_number: makePhone(), auth_provider: "phone", role: "buyer" });
   if (uErr) throw new Error(`users seed(${label}): ${uErr.message}`);
 
+  // REG-75 B: buyer actions refuse until the current buyer_terms row exists.
+  // Service-role seed. status defaults to accepted. Deleted in afterAll.
+  const { data: version, error: versionErr } = await svc()
+    .from("admin_settings")
+    .select("value")
+    .eq("key", "agreement_buyer_terms_version")
+    .single();
+  if (versionErr || !version?.value) {
+    throw new Error(`buyer terms version: ${versionErr?.message}`);
+  }
+  const { error: acceptErr } = await svc().from("agreement_acceptances").insert({
+    user_id: id,
+    document: "buyer_terms",
+    version_label: version.value,
+  });
+  if (acceptErr) throw new Error(`buyer terms seed(${label}): ${acceptErr.message}`);
+
   return { id, client: await signIn(email) };
 }
 
@@ -170,6 +187,11 @@ async function seedListing(storeId: string, categoryId: string): Promise<string>
       price: 100,
       price_type: "fixed",
       status: "active",
+      prep_days: 1,
+      weight_g: 1,
+      length_mm: 1,
+      width_mm: 1,
+      height_mm: 1,
     })
     .select("id")
     .single();
@@ -208,10 +230,18 @@ describeOrSkip("Phase 06 / T02 — messaging write layer (staging)", () => {
       await svc().from("users").delete().in("id", stale.map((s) => s.seller_id));
     }
 
+    const { data: foodParent, error: foodErr } = await svc()
+      .from("categories")
+      .select("id")
+      .eq("slug", "food-beverages")
+      .single();
+    if (foodErr || !foodParent) throw new Error(`food parent: ${foodErr?.message}`);
     const { data: cat, error: catErr } = await svc()
       .from("categories")
       .select("id")
       .eq("is_active", true)
+      .neq("slug", "food-beverages")
+      .or(`parent_id.is.null,parent_id.neq.${foodParent.id}`)
       .limit(1)
       .single();
     if (catErr || !cat) throw new Error(`no active category: ${catErr?.message}`);
@@ -221,11 +251,24 @@ describeOrSkip("Phase 06 / T02 — messaging write layer (staging)", () => {
     sellerB = await createSeller("sellerb");
     buyer = await createBuyer("buyer");
     outsiderBuyer = await createBuyer("outsider");
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: sellerA.storeId, category_id: categoryId });
+    if (scIns) throw new Error(`store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", sellerA.storeId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`store_categories approve: ${scUpd.message}`);
     listingA = await seedListing(sellerA.storeId, categoryId);
   });
 
   afterAll(async () => {
     await svc().from("inquiries").delete().in("buyer_id", createdAuthIds);
+    if (createdAuthIds.length > 0) {
+      await svc().from("agreement_acceptances").delete().in("user_id", createdAuthIds);
+    }
     for (const id of createdAuthIds) {
       await svc().from("users").delete().eq("id", id);
       await service.auth.admin.deleteUser(id).catch(() => undefined);

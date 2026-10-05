@@ -1,3 +1,4 @@
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +16,7 @@ import { fileURLToPath } from "node:url";
  * .env.local + Zod-loader placeholders are wired in tests/setup/env.ts.
  */
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -27,6 +29,14 @@ export default defineConfig({
     environment: "node",
     globalSetup: ["./tests/setup/residueGlobalSetup.ts"],
     setupFiles: ["./tests/setup/env.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+      "tests/e2e/**",
+    ],
     include: [
       "tests/**/*.{test,spec}.ts",
       "src/**/*.{test,spec}.ts",

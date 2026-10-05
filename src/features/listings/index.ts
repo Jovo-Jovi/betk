@@ -18,6 +18,7 @@
 export { getOwnListings } from "./queries/getOwnListings";
 export { getOwnListingById } from "./queries/getOwnListingById";
 export { getOwnInventory } from "./queries/getOwnInventory";
+export { getOwnApprovedCategories } from "./queries/getOwnApprovedCategories";
 
 // ── T03 query (status-filter tab counts) ────────────────────────────────────
 export { getOwnListingsStatusCounts } from "./queries/getOwnListingsStatusCounts";
@@ -30,6 +31,7 @@ export { publishListing } from "./actions/publishListing";
 export { pauseListing, unpauseListing } from "./actions/pauseListing";
 export { softDeleteListing } from "./actions/softDeleteListing";
 export { updateStock } from "./actions/updateStock";
+export { setListingSoldOut } from "./actions/setListingSoldOut";
 export {
   addListingImage,
   removeListingImage,
@@ -52,6 +54,7 @@ export type {
   OwnListingsPage,
   OwnListingDetail,
   OwnInventoryItem,
+  ApprovedStoreCategory,
 } from "./types";
 
 // ── Schemas + discriminated result types ────────────────────────────────────
@@ -63,6 +66,7 @@ export {
   reorderListingImagesSchema,
   listingIdInputSchema,
   updateStockSchema,
+  setListingSoldOutSchema,
   getOwnListingsParamsSchema,
   listingStatusFilterSchema,
   listingTypeSchema,
@@ -76,6 +80,7 @@ export type {
   ReorderListingImagesInput,
   ListingIdInput,
   UpdateStockInput,
+  SetListingSoldOutInput,
   GetOwnListingsParams,
   ListingStatusFilter,
   CreateListingResult,
@@ -84,6 +89,7 @@ export type {
   SetPauseResult,
   SoftDeleteListingResult,
   UpdateStockResult,
+  SetListingSoldOutResult,
   AddListingImageResult,
   RemoveListingImageResult,
   ReorderListingImagesResult,

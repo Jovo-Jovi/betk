@@ -24,12 +24,12 @@ import type { Route } from "next";
 import { redirect, notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnListingById } from "@/features/listings";
-import { getCategoryTree } from "@/features/discovery";
+import { getOwnApprovedCategories, getOwnListingById } from "@/features/listings";
 import { listingIdSchema } from "@/validations/discovery";
 import { routes } from "@/constants/routes";
 import { StatusBadge } from "@/components/shared";
 import { ListingForm } from "../../_components/ListingForm";
+import { SoldOutToggle } from "../../_components/SoldOutToggle";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("seller.listings.form");
@@ -59,7 +59,7 @@ export default async function EditListingPage({ params }: { params: Promise<Rout
   const idResult = listingIdSchema.safeParse(id);
   const [listing, categories] = await Promise.all([
     idResult.success ? getOwnListingById(idResult.data, supabase) : Promise.resolve(null),
-    getCategoryTree(supabase),
+    getOwnApprovedCategories(supabase),
   ]);
 
   if (!listing) {
@@ -71,6 +71,7 @@ export default async function EditListingPage({ params }: { params: Promise<Rout
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-lg font-bold text-foreground">{t("editTitle")}</h1>
         <StatusBadge domain="listing" status={listing.status} label={tCommon(`filter.${listing.status}`)} />
+        <SoldOutToggle listingId={listing.id} status={listing.status} />
       </div>
 
       <ListingForm mode="edit" uid={user.id} mediaBucket={MEDIA_BUCKET} categories={categories} initial={listing} />

@@ -257,6 +257,10 @@ export async function middleware(request: NextRequest) {
   if (gate === "admin") {
     // is_admin(): role IN ('admin','superadmin') AND status='active' (checked above).
     if (profile.role !== "admin" && profile.role !== "superadmin") {
+      // P49 calls notFound() itself. A redirect to / would follow through to a 200 home page.
+      if (path === "/admin/sellers/approvals") {
+        return response;
+      }
       return redirect(request, response, localize(locale, "/"));
     }
     return response;

@@ -81,6 +81,7 @@ export async function StoreListingsSection({
             price={listing.price}
             priceType={listing.priceType}
             storeName={storeName}
+            storeSlug={storeSlug}
             rating={ratingAverage}
             reviews={ratingTotal}
             boostLabel={boostLabel}

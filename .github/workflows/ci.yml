@@ -5,16 +5,21 @@
 # Stage order per CICD_PIPELINE.md:
 #   install → lint → typecheck → vitest (unit) → guards → types-drift → build
 #
-# Integration tests (tests/integration/rls.smoke.test.ts) hit live staging and
-# create/teardown auth users — they MUST NOT run in the default CI job silently.
-# They are gated behind the separate `rls-smoke` job, which runs the staging
-# suite when triggered on develop push or workflow_dispatch (explicit opt-in),
-# AND — as a BLOCKING gate — on any pull_request whose diff touches
-# supabase/migrations/** (RLS is the sole authz boundary, so a policy change
-# must be smoke-tested before merge). On non-migration PRs the job still runs but
-# short-circuits with an explicit "no migration changes" log line (never a silent
-# absence), so it can be marked "required" in branch protection and act as a
-# conditional gate. It fails loudly when secrets are absent — never a silent skip.
+# Integration tests hit live staging and create/teardown auth users — they MUST
+# NOT run in the default CI job silently. `rls-smoke` runs
+# tests/integration/rls.smoke.test.ts when triggered on develop push or
+# workflow_dispatch (explicit opt-in), AND — as a BLOCKING gate — on any
+# pull_request whose diff touches supabase/migrations/** (RLS is the sole authz
+# boundary, so a policy change must be smoke-tested before merge). On
+# non-migration PRs that job still runs but short-circuits with an explicit
+# "no migration changes" log line (never a silent absence), so it can be marked
+# "required" in branch protection and act as a conditional gate. It fails loudly
+# when secrets are absent — never a silent skip.
+#
+# `integration-staging` runs the full tests/integration suite on a pull_request
+# whose diff touches src/, tests/, or supabase/. It needs rls-smoke so the two
+# jobs never write staging at the same time. It is not a required check.
+# Phase 10 T00 decides that.
 
 name: CI
 
@@ -180,6 +185,10 @@ jobs:
       - name: Guard — no select-star on seller_orders (REG-92)
         run: node scripts/check-seller-orders-select.mjs
 
+      # Kit files change only in a CD-LAND task or a recorded Claude Design sanction.
+      - name: Guard — kit integrity (ui + shared)
+        run: node scripts/check-kit-integrity.mjs
+
   # ─── Stage 5: types-drift ─────────────────────────────────────────────────
   # Requires GitHub secrets: SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN.
   # Fails LOUDLY if either is absent — a silent skip would allow stale types to merge.
@@ -279,6 +288,110 @@ jobs:
           SUPABASE_DOCS_BUCKET: ${{ secrets.SUPABASE_DOCS_BUCKET || 'seller-documents' }}
           SUPABASE_MEDIA_BUCKET: ${{ secrets.SUPABASE_MEDIA_BUCKET || 'listing-media' }}
         run: pnpm build
+
+  # ─── Contrast (REG-58) ────────────────────────────────────────────────────
+  # axe-core color-contrast on the composed SearchBar, light and dark.
+  # Extra job. Not one of the eight required branch-protection checks.
+  # Public pages need the real anon project so the SearchBar actually renders.
+  contrast:
+    name: Contrast
+    needs: [install]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      - name: Require public Supabase secrets
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=()
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Contrast check requires secrets: ${missing[*]}"
+            echo "::error::A silent skip would close REG-58 without a measurement — failing explicitly."
+            exit 1
+          fi
+
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY || 'phc_ci_placeholder' }}
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ secrets.NEXT_PUBLIC_POSTHOG_HOST || 'https://posthog.invalid' }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY || 'dummy-service-key-ci-contrast' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 're_ci_placeholder' }}
+          RESEND_FROM_ADDRESS: ${{ secrets.RESEND_FROM_ADDRESS || 'noreply@betk.invalid' }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci-client-id' }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci-client-secret' }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN || 'ci-whatsapp-token' }}
+          WHATSAPP_PHONE_ID: ${{ secrets.WHATSAPP_PHONE_ID || 'ci-phone-id' }}
+          SMS_PROVIDER_KEY: ${{ secrets.SMS_PROVIDER_KEY || 'ci-sms-key' }}
+          SUPABASE_DOCS_BUCKET: ${{ secrets.SUPABASE_DOCS_BUCKET || 'seller-documents' }}
+          SUPABASE_MEDIA_BUCKET: ${{ secrets.SUPABASE_MEDIA_BUCKET || 'listing-media' }}
+        run: pnpm build
+
+      - name: SearchBar contrast in both themes
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY || 'phc_ci_placeholder' }}
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ secrets.NEXT_PUBLIC_POSTHOG_HOST || 'https://posthog.invalid' }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY || 'dummy-service-key-ci-contrast' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://ci@ci.ingest.sentry.io/1' }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 're_ci_placeholder' }}
+          RESEND_FROM_ADDRESS: ${{ secrets.RESEND_FROM_ADDRESS || 'noreply@betk.invalid' }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci-client-id' }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci-client-secret' }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN || 'ci-whatsapp-token' }}
+          WHATSAPP_PHONE_ID: ${{ secrets.WHATSAPP_PHONE_ID || 'ci-phone-id' }}
+          SMS_PROVIDER_KEY: ${{ secrets.SMS_PROVIDER_KEY || 'ci-sms-key' }}
+          SUPABASE_DOCS_BUCKET: ${{ secrets.SUPABASE_DOCS_BUCKET || 'seller-documents' }}
+          SUPABASE_MEDIA_BUCKET: ${{ secrets.SUPABASE_MEDIA_BUCKET || 'listing-media' }}
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: |
+          pnpm start &
+          pid=$!
+          ready=0
+          for i in $(seq 1 90); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)"
+            if [ "$code" = "200" ]; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::error::next start exited before the homepage returned 200 (last HTTP $code)."
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then
+            echo "::error::Homepage did not return 200 in time (last HTTP ${code:-none})."
+            kill "$pid" || true
+            exit 1
+          fi
+          pnpm exec playwright test tests/e2e/searchbar-contrast.spec.ts --project=chromium
+          status=$?
+          kill "$pid" || true
+          exit $status
 
 # ─────────────────────────────────────────────────────────────────────────────
 # RLS smoke test — runs integration tests against staging.
@@ -410,3 +523,90 @@ jobs:
           WHATSAPP_PHONE_ID: ci-phone-id
           SMS_PROVIDER_KEY: ci-sms-key
         run: pnpm exec vitest run tests/integration/rls.smoke.test.ts --reporter=verbose
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Full integration suite against staging.
+# Needs rls-smoke so the two jobs never write staging at the same time.
+# Runs on a pull_request that changes src/, tests/, or supabase/.
+# Not a required check. Phase 10 T00 decides that.
+# ─────────────────────────────────────────────────────────────────────────────
+  integration-staging:
+    name: Integration (staging)
+    needs: [install, rls-smoke]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect integration paths
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- src/ tests/ supabase/)"
+          if [ -n "$changed" ]; then
+            echo "src/, tests/, or supabase/ changed — running the integration suite against staging:"
+            echo "$changed" | sed 's/^/  - /'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No src/, tests/, or supabase/ changes — skipping the integration suite."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/cache/restore@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          path: node_modules
+          key: ${{ needs.install.outputs.cache-key }}
+
+      - name: Verify staging secrets are present
+        if: steps.detect.outputs.run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          missing=()
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]      && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          [ -z "$SUPABASE_SERVICE_KEY" ]           && missing+=("SUPABASE_SERVICE_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Integration suite requires secrets: ${missing[*]}"
+            echo "::error::Add them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Integration tests (staging)
+        if: steps.detect.outputs.run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: phc_ci_placeholder
+          NEXT_PUBLIC_POSTHOG_HOST: https://posthog.invalid
+          NEXT_PUBLIC_SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          GOOGLE_CLIENT_ID: ci-client-id
+          GOOGLE_CLIENT_SECRET: ci-client-secret
+          RESEND_API_KEY: re_ci_placeholder
+          RESEND_FROM_ADDRESS: noreply@betk.invalid
+          SENTRY_DSN: https://ci@ci.ingest.sentry.io/1
+          # Live staging buckets (storage.buckets). The smoke job's
+          # seller-documents / listing-media placeholders are not buckets.
+          SUPABASE_DOCS_BUCKET: docs
+          SUPABASE_MEDIA_BUCKET: media
+          WHATSAPP_API_TOKEN: ci-whatsapp-token
+          WHATSAPP_PHONE_ID: ci-phone-id
+          SMS_PROVIDER_KEY: ci-sms-key
+        run: pnpm exec vitest run tests/integration --reporter=verbose

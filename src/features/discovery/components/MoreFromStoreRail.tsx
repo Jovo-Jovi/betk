@@ -62,6 +62,7 @@ export async function MoreFromStoreRail({
                 ? localizedName({ ar: listing.store.nameAr, en: listing.store.nameEn }, locale)
                 : null
             }
+            storeSlug={listing.store?.slug ?? null}
             rating={listing.store?.rating?.averageRating ?? null}
             reviews={listing.store?.rating?.totalReviews ?? null}
             boostLabel={boostLabel}

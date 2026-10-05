@@ -32,7 +32,7 @@ import type { Database, Json } from "@/lib/supabase/types";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 import { resolveCallerStoreId } from "../queries/_shared";
-import { syncListingTags } from "./_shared";
+import { catalogueWrite, refusalFromDb, syncListingTags } from "./_shared";
 
 type ListingUpdate = Database["betk"]["Tables"]["listings"]["Update"];
 
@@ -84,8 +84,11 @@ export async function updateListing(
     is_made_to_order: stock.isMadeToOrder,
     accepts_custom_orders: p.acceptsCustomOrders ?? false,
     custom_order_notes: p.customOrderNotes ?? null,
-    delivery_options: (p.deliveryOptions ?? {}) as Json,
+    ...catalogueWrite(p),
   };
+  if (p.deliveryOptions !== undefined) {
+    update.delivery_options = p.deliveryOptions as Json;
+  }
   if (p.type !== "service") {
     update.low_stock_threshold = p.lowStockThreshold ?? 3;
   }
@@ -100,7 +103,7 @@ export async function updateListing(
 
   if (error) {
     captureTaggedError(error, "listing", { extra: { step: "updateListing" } });
-    return { ok: false, reason: "error" };
+    return refusalFromDb(error.message);
   }
   if ((data?.length ?? 0) === 0) {
     return { ok: false, reason: "not_found" };

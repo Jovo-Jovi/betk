@@ -57,6 +57,18 @@ const publicRoutes = {
   store: (slug: string) => `/store/${slug}`,
 } as const;
 
+/** P67–P70. Public. Readable without an account (AC-AGR-4). */
+const legalRoutes = {
+  /** `/legal/terms` — Buyer terms */
+  terms: "/legal/terms",
+  /** `/legal/seller-agreement` — Seller agreement */
+  sellerAgreement: "/legal/seller-agreement",
+  /** `/legal/returns` — Platform return & refund policy */
+  returns: "/legal/returns",
+  /** `/legal/privacy` — Privacy */
+  privacy: "/legal/privacy",
+} as const;
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 // UI Spec §3 AUTH pages
 const authRoutes = {
@@ -294,6 +306,7 @@ const adminRoutes = {
  */
 export const routes = {
   ...publicRoutes,
+  legal: legalRoutes,
 
   /** `/checkout?inquiry=[inquiryId]` — Checkout (requires confirmed inquiry, OD-4 phone gate) */
   checkout: (inquiryId: string) => `/checkout?inquiry=${inquiryId}`,

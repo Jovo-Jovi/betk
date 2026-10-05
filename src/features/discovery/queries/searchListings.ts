@@ -100,7 +100,7 @@ interface Chainable<T> {
 interface ResolvedFilters {
   q?: string;
   category?: string;
-  type?: "product" | "service";
+  type?: "product";
   governorate?: string;
   city?: string;
   priceMin?: number;

@@ -1,6 +1,6 @@
 /**
- * Payment Methods Settings (/seller/store/payments) — Phase 04 / T07
- * (FR-SEL-7 / R-S09 config).
+ * P29 Settlement (/seller/store/payments) — Phase 04 / T07
+ * (FR-SEL-7 / R-S09 config). Copy is the BETK→seller settlement wording.
  *
  * Seller-console page (inside the `(seller)` group → renders with the
  * ConsoleSidebar shell). Dynamic/authed: reads the caller's OWN

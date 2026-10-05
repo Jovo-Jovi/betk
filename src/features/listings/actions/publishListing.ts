@@ -43,6 +43,7 @@ import { getTyped, type StorePaymentMethods } from "@/types/jsonb";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 import { resolveCallerStoreId } from "../queries/_shared";
+import { refusalFromDb } from "./_shared";
 
 interface PublishFetchRow {
   title_ar: string;
@@ -129,7 +130,7 @@ export async function publishListing(input: ListingIdInput): Promise<PublishList
 
   if (updErr) {
     captureTaggedError(updErr, "listing", { extra: { step: "flipActive" } });
-    return { ok: false, reason: "error" };
+    return refusalFromDb(updErr.message);
   }
   if ((updated?.length ?? 0) === 0) {
     // Not a draft (already active/paused/sold_out/removed) — nothing to publish.

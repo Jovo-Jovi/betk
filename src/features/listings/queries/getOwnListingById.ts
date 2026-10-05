@@ -23,7 +23,7 @@ const OWN_DETAIL_SELECT = `
   id, store_id, type, title_ar, title_en, description_ar, category_id, subcategory_id,
   price, price_type, status, stock_qty, is_made_to_order, low_stock_threshold,
   accepts_custom_orders, custom_order_notes, delivery_options, view_count,
-  inquiry_count, created_at,
+  inquiry_count, created_at, weight_g, length_mm, width_mm, height_mm, prep_days,
   listing_images ( id, url, sort_order ),
   listing_tags ( tag )
 `;
@@ -49,6 +49,11 @@ interface RawOwnDetailRow {
   view_count: number;
   inquiry_count: number;
   created_at: string;
+  weight_g: number | null;
+  length_mm: number | null;
+  width_mm: number | null;
+  height_mm: number | null;
+  prep_days: number | null;
   listing_images: { id: string; url: string; sort_order: number }[] | null;
   listing_tags: { tag: string }[] | null;
 }
@@ -98,6 +103,11 @@ export async function getOwnListingById(
     viewCount: row.view_count,
     inquiryCount: row.inquiry_count,
     createdAt: row.created_at,
+    weightG: row.weight_g,
+    lengthMm: row.length_mm,
+    widthMm: row.width_mm,
+    heightMm: row.height_mm,
+    prepDays: row.prep_days,
     images: (row.listing_images ?? [])
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)

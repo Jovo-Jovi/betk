@@ -139,6 +139,21 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
       const uid = data.user.id;
       createdAuthIds.push(uid);
       await svc().from("users").insert({ id: uid, phone_number: null, auth_provider: "google", role: "buyer" } as never);
+      // REG-75 B: buyer actions refuse until the current buyer_terms row exists.
+      const { data: version, error: versionErr } = await svc()
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "agreement_buyer_terms_version")
+        .single();
+      if (versionErr || !version?.value) {
+        throw new Error(`[storefront.test] buyer terms version: ${versionErr?.message}`);
+      }
+      const { error: acceptErr } = await svc().from("agreement_acceptances").insert({
+        user_id: uid,
+        document: "buyer_terms",
+        version_label: version.value,
+      });
+      if (acceptErr) throw new Error(`[storefront.test] buyer terms seed: ${acceptErr.message}`);
       if (label === "a") buyerAId = uid;
       else buyerBId = uid;
     }
@@ -188,6 +203,17 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
     if (suspErr || !susp) throw new Error(`[storefront.test] suspended store: ${suspErr?.message}`);
     suspendedStoreId = (susp as { id: string }).id;
 
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: activeStoreId, category_id: categoryId });
+    if (scIns) throw new Error(`[storefront.test] store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", activeStoreId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`[storefront.test] store_categories approve: ${scUpd.message}`);
+
     // ── one active listing on the active store (wishlist target) ──
     const { data: listing, error: listErr } = await svc()
       .from("listings")
@@ -200,6 +226,11 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
         price_type: "fixed",
         stock_qty: 5,
         status: "active",
+        prep_days: 1,
+        weight_g: 1,
+        length_mm: 1,
+        width_mm: 1,
+        height_mm: 1,
       } as never)
       .select("id")
       .single();
@@ -223,6 +254,9 @@ describeOrSkip("Phase 03 / T06 — storefront + wishlist/follow actions (staging
     if (categoryId) await svc().from("categories").delete().eq("id", categoryId);
     for (const sid of [sellerId, suspSellerId]) {
       if (sid) await svc().from("seller_profiles").delete().eq("id", sid);
+    }
+    if (createdAuthIds.length > 0) {
+      await svc().from("agreement_acceptances").delete().in("user_id", createdAuthIds);
     }
     for (const id of createdAuthIds) {
       await svc().from("users").delete().eq("id", id);

@@ -32,6 +32,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toggleWishlistInputSchema, type ToggleResult } from "@/validations/discovery";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import { buyerTermsBlock } from "@/services/agreementVersions";
 
 /** Postgres unique-violation SQLSTATE — a concurrent double-insert race. */
 const PG_UNIQUE_VIOLATION = "23505";
@@ -55,6 +56,10 @@ export async function toggleWishlist(listingId: string): Promise<ToggleResult> {
 
   if (authError || !user) {
     return { ok: false, reason: "unauthenticated" };
+  }
+
+  if (await buyerTermsBlock(supabase, user.id)) {
+    return { ok: false, reason: "error" };
   }
 
   // ── Read the caller's own row (wishlist_own self-scope SELECT) ──────────────

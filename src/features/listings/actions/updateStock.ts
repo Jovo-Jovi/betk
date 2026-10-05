@@ -40,6 +40,7 @@ import {
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 import { resolveCallerStoreId } from "../queries/_shared";
+import { refusalFromDb } from "./_shared";
 
 type ListingUpdate = Database["betk"]["Tables"]["listings"]["Update"];
 
@@ -102,7 +103,7 @@ export async function updateStock(input: UpdateStockInput): Promise<UpdateStockR
 
   if (error) {
     captureTaggedError(error, "listing", { extra: { step: "updateStock" } });
-    return { ok: false, reason: "error" };
+    return refusalFromDb(error.message);
   }
   if ((updated?.length ?? 0) === 0) {
     return { ok: false, reason: "not_found" };

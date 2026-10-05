@@ -31,6 +31,7 @@ import { translateZodIssue } from "@/validations/zodMessages";
 import { sanitizeReturnUrl } from "@/validations/returnUrl";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import { completeBuyerSignup } from "@/services/agreementVersions";
 
 export interface CompleteProfileResult {
   success?: boolean;
@@ -52,6 +53,7 @@ export async function completeProfile(
     full_name: formData.get("full_name"),
     governorate: formData.get("governorate"),
     city: formData.get("city") ?? undefined,
+    acceptBuyerTerms: formData.get("acceptBuyerTerms") ?? undefined,
     returnUrl: formData.get("returnUrl") ?? undefined,
   });
 
@@ -59,7 +61,7 @@ export async function completeProfile(
     return { errorAr: translateZodIssue(tValidation, parsed.error.errors[0]?.message) };
   }
 
-  const { full_name, governorate, city, returnUrl: rawReturnUrl } = parsed.data;
+  const { full_name, governorate, city, acceptBuyerTerms, returnUrl: rawReturnUrl } = parsed.data;
   const returnUrl = sanitizeReturnUrl(rawReturnUrl);
 
   // ── Verify authenticated session ───────────────────────────────────────────
@@ -80,26 +82,24 @@ export async function completeProfile(
   // the value comes from the live GoTrue session, not the form.
   const cityValue = city && city.trim() !== "" ? city.trim() : null;
 
-  const { error: upsertError } = await supabase
-    .schema("betk")
-    .from("buyer_profiles")
-    .upsert(
-      {
-        id: user.id,
-        full_name: full_name.trim(),
-        governorate,
-        ...(cityValue !== null ? { city: cityValue } : {}),
-      },
-      { onConflict: "id" },
-    );
+  // Acceptance is written only when this request carried the checkbox literal.
+  // A refusal writes neither the acceptance row nor the profile.
+  const signup = await completeBuyerSignup(supabase, user.id, {
+    accepted: acceptBuyerTerms === "accepted",
+    fullName: full_name,
+    governorate,
+    city: cityValue,
+  });
 
-  if (upsertError) {
-    captureTaggedError(upsertError, "auth", {
-      extra: { step: "completeProfile.upsert" },
-    });
-    return {
-      errorAr: tErrors("profileSaveFailed"),
-    };
+  if (!signup.ok) {
+    if (signup.code === "profile_failed" || signup.code === "acceptance_failed") {
+      captureTaggedError(new Error(signup.code), "auth", {
+        extra: { step: "completeProfile.signup", code: signup.code },
+      });
+    }
+    if (signup.code === "not_accepted") return { errorAr: tErrors("buyerTermsRequired") };
+    if (signup.code === "unconfigured") return { errorAr: tErrors("buyerTermsUnavailable") };
+    return { errorAr: tErrors("profileSaveFailed") };
   }
 
   // ── Sentry + PostHog ───────────────────────────────────────────────────────

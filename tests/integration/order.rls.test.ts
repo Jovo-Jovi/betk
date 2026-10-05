@@ -243,10 +243,18 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
 
     await sweepLeftovers();
 
+    const { data: foodParent, error: foodErr } = await svc()
+      .from("categories")
+      .select("id")
+      .eq("slug", "food-beverages")
+      .single();
+    if (foodErr || !foodParent) throw new Error(`food parent: ${foodErr?.message}`);
     const { data: cat, error: catErr } = await svc()
       .from("categories")
       .select("id")
       .eq("is_active", true)
+      .neq("slug", "food-beverages")
+      .or(`parent_id.is.null,parent_id.neq.${foodParent.id}`)
       .limit(1)
       .single();
     if (catErr || !cat) throw new Error(`no active category for fixtures: ${catErr?.message}`);
@@ -258,6 +266,17 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
     outsiderBuyer = await createBuyer("outsider", makePhone());
     googleNoPhone = await createBuyer("nophone", null);
 
+    const { error: scIns } = await svc()
+      .from("store_categories")
+      .insert({ store_id: sellerA.storeId, category_id: categoryId });
+    if (scIns) throw new Error(`store_categories insert: ${scIns.message}`);
+    const { error: scUpd } = await svc()
+      .from("store_categories")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("store_id", sellerA.storeId)
+      .eq("category_id", categoryId);
+    if (scUpd) throw new Error(`store_categories approve: ${scUpd.message}`);
+
     const { data: listing, error: lErr } = await svc()
       .from("listings")
       .insert({
@@ -268,6 +287,7 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
         price: 100,
         price_type: "fixed",
         status: "active",
+        prep_days: 1,
         ...{
           // M3 chk_active_listing_shipping: an active row needs all four, each > 0.
           weight_g: 1,
@@ -526,7 +546,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
     const buyerShip = await buyer.client.from("shipments").select("id").eq("id", shipmentId);
     expect(buyerShip.data?.length ?? 0).toBe(1);
     const sellerShip = await sellerA.client.from("shipments").select("id").eq("id", shipmentId);
-    expect(sellerShip.data?.length ?? 0).toBe(1);
+    // M7 shipments_access / ERD §8: buyer via the seller order, or admin. Seller none (R-V02).
+    expect(sellerShip.data?.length ?? 0).toBe(0);
     const outsiderShip = await outsiderBuyer.client.from("shipments").select("id").eq("id", shipmentId);
     expect(outsiderShip.data?.length ?? 0).toBe(0);
     const anonShip = await anonClient().from("shipments").select("id").eq("id", shipmentId);
@@ -541,7 +562,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
       .from("shipment_tracking_events")
       .select("id")
       .eq("shipment_id", shipmentId);
-    expect(sellerTe.data?.length ?? 0).toBe(1);
+    // M7 shipment_tracking_events_access / ERD §8: buyer via the shipment, or admin. Seller none (R-V02).
+    expect(sellerTe.data?.length ?? 0).toBe(0);
     const outsiderTe = await outsiderBuyer.client
       .from("shipment_tracking_events")
       .select("id")
@@ -660,7 +682,9 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
       .select("converted_to_order_id")
       .eq("id", confirmedInquiryId)
       .single();
-    expect(inq?.converted_to_order_id).toBe(convOrderId);
+    // CF-4 dropped set_inquiry_converted_order and trg_set_inquiry_converted_order.
+    // The column and fk_inquiries_order stay. Nothing writes the link.
+    expect(inq?.converted_to_order_id).toBeNull();
 
     // And the buyer genuinely cannot write that column directly (RLS proof).
     const direct = await buyer.client
@@ -678,7 +702,8 @@ describeOrSkip("Phase 07 / T01 — order-set RLS (staging)", () => {
       .eq("id", confirmedInquiryId)
       .single();
     const firstLink = before?.converted_to_order_id;
-    expect(firstLink).toBeTruthy();
+    // CF-4: the first order does not set the link, so a second order has nothing to overwrite.
+    expect(firstLink).toBeNull();
 
     const ins = await buyer.client
       .from("seller_orders")

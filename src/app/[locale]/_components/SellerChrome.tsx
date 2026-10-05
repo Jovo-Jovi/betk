@@ -29,7 +29,7 @@
  * Composition only — no restyle. Zero edits to components/ui or components/shared.
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -104,9 +104,16 @@ export function SellerChrome() {
   const t = useTranslations("console");
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
   const [isRoutePending, startRouteTransition] = useTransition();
 
-  const isDark = resolvedTheme === "dark";
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  // Same mount gate as AppChrome: the sun/moon swap must not differ on the
+  // server and the first client render.
+  const isDark = themeMounted && resolvedTheme === "dark";
   const activeId = activeIdFromPath(pathname);
   const otherLocale: AppLocale = locale === "ar" ? "en" : "ar";
 
@@ -133,7 +140,14 @@ export function SellerChrome() {
         >
           <Menu className="size-5" />
         </button>
-        <span className="font-display text-base font-extrabold text-primary">BETK</span>
+        <button
+          type="button"
+          onClick={() => startRouteTransition(() => router.push(routes.home))}
+          aria-label="BETK"
+          className="font-display text-base font-extrabold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          BETK
+        </button>
         <div className="ms-auto flex items-center gap-1">
           <button
             type="button"
@@ -165,6 +179,7 @@ export function SellerChrome() {
         }}
         open={open}
         onClose={() => setOpen(false)}
+        onLogoClick={() => startRouteTransition(() => router.push(routes.home))}
       />
     </>
   );

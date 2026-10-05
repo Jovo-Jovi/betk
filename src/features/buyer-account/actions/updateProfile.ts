@@ -30,6 +30,7 @@ import { updateProfileSchema } from "@/validations/account";
 import { translateZodIssue } from "@/validations/zodMessages";
 import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
+import { buyerTermsBlock } from "@/services/agreementVersions";
 
 export interface UpdateProfileResult {
   success?: boolean;
@@ -69,6 +70,15 @@ export async function updateProfile(
 
   if (authError || !user) {
     return { errorAr: tErrors("mustLoginFirst") };
+  }
+
+  const termsBlock = await buyerTermsBlock(supabase, user.id);
+  if (termsBlock) {
+    return {
+      errorAr: tErrors(
+        termsBlock === "unconfigured" ? "buyerTermsUnavailable" : "buyerTermsRequired",
+      ),
+    };
   }
 
   // ── Upsert buyer_profiles (bp_self RLS — authenticated cookie client) ──────

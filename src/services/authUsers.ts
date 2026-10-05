@@ -18,6 +18,7 @@
 
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
+import { readCurrentBuyerTerms } from "@/services/agreementVersions";
 import type { Database } from "@/lib/supabase/types";
 
 type UserRow = Database["betk"]["Tables"]["users"]["Row"];
@@ -256,6 +257,8 @@ export async function isPhoneNumberTaken(phoneNumber: string): Promise<boolean> 
  * - admin/superadmin → /admin
  * - seller: seller_profiles.status non-active (R-S04) → /seller/status; active → /seller
  * - buyer: no buyer_profiles row (first sign-in) → /auth/register; else → returnUrl|'/'
+ * - any of those, when the current buyer_terms row is missing → /auth/register
+ *   (REG-75 B). The accept step is P08.
  *
  * Uses the service-role client because the authenticated cookie client may not
  * yet have the session cookie set when this is called inside verifyOtp.
@@ -266,12 +269,11 @@ export async function resolvePostAuthRedirect(
   returnUrl: string,
 ): Promise<string> {
   const supabase = createServiceClient();
+  let destination: string;
 
   if (role === "admin" || role === "superadmin") {
-    return "/admin";
-  }
-
-  if (role === "seller") {
+    destination = "/admin";
+  } else if (role === "seller") {
     const { data: sp } = await supabase
       .schema("betk")
       .from("seller_profiles")
@@ -279,22 +281,33 @@ export async function resolvePostAuthRedirect(
       .eq("id", userId)
       .maybeSingle();
 
-    if (!sp || sp.status !== "active") return "/seller/status";
-    return "/seller";
+    destination = !sp || sp.status !== "active" ? "/seller/status" : "/seller";
+  } else {
+    const { data: bp } = await supabase
+      .schema("betk")
+      .from("buyer_profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!bp) {
+      destination = returnUrl
+        ? `/auth/register?returnUrl=${encodeURIComponent(returnUrl)}`
+        : "/auth/register";
+    } else {
+      destination = returnUrl || "/";
+    }
   }
 
-  // buyer — check for buyer_profile (T04: missing → registration required).
-  const { data: bp } = await supabase
-    .schema("betk")
-    .from("buyer_profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
+  const terms = await readCurrentBuyerTerms(userId);
+  if (!terms.accepted) {
+    if (destination === "/auth/register" || destination.startsWith("/auth/register?")) {
+      return destination;
+    }
+    return `/auth/register?returnUrl=${encodeURIComponent(destination)}`;
+  }
 
-  if (!bp) return "/auth/register";
-
-  // Safe returnUrl already validated by the caller.
-  return returnUrl || "/";
+  return destination;
 }
 
 /**

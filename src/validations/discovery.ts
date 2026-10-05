@@ -54,6 +54,19 @@ export const toggleFollowInputSchema = z.object({
 });
 export type ToggleFollowInput = z.infer<typeof toggleFollowInputSchema>;
 
+/** Guest add-to-cart. The listing id is the only client field. */
+export const addToCartInputSchema = z.object({
+  listingId: z.string().uuid(),
+});
+export type AddToCartInput = z.infer<typeof addToCartInputSchema>;
+
+/**
+ * This phase does not insert a cart row for an authenticated buyer (Phase 10).
+ * `unauthenticated` is the guest refusal after the anon insert attempt.
+ */
+export type AddToCartResult =
+  | { ok: false; reason: "unauthenticated" | "invalid" | "unavailable" | "error" };
+
 /**
  * Shared discriminated result for both discovery toggle actions
  * (`toggleWishlist` / `toggleFollow`). Lives here (not in a `"use server"`
@@ -81,15 +94,22 @@ const emptyToUndefined = (v: unknown): unknown =>
 export const searchSortSchema = z.enum(["relevance", "newest", "price", "popularity"]);
 export type SearchSort = z.infer<typeof searchSortSchema>;
 
-/** Listing-type filter (product|service); absent = both. */
-export const searchListingTypeSchema = z.enum(["product", "service"]);
+/**
+ * Listing-type filter on discovery. `product` narrows to products.
+ * `service` is not a filter (R-L16, P02): a stale `type=service` is dropped,
+ * and the listing_type enum member stays. Absent does not add a type predicate.
+ */
+const dropRetiredServiceFilter = (v: unknown): unknown =>
+  v === "" || v === null || v === "service" ? undefined : v;
+
+export const searchListingTypeSchema = z.enum(["product"]);
 export type SearchListingType = z.infer<typeof searchListingTypeSchema>;
 
 export const searchListingsParamsSchema = z.object({
   /** 1–2 keyword full-text query over listings.search_vector (C2). */
   q: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(100).optional()),
   category: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
-  type: z.preprocess(emptyToUndefined, searchListingTypeSchema.optional()),
+  type: z.preprocess(dropRetiredServiceFilter, searchListingTypeSchema.optional()),
   /** stores.governorate slug (e.g. "cairo"). */
   governorate: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(50).optional()),
   /** stores.city free-text (exact match). */

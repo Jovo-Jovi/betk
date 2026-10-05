@@ -6,6 +6,12 @@
     "backToHome": "Back to home",
     "or": "or"
   },
+  "share": {
+    "action": "Share",
+    "fallback": "Copy link",
+    "copied": "Link copied",
+    "error": "Could not share this link"
+  },
   "notFound": {
     "title": "Page not found",
     "description": "The page you’re looking for doesn’t exist or has moved.",
@@ -42,9 +48,9 @@
       "inbox": "Inbox",
       "status": "Application status",
       "store": "Store profile",
-      "delivery": "Delivery",
+      "delivery": "Pickup address",
       "returns": "Returns",
-      "payments": "Payments"
+      "payments": "Settlement"
     },
     "landing": {
       "title": "Dashboard",
@@ -127,6 +133,8 @@
       "cityLabel": "City",
       "cityOptional": "(optional)",
       "cityPlaceholder": "e.g. Nasr City",
+      "acceptLabel": "I accept the current Buyer Terms",
+      "acceptLink": "Buyer Terms",
       "saving": "Saving…",
       "submit": "Complete registration"
     },
@@ -192,6 +200,35 @@
       }
     }
   },
+  "legal": {
+    "common": {
+      "pendingTitle": "Pending legal review",
+      "pendingBody": "This page shows the version label only. The document text is not published yet.",
+      "versionCaption": "Version",
+      "error": "The version label could not be loaded. Please try again.",
+      "retry": "Try again"
+    },
+    "terms": {
+      "title": "Buyer Terms",
+      "metaTitle": "Buyer Terms — BETK",
+      "metaDescription": "The current Buyer Terms version label"
+    },
+    "sellerAgreement": {
+      "title": "Seller agreement",
+      "metaTitle": "Seller agreement — BETK",
+      "metaDescription": "The current seller agreement version label"
+    },
+    "returns": {
+      "title": "Return and refund policy",
+      "metaTitle": "Return and refund policy — BETK",
+      "metaDescription": "The current return and refund policy version label"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "metaTitle": "Privacy — BETK",
+      "metaDescription": "The current privacy version label"
+    }
+  },
   "validation": {
     "invalidInput": "Invalid data",
     "phoneRequired": "Phone number is required",
@@ -204,11 +241,14 @@
     "governorateRequired": "Governorate is required",
     "governorateInvalid": "Select a valid governorate",
     "cityTooLong": "City name must not exceed 100 characters",
+    "buyerTermsRequired": "Accept the current Buyer Terms to continue.",
     "deactivateConfirmRequired": "You must confirm deactivation before continuing."
   },
   "errors": {
     "invalidInput": "Invalid data. Please check your input.",
     "mustLoginFirst": "You must sign in first.",
+    "buyerTermsRequired": "Accept the current Buyer Terms to continue.",
+    "buyerTermsUnavailable": "Buyer Terms are not available yet. Nothing was saved.",
     "profileSaveFailed": "An error occurred while saving your profile. Please try again.",
     "rateLimited": "Please wait one minute before requesting a new code.",
     "sendOtpFailed": "An error occurred while sending the code. Please try again.",
@@ -309,8 +349,7 @@
       "resultCount": "{count, plural, =0 {No results} one {Showing # result} other {Showing # results}}",
       "types": {
         "all": "All",
-        "product": "Products",
-        "service": "Services"
+        "product": "Products"
       },
       "sorts": {
         "relevance": "Most relevant",
@@ -419,7 +458,7 @@
       "inquiry": "Inquire now",
       "inquiryOwnListingReason": "You can't inquire about your own listing",
       "notifyMe": "Notify me when back",
-      "share": "Share on WhatsApp"
+      "addToCart": "Add to cart"
     },
     "composer": {
       "title": "Inquire about this listing",
@@ -437,7 +476,6 @@
       "errorGeneric": "Couldn't send the inquiry, try again",
       "errorUnavailable": "This listing is no longer available"
     },
-    "shareText": "{title} on BETK:",
     "reviews": {
       "title": "Store reviews",
       "subtitle": "These reviews reflect the store's overall experience, not just this listing",
@@ -607,6 +645,31 @@
         },
         "priceLabel": "Price (EGP)",
         "pricePlaceholder": "0.00",
+        "weightLabel": "Weight (g)",
+        "lengthLabel": "Length (mm)",
+        "widthLabel": "Width (mm)",
+        "heightLabel": "Height (mm)",
+        "shippingHint": "Weight and the three dimensions are required to publish. A draft can leave them empty.",
+        "prepLabel": "Preparation days",
+        "prepHint": "Days you need before the order is ready.",
+        "categoryEmpty": "No approved category yet",
+        "markSoldOut": "Mark sold out",
+        "markAvailable": "Mark available",
+        "markSoldOutDone": "Marked sold out",
+        "markAvailableDone": "Marked available",
+        "availabilityFailed": "Couldn't update availability, try again",
+        "refusal": {
+          "BETK_LISTING_TYPE": "Only a product can be published.",
+          "BETK_PRICE_TYPE": "A published listing needs a fixed price.",
+          "BETK_PREP_CAP": "Preparation days are above the allowed maximum.",
+          "BETK_PREP_CAP_UNCONFIGURED": "Publishing is closed until the preparation limit is set.",
+          "BETK_PRICE_BAND": "This price is outside the allowed range.",
+          "BETK_PRICE_BAND_UNCONFIGURED": "Publishing is closed until the price range is set.",
+          "BETK_CATEGORY_NOT_APPROVED": "This category is not approved for your store.",
+          "BETK_FOOD_APPROVAL_REQUIRED": "Food listings stay unpublished until the food documents are approved.",
+          "BETK_FOOD_REQUIREMENTS_UNCONFIGURED": "Food publishing is closed until food requirements are set.",
+          "SHIPPING": "An active listing needs a weight and length, width, and height."
+        },
         "priceHiddenHint": "Price is hidden — buyers will request a quote directly",
         "stockQtyLabel": "Stock quantity",
         "stockQtyHint": "Leave empty for unlimited stock",
@@ -688,7 +751,16 @@
       "metaTitle": "Inventory",
       "title": "Inventory",
       "columns": {
-        "threshold": "Threshold"
+        "threshold": "Threshold",
+        "touched": "Stock updated"
+      },
+      "table": {
+        "caption": "Inventory",
+        "empty": "No stock to track",
+        "error": "Couldn't load inventory",
+        "retry": "Try again",
+        "previous": "Previous",
+        "next": "Next"
       },
       "actions": {
         "save": "Save",
@@ -706,15 +778,14 @@
     },
     "onboarding": {
       "metaTitle": "Become a seller — BETK",
-      "metaDescription": "Set up your BETK store in five steps and start selling.",
+      "metaDescription": "Set up your BETK store and submit it for review.",
       "title": "Open your store on BETK",
-      "subtitle": "Complete the five steps to submit your store for review.",
+      "subtitle": "Complete the steps to submit your store for review.",
       "stepCounter": "Step {current} of {total}",
       "steps": {
         "identity": "Identity",
         "category": "Category",
-        "payment": "Payment",
-        "delivery": "Delivery",
+        "pickup": "Pickup address",
         "documents": "Documents"
       },
       "nav": {
@@ -746,41 +817,53 @@
         "slugTaken": "This link is already in use"
       },
       "category": {
-        "primaryLabel": "Primary category",
-        "primaryPlaceholder": "Choose a category",
-        "secondaryLabel": "Secondary category",
-        "secondaryHint": "Optional",
-        "secondaryPlaceholder": "None",
+        "hint": "Choose up to {limit} categories. Approval happens after review.",
+        "slotLabel": "Category {n}",
+        "placeholder": "Choose a category",
+        "none": "None",
         "governorateLabel": "Governorate",
         "governoratePlaceholder": "Choose a governorate",
         "cityLabel": "City",
         "cityPlaceholder": "Optional"
       },
-      "payment": {
-        "note": "These are the handles BETK uses to send your money to you — they are not shown to buyers. Never enter them as secrets in any other field.",
-        "instapayLabel": "InstaPay handle",
-        "instapayPlaceholder": "Username or number",
-        "vodafoneLabel": "Vodafone Cash",
-        "vodafonePlaceholder": "01xxxxxxxxx",
-        "orangeLabel": "Orange Cash",
-        "orangePlaceholder": "01xxxxxxxxx",
-        "codLabel": "Cash on delivery",
-        "atLeastOneHint": "At least one settlement method is required so BETK can pay you, before publishing your first listing (you can add it later)."
+      "pickup": {
+        "intro": "This is the address the courier collects from. Buyers do not see it.",
+        "governorateNote": "Governorate: {governorate}. It matches your store.",
+        "streetLabel": "Street address",
+        "cityLabel": "City",
+        "notesLabel": "Building notes",
+        "notesHint": "Optional. Floor, landmark, or door."
       },
-      "delivery": {
-        "intro": "Choose how buyers receive their orders.",
-        "modes": {
-          "delivery": "Delivery",
-          "pickup": "Pickup from store",
-          "remote": "Remote service"
+      "agreement": {
+        "label": "I accept the seller agreement",
+        "link": "Read the seller agreement",
+        "required": "Accept the seller agreement to submit."
+      },
+      "food": {
+        "food-v1": {
+          "intro": "Food and beverages need these four items before a food listing can be published.",
+          "packagingLabel": "Packaging photo",
+          "packagingHint": "A photo of the packaging.",
+          "labelLabel": "Label photo",
+          "labelHint": "A photo of the product label.",
+          "expiryLabel": "Expiry photo",
+          "expiryHint": "A photo that shows the expiry.",
+          "socialLabel": "Social page URL",
+          "socialHint": "Only you and BETK admin can read this URL.",
+          "socialPlaceholder": "https://"
         },
-        "minDaysLabel": "Min delivery time (days)",
-        "maxDaysLabel": "Max delivery time (days)",
-        "feeLabel": "Default delivery fee (EGP)",
-        "feeHint": "Leave empty if delivery is free.",
-        "pickupGovLabel": "Pickup governorate",
-        "pickupGovHint": "For pickup from your store.",
-        "pickupGovPlaceholder": "Choose a governorate"
+        "fallback": {
+          "intro": "Food and beverages need these four items before a food listing can be published.",
+          "packagingLabel": "Packaging photo",
+          "packagingHint": "A photo of the packaging.",
+          "labelLabel": "Label photo",
+          "labelHint": "A photo of the product label.",
+          "expiryLabel": "Expiry photo",
+          "expiryHint": "A photo that shows the expiry.",
+          "socialLabel": "Social page URL",
+          "socialHint": "Only you and BETK admin can read this URL.",
+          "socialPlaceholder": "https://"
+        }
       },
       "documents": {
         "intro": "Upload your national ID (front and back) to verify your identity. Your documents stay strictly private.",
@@ -907,30 +990,21 @@
         "uploadFailed": "Upload failed, please try again."
       },
       "delivery": {
-        "metaTitle": "Delivery settings",
-        "title": "Delivery settings",
-        "intro": "Choose the delivery methods available for your store and their default fees.",
-        "modesTitle": "Delivery methods",
-        "modes": {
-          "delivery": "Delivery",
-          "pickup": "Pickup from store",
-          "remote": "Remote service"
-        },
-        "minDaysLabel": "Min delivery time (days)",
-        "maxDaysLabel": "Max delivery time (days)",
-        "feeLabel": "Default delivery fee (EGP)",
-        "feeHint": "Leave empty if delivery is free.",
-        "freeThresholdLabel": "Free delivery threshold (EGP)",
-        "freeThresholdHint": "Delivery becomes free once the order total passes this amount. Optional.",
-        "pickupGovLabel": "Pickup governorate",
-        "pickupGovHint": "For pickup from your store.",
-        "pickupGovPlaceholder": "Choose a governorate",
-        "shipsNationwideLabel": "Ships to all governorates",
-        "allModesOffWarning": "No delivery method is enabled — buyers won't be able to receive their orders. You can still save now and enable a method later.",
+        "metaTitle": "Pickup address",
+        "title": "Pickup address",
+        "intro": "The courier collects orders from this address. Buyers never see it.",
+        "governorateLabel": "Governorate",
+        "governorateHint": "Choosing another governorate updates your store's public governorate so the address stays valid.",
+        "governoratePlaceholder": "Choose a governorate",
+        "cityLabel": "City",
+        "streetLabel": "Street address",
+        "notesLabel": "Building notes",
+        "notesHint": "Optional. Floor, landmark, or door.",
         "save": "Save changes",
         "saving": "Saving…",
-        "saved": "Delivery settings saved",
+        "saved": "Pickup address saved",
         "saveFailed": "Couldn't save your changes, please try again.",
+        "mismatch": "The pickup governorate has to match the store.",
         "errors": {
           "invalid": "Invalid value"
         }
@@ -950,9 +1024,9 @@
         }
       },
       "payments": {
-        "metaTitle": "Payment methods",
-        "title": "Payment methods",
-        "note": "These handles are shown to buyers at checkout — never enter them as secrets in any other field.",
+        "metaTitle": "Settlement",
+        "title": "Settlement",
+        "note": "These handles are where BETK pays you, after commission. Buyers pay BETK, not you. Do not enter them as secrets in any other field.",
         "instapayLabel": "InstaPay handle",
         "instapayPlaceholder": "Username or number",
         "vodafoneLabel": "Vodafone Cash",
@@ -960,10 +1034,10 @@
         "orangeLabel": "Orange Cash",
         "orangePlaceholder": "01xxxxxxxxx",
         "codLabel": "Cash on delivery",
-        "emptyWarning": "Add at least one payment method to start selling.",
+        "emptyWarning": "Add at least one settlement handle so BETK can pay you.",
         "save": "Save changes",
         "saving": "Saving…",
-        "saved": "Payment methods saved",
+        "saved": "Settlement handles saved",
         "saveFailed": "Couldn't save your changes, please try again.",
         "errors": {
           "invalid": "Invalid value"
@@ -1010,6 +1084,50 @@
           "notFound": "This inquiry doesn't exist or isn't yours",
           "invalidState": "This inquiry can no longer be declined"
         }
+      }
+    }
+  },
+  "admin": {
+    "approvals": {
+      "metaTitle": "Seller approvals",
+      "title": "Seller approvals",
+      "nav": "Approvals",
+      "consoleSubtitle": "Admin",
+      "openNav": "Open navigation",
+      "theme": "Toggle theme",
+      "language": "Change language",
+      "columnStore": "Store",
+      "columnStatus": "Status",
+      "caption": "Sellers waiting for approval",
+      "empty": "The queue is clear",
+      "loadError": "Couldn't load the queue. Try again.",
+      "retry": "Try again",
+      "previous": "Previous",
+      "next": "Next",
+      "missingApplication": "This application is not in the queue.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "reason": "Reason",
+      "incomplete": "This application is incomplete.",
+      "forbidden": "You can't approve this application.",
+      "refused": "Couldn't save the decision. Try again.",
+      "signedUrlError": "Couldn't open this document.",
+      "foodSocial": "Social link",
+      "proofLoading": "Loading document",
+      "proofEmpty": "No document",
+      "proofError": "Couldn't show this document.",
+      "proofUnsupported": "This file can't be shown.",
+      "status": {
+        "pending": "Pending",
+        "rejected": "Rejected"
+      },
+      "documents": {
+        "national_id_front": "National ID, front",
+        "national_id_back": "National ID, back",
+        "food_packaging": "Food packaging",
+        "food_label": "Food label",
+        "food_expiry": "Food expiry",
+        "food_social_url": "Food social link"
       }
     }
   }
