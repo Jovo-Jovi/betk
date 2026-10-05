@@ -12,17 +12,22 @@
  * - Google user with phone_number NULL: non-blocking "add phone" affordance
  *   linking to the phone-capture entry point (flow implemented in T07).
  *
- * Phase 02 / T05.
+ * REG-59 compose (decision 2026-10-05): kit only. Layout follows
+ * /seller/store/returns (max-w-2xl column, gap-6, token type).
  */
 
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProfile } from "@/features/buyer-account/queries/getProfile";
+import { Alert } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Link } from "@/i18n/navigation";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
 import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
 import { LanguageSwitcher } from "./_components/LanguageSwitcher";
 import { ThemeSwitcher } from "./_components/ThemeSwitcher";
-import { Link } from "@/i18n/navigation";
 
 /**
  * Phone-capture entry point path (T07 — /auth/phone is live). Uses the
@@ -48,62 +53,96 @@ export default async function AccountPage() {
       : t("authProviderPhone");
 
   return (
-    <main data-slot="account-page">
-      {/* ── Phone-add affordance (Google users without a phone) ─────────────── */}
+    <main
+      data-slot="account-page"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8"
+    >
       {isPhoneNull && (
         <div data-slot="phone-add-banner" role="alert" aria-live="polite">
-          <p>
+          <Alert variant="info">
             {t("phoneAddBanner")}{" "}
-            {/* T07 entry point — link only; phone-capture flow implemented in T07 */}
-            <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
-          </p>
+            <Button variant="link" asChild className="h-auto px-1">
+              <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
+            </Button>
+          </Alert>
         </div>
       )}
 
-      <h1>{t("pageTitle")}</h1>
+      <h1 className="font-display text-lg font-bold text-foreground">{t("pageTitle")}</h1>
 
-      {/* ── Read-only identity fields (betk.users — no UPDATE policy) ──────── */}
       <section data-slot="identity-info" aria-label={t("identityInfoLabel")}>
-        <dl>
-          <div>
-            <dt>{t("phoneLabel")}</dt>
-            {/* R-A06: phone_number is read-only — rendered, never editable */}
-            <dd>
-              {user.phone_number ?? (
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-lg font-bold text-foreground">
+              {t("identityInfoLabel")}
+            </h2>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="account-phone" className="text-sm font-medium text-foreground">
+                {t("phoneLabel")}
+              </label>
+              {user.phone_number ? (
+                <Input
+                  id="account-phone"
+                  value={user.phone_number}
+                  readOnly
+                  dir="ltr"
+                />
+              ) : (
                 <span data-slot="phone-missing">
                   {t("phoneMissing")}{" "}
-                  {/* T07 entry point */}
-                  <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
+                  <Button variant="link" asChild className="h-auto px-1">
+                    <Link href={PHONE_CAPTURE_PATH}>{t("addPhoneLink")}</Link>
+                  </Button>
                 </span>
               )}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("authMethodLabel")}</dt>
-            <dd>{authProviderLabel}</dd>
-          </div>
-        </dl>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="account-auth-method" className="text-sm font-medium text-foreground">
+                {t("authMethodLabel")}
+              </label>
+              <Input id="account-auth-method" value={authProviderLabel} readOnly />
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* ── Editable profile fields (betk.buyer_profiles — bp_self RLS) ─────── */}
       <section data-slot="profile-edit" aria-label={t("editProfileLabel")}>
-        <ProfileEditForm
-          initialFullName={buyerProfile.full_name}
-          initialGovernorate={buyerProfile.governorate}
-          initialCity={buyerProfile.city ?? ""}
-        />
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-lg font-bold text-foreground">
+              {t("editProfileLabel")}
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <ProfileEditForm
+              initialFullName={buyerProfile.full_name}
+              initialGovernorate={buyerProfile.governorate}
+              initialCity={buyerProfile.city ?? ""}
+            />
+          </CardContent>
+        </Card>
       </section>
 
-      {/* ── Settings: language (AR/EN) + theme (light/dark/system) — OD-7/BL-03 ── */}
       <section data-slot="account-settings" aria-label={t("settings.sectionLabel")}>
-        <h2>{t("settings.title")}</h2>
-        <LanguageSwitcher />
-        <ThemeSwitcher />
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-lg font-bold text-foreground">{t("settings.title")}</h2>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <LanguageSwitcher />
+            <ThemeSwitcher />
+          </CardContent>
+        </Card>
       </section>
 
-      {/* ── Account deactivation (OD-2 — sets users.deleted_at; no hard delete) ─ */}
       <section data-slot="account-deactivate" aria-label={t("deactivate.sectionLabel")}>
-        <DeactivateAccountForm />
+        <Card>
+          <CardContent className="p-6">
+            <DeactivateAccountForm />
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

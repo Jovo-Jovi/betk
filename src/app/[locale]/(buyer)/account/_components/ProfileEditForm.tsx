@@ -8,16 +8,30 @@
  * — it is read-only and never passed to this form or to updateProfile).
  *
  * Wires into the updateProfile Server Action via useActionState.
+ * The kit Select does not submit a name, so a hidden input carries
+ * `governorate`. updateProfile reads formData.get("governorate")
+ * (src/features/buyer-account/actions/updateProfile.ts).
  *
- * Phase 02 / T05.
- * TODO(Phase DS): restyle with Claude Design system components.
+ * REG-59 compose (decision 2026-10-05). Layout matches
+ * /seller/store/returns: flex column, gap-6, kit controls.
  */
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { updateProfile } from "@/features/buyer-account/actions/updateProfile";
 import type { UpdateProfileResult } from "@/features/buyer-account/actions/updateProfile";
 import { GOVERNORATES } from "@/constants/governorates";
+import { Alert } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProfileEditFormProps {
   initialFullName: string;
@@ -32,31 +46,31 @@ export function ProfileEditForm({
 }: ProfileEditFormProps) {
   const t = useTranslations("account.profileForm");
   const locale = useLocale();
+  const [governorate, setGovernorate] = useState(initialGovernorate);
   const [state, formAction, isPending] = useActionState<
     UpdateProfileResult | null,
     FormData
   >(updateProfile, null);
 
   return (
-    <form action={formAction} data-slot="profile-edit-form">
-      {/* Success message */}
+    <form action={formAction} data-slot="profile-edit-form" className="flex flex-col gap-6">
       {state?.success && (
-        <p role="status" data-slot="success-msg">
-          {t("successMessage")}
-        </p>
+        <div role="status" data-slot="success-msg">
+          <Alert variant="success" message={t("successMessage")} />
+        </div>
       )}
 
-      {/* Error message */}
       {state?.errorAr && (
-        <p role="alert" data-slot="error-msg">
-          {state.errorAr}
-        </p>
+        <div role="alert" data-slot="error-msg">
+          <Alert variant="destructive" message={state.errorAr} />
+        </div>
       )}
 
-      {/* full_name */}
-      <div data-slot="field">
-        <label htmlFor="full_name">{t("fullNameLabel")}</label>
-        <input
+      <div data-slot="field" className="flex flex-col gap-1.5">
+        <label htmlFor="full_name" className="text-sm font-medium text-foreground">
+          {t("fullNameLabel")}
+        </label>
+        <Input
           id="full_name"
           name="full_name"
           type="text"
@@ -68,29 +82,34 @@ export function ProfileEditForm({
         />
       </div>
 
-      {/* governorate */}
-      <div data-slot="field">
-        <label htmlFor="governorate">{t("governorateLabel")}</label>
-        <select
-          id="governorate"
-          name="governorate"
-          defaultValue={initialGovernorate}
-          required
+      <div data-slot="field" className="flex flex-col gap-1.5">
+        <label htmlFor="governorate" className="text-sm font-medium text-foreground">
+          {t("governorateLabel")}
+        </label>
+        <input type="hidden" name="governorate" value={governorate} />
+        <Select
+          value={governorate === "" ? undefined : governorate}
+          onValueChange={setGovernorate}
           disabled={isPending}
         >
-          <option value="">{t("governoratePlaceholder")}</option>
-          {GOVERNORATES.map((g) => (
-            <option key={g.value} value={g.value}>
-              {locale === "en" ? g.labelEn : g.labelAr}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="governorate">
+            <SelectValue placeholder={t("governoratePlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            {GOVERNORATES.map((g) => (
+              <SelectItem key={g.value} value={g.value}>
+                {locale === "en" ? g.labelEn : g.labelAr}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* city (optional) */}
-      <div data-slot="field">
-        <label htmlFor="city">{t("cityLabel")}</label>
-        <input
+      <div data-slot="field" className="flex flex-col gap-1.5">
+        <label htmlFor="city" className="text-sm font-medium text-foreground">
+          {t("cityLabel")}
+        </label>
+        <Input
           id="city"
           name="city"
           type="text"
@@ -101,9 +120,9 @@ export function ProfileEditForm({
         />
       </div>
 
-      <button type="submit" disabled={isPending} data-slot="submit-btn">
+      <Button type="submit" disabled={isPending} data-slot="submit-btn">
         {isPending ? t("saving") : t("submit")}
-      </button>
+      </Button>
     </form>
   );
 }
