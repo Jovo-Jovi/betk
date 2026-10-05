@@ -564,7 +564,7 @@ Kit names below are components that already exist under `components/shared` or `
 - **Data:** `cart_items` (`quantity`, `unit_price`, `is_custom`, `inquiry_id`, `listing_id`); `listings` (`title_ar`, `title_en`, `stock_qty`, `weight_g`, `status`, `store_id`); `inquiries.quote_expires_at` for custom lines; `stores` name only. Blocked is **derived** (stock or quote expiry), not a column. Delivery figure is the REG-91 projection, not a `cart_items` column and not `store_pickup_addresses`.
 - **States:** empty cart; blocked line named in the error; custom line dropped after restore with a request-a-new-quote prompt (REG-82); error retry. **notFound(): no.**
 - **Composes:** `EmptyState`, `ErrorRetryCard`, `Button`, `ConfirmDialog` for remove. **Gap:** cart line (§8). Do not reuse `ListingCard` as a qty line.
-- **Binding:** Entry points are the top-bar cart icon with a count and the bottom-nav Cart tab (D1). In Phase 10 the delivery line reads "calculated at checkout"; the figure and the total arrive with Phase 11's preview (R-DELIVERY). Goods subtotal still runs (R-C03). No per-seller fee. No commission. Phone gate not encoded (REG-79).
+- **Binding:** Entry points are the top-bar cart button (dot indicator, count in its accessible name) and the bottom-nav Cart tab (D1, D4). In Phase 10 the delivery line reads "calculated at checkout"; the figure and the total arrive with Phase 11's preview (R-DELIVERY). Goods subtotal still runs (R-C03). No per-seller fee. No commission. Phone gate not encoded (REG-79).
 
 #### P15 Checkout — `/checkout`
 - **v1 #15 AMENDED.** FR-CHK-1, FR-PAY-1, FR-AGR-1, FR-COU-1, FR-COM-1, R-O11–R-O16, R-G02, AC-CHK-1–6, AC-PAY-1, AC-PAY-2, AC-AGR-2, REG-88, REG-89, REG-91, AC-AUTH-4.
@@ -1272,7 +1272,6 @@ This is input to Stage D, which is already running. It is not a design. P78 comp
 | **ChartSeries** | P46 | No chart primitive. Do not specify axes, colors, or chart chrome here. |
 | **ShareButton** | P04, P05 | No share primitive. **Absorbs REG-51.** Channel-agnostic public-link share. Downstream apps stay unenumerated. |
 | **Navigable store identity** | P01, P02, P03, P04, P05, P12 | `ListingCard`, `SellerMiniCard`, and `StoreCard` render the store name as non-interactive text and expose no `href`. **Absorbs REG-72.** |
-| **AppTopbar cart slot** | P66 | `AppTopbar` has no cart icon and no count prop (`AppTopbar.tsx` lines 14–47). **CD-DELTA-7, REG-114.** |
 
 ### 8.1 CD-DELTA-5 reconciliation
 

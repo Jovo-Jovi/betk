@@ -76,7 +76,7 @@ P10-T00-FIX re-read (2026-10-06), before the mint: header still REG-01..REG-112,
 
 **REG-113** (a). Checkout-price finding. `checkout_from_cart` writes `order_items.unit_price` and the seller-order subtotal from live `listings.price` for fixed lines, not from `cart_items.unit_price`. Migration `supabase/migrations/20261003082041_v2_08_functions.sql`: subtotal at lines 867–872, `order_items.unit_price` at lines 1044–1045. That contradicts R-C06, AC-CART-3, and ERD §3.3 (“copies `inquiry_id`, `is_custom`, `unit_price`, and `quantity`”), which ADR-025 points at for the copy. Owner: Phase 11 (checkout migration). Precondition: P10M1 applied. Before: the Phase 11 exit. The same function locks `cart_items` with a row lock at lines 784–787. That lock needs the UPDATE privilege, and P10M1 revokes the buyer's UPDATE. Phase 11's checkout change is what keeps the buyer's call working without handing the buyer a direct column write. Phase 10 does not edit the function.
 
-**REG-114** (b). `AppTopbar` has no cart slot. `AppTopbarProps` (`src/components/shared/AppTopbar.tsx` lines 14–47) is search, language, theme, notifications, and account. The cluster at lines 70–87 has no cart icon and no count. D1 needs that icon. Owner: Claude Design (CD-DELTA-7), then T05 wires it. Before: the Phase 10 exit. T05 does not start until this slot has landed.
+**REG-114** (b). `AppTopbar` has no cart slot. `AppTopbarProps` (`src/components/shared/AppTopbar.tsx` lines 14–47) is search, language, theme, notifications, and account. The cluster at lines 70–87 has no cart icon and no count. D1, as amended by D4, needs the sanctioned cart button. Owner: Cursor in P10-T05 under the D4 human sanction. Before: the Phase 10 exit.
 
 REG-79 is updated in place. It is not a new number. Status: **PINNED 2026-10-05 (B).** The pin text is §4.
 
@@ -108,6 +108,15 @@ D2 Q "The listing page button 'استفسر الآن / Inquire now'" A "it shoul
 
 D3 Q "Approve the FLAG rulings and the checkout-price finding as written?" A "Yes, approve"
 
+D4 "can you make it wothout claude design as i feel its too uch cost" (about D1, the cart entry).
+
+**D1 as amended by D4 (planning chat, record as such).**
+
+- The bottom-nav Cart tab is app-side (`MobileBottomNav` items come from `AppChrome`), with no kit change.
+- The top-bar cart button is a recorded HUMAN SANCTION for a Cursor edit of `src/components/shared/AppTopbar.tsx`. It is the first human sanction under the kit-integrity rule: the FilterSheet precedent was a Claude Design sanction.
+- Scope of the sanction: optional props `onCartClick`, `cartCount`, `cartLabel`. The button renders only when `onCartClick` is set; with none of the props, the markup is identical to `main`. The button is an exact copy of the existing notifications button (same element, same classes, same focus ring), with a lucide cart icon in place of the bell. It shows the same dot indicator when `cartCount` > 0 and no number. The count goes into the accessible name, which the page passes. `cartLabel` has no default. Nothing else in the file changes. The kit manifest is updated in the same commit.
+- CD-DELTA-7 is withdrawn and was never sent.
+
 **D2 mapping (planning chat, record as such).** "custom" = `listings.is_made_to_order` = true (PRD R-L15 and R-C04 "Custom / made-to-order"). "Unpriced" = `listings.price` IS NULL; no active v2 listing qualifies, because publishing requires a fixed price (`supabase/migrations/20261003214258_v2_09_publish_and_submit.sql` lines 74–75, `BETK_PRICE_TYPE` when `price_type` is not fixed or `price` is null). The P04 button shows only for those listings and is labelled per UI spec P04 "Request price". Server side: `createInquiry` refuses other listings, and the quote function refuses them in the database (R-Q01). The current catalog strings are `listing.cta.inquiry`: en "Inquire now" (`messages/en.json` line 462), ar "استفسر الآن" (`messages/ar.json` line 462). T04 changes that label. It does not restyle P04.
 
 ## 5. Enforcement inventory and the DB plan
@@ -116,7 +125,7 @@ Server-side evidence for a refusal is the database error or the server-action re
 
 **Phone.** Live restrictive INSERT policies, none of them on `cart_items`: `master_orders_phone_gate` on `master_orders`; `orders_phone_gate` on `seller_orders` (name kept across the rename); `seller_profiles_phone_gate` on `seller_profiles`; `payouts_phone_gate` on `payouts`. Each WITH CHECK requires `users.phone_number IS NOT NULL` for `auth.uid()`. `cart_items` policies are `cart_items_select`, `cart_items_insert`, `cart_items_update`, `cart_items_delete`. None of their expressions mention phone. Live columns on `cart_items`: `id`, `buyer_id`, `listing_id`, `quantity`, `unit_price`, `is_custom`, `inquiry_id`, `created_at`, `updated_at`. No phone column. Phase 10 adds no phone predicate and no phone check in the cart or quote actions.
 
-**Inbox routes moved from signed Phase 06.** `BETK_PHASES.md` §2: Phase 06 `PAGES:` none and `CODES:` none. "The quote behaviour and the inbox routes moved to Phase 10." `inquiries.last_message_at` stays unmaintained (REG-43, closed): sort from `max(inquiry_messages.sent_at)`. The routes are already on `main`: `src/app/[locale]/(buyer)/inbox/page.tsx` (P13), `inbox/[id]/page.tsx` (P14), `(seller)/seller/inbox/page.tsx` (P36), `seller/inbox/[id]/page.tsx` (P37). Phase 10 edits those files. It does not add a second inbox route. UI spec headings say `/inbox/[inquiryId]` and `/seller/inbox/[inquiryId]`; the built segment is `[id]`. That is the same route pattern (one dynamic segment). P66 `/cart` has no `page.tsx` (glob, 2026-10-06). T05 adds that one file and raises Guard F's pin from 31 to 32 in the same commit (`scripts/check-page-count.mjs`, `PINNED_PAGE_COUNT = 31`). OD-21 stays 79. T05 starts only after CD-DELTA-7 has landed (REG-114).
+**Inbox routes moved from signed Phase 06.** `BETK_PHASES.md` §2: Phase 06 `PAGES:` none and `CODES:` none. "The quote behaviour and the inbox routes moved to Phase 10." `inquiries.last_message_at` stays unmaintained (REG-43, closed): sort from `max(inquiry_messages.sent_at)`. The routes are already on `main`: `src/app/[locale]/(buyer)/inbox/page.tsx` (P13), `inbox/[id]/page.tsx` (P14), `(seller)/seller/inbox/page.tsx` (P36), `seller/inbox/[id]/page.tsx` (P37). Phase 10 edits those files. It does not add a second inbox route. UI spec headings say `/inbox/[inquiryId]` and `/seller/inbox/[inquiryId]`; the built segment is `[id]`. That is the same route pattern (one dynamic segment). P66 `/cart` has no `page.tsx` (glob, 2026-10-06). T05 adds that one file and raises Guard F's pin from 31 to 32 in the same commit (`scripts/check-page-count.mjs`, `PINNED_PAGE_COUNT = 31`). OD-21 stays 79. T05 adds the cart entry points under D4 (REG-114).
 
 **Quote settings, not a Phase 10 pin.** `quote_validity_hours` equals `24`. `quote_tolerance_multiplier` equals `2`. Both match the M3 documented defaults (plan §8.2.5). `payment_window_minutes` length is 0. `checkout_payment_window_minutes()` is SECURITY DEFINER and its body contains `BETK_PAYMENT_WINDOW_UNCONFIGURED`. `checkout_from_cart(p_delivery_address_id uuid)` is INVOKER and its body calls `checkout_payment_window_minutes`. Phase 10 does not write `payment_window_minutes` and does not choose a duration (REG-93, before Phase 11).
 
@@ -171,7 +180,7 @@ The production sweeper stays Phase 11. Quote expiry at 24h is not a cron (`BETK_
 | AC-BUY-5 | Implied same-ID AC. `BETK_PRD.md` §1.3: it inherits FR-BUY-5. | The P13 surface matches the amended FR. No separate script is invented here. |
 | AC-SEL-13 | Implied same-ID AC. It inherits FR-SEL-13. | The P37 surface matches the amended FR once T04 removes confirm-to-checkout. P36 is checked in the same task (R-P36). |
 | D2 (P04) | The listing CTA is `listing.cta.inquiry`, shown for a normal listing. en "Inquire now", ar "استفسر الآن". | T04 shows it only when `is_made_to_order` is true or `price` is null, and labels it per UI spec P04 "Request price". `createInquiry` and the quote-send function refuse every other listing (R-Q01). T04 may edit P04 for that visibility and that label only. |
-| D1 (cart entry) | No `/cart` page. `AppTopbar` has no cart prop (REG-114). `MobileBottomNav` default items are Home, Search, Wishlist, Inbox, Account (`MobileBottomNav.tsx` lines 18–24). Items are props, so a Cart tab does not need a new kit component. | T05 adds the bottom-nav Cart tab and wires the top-bar icon with a count after CD-DELTA-7 lands. Both are present at the exit. T05 does not start before that landing. |
+| D1 (cart entry) | No `/cart` page. `AppTopbar` has no cart prop (REG-114). `MobileBottomNav` default items are Home, Search, Wishlist, Inbox, Account (`MobileBottomNav.tsx` lines 18–24). Items are props, and `AppChrome` passes them, so a Cart tab does not need a new kit component. | T05 adds the bottom-nav Cart tab from `AppChrome`, with no kit change. T05 edits `AppTopbar` under the D4 sanction and wires the signed-in buyer's cart count. The kit manifest is updated in that same commit. |
 
 ### Writer inventory
 
@@ -220,7 +229,7 @@ Columns regranted to `authenticated` after the table revoke, and no others:
 
 ## 6. Task table
 
-Model is Grok 4.7 on every row. T01 cuts `feature/phase-10-cart-quote` from `origin/main` after this pack's PR is on `main`. Later tasks stay on that branch. T05 starts only after CD-DELTA-7 has landed.
+Model is Grok 4.7 on every row. T01 cuts `feature/phase-10-cart-quote` from `origin/main` after this pack's PR is on `main`. Later tasks stay on that branch.
 
 | T | Work | Model | Thinking | Branch |
 |---|---|---|---|---|
@@ -229,7 +238,7 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-10-cart-quote` from `ori
 | T02 | CI proof of P10M1 on a local stack. Staging is not written. | Grok 4.7 | High | `feature/phase-10-cart-quote` |
 | T03 | Apply P10M1 after planning-chat review and GO. Ledger 1:1. Schema backfill. Advisors before and after. Types diff verbatim. Closes REG-107. | Grok 4.7 | High | `feature/phase-10-cart-quote` |
 | T04 | Quote send on P37 and the P36 check. Accept on P14. Fixed-price add via the function. `createInquiry` refusal. P04 visibility and label per D2 and R-ADD. Remove the app `avg_response_hours` call. | Grok 4.7 | High | `feature/phase-10-cart-quote` |
-| T05 | P66 composing CartLine. Goods subtotal and the R-DELIVERY line. `cartLine.droppedQuote` in ar and en. P13 drops the checkout CTA. Bottom-nav Cart tab. Top-bar cart icon with a count, wired after CD-DELTA-7. Guard F 31 → 32 in the commit that adds P66. | Grok 4.7 | Medium | `feature/phase-10-cart-quote` |
+| T05 | P66 composing CartLine. Goods subtotal and the R-DELIVERY line. `cartLine.droppedQuote` in ar and en. P13 drops the checkout CTA. Bottom-nav Cart tab, app-side from `AppChrome`, no kit change. D4-sanctioned `AppTopbar` edit plus the kit manifest update in the same commit, wired with the signed-in buyer's cart count. Guard F 31 → 32 in the commit that adds P66. | Grok 4.7 | High | `feature/phase-10-cart-quote` |
 | T06 | Exit evidence. Opens the one PR. | Grok 4.7 | Max | `feature/phase-10-cart-quote` |
 
 ### Mapping
@@ -239,7 +248,7 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-10-cart-quote` from `ori
 | Phase 10: T00 write the pack | T00. This amendment is P10-T00-FIX, same branch, same PR. |
 | P10M1 part A (cart and quote) and part B (REG-107) | T01 authors, T02 proves, T03 applies. T03 closes REG-107. |
 | Phase 10: Quote write on P37; accept on P14 inserts `cart_items` | T04, through the functions. Includes the P36 check (R-P36), the D2 change on P04, the fixed-price add (R-ADD), and removal of the app `avg_response_hours` call. |
-| Phase 10: P66 cart, composing CartLine; P13 list drops the checkout CTA | T05. Also the two cart entry points (D1) and Guard F 31 → 32. Starts only after CD-DELTA-7. |
+| Phase 10: P66 cart, composing CartLine; P13 list drops the checkout CTA | T05. Also the two cart entry points (D1 as amended by D4) and Guard F 31 → 32. The `AppTopbar` edit and the kit manifest update are that same commit. |
 | Phase 10: Exit evidence | T06 |
 
 ### Carry-forwards
@@ -260,7 +269,7 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-10-cart-quote` from `ori
 
 **REG-113.** Carry-forward to Phase 11. Checkout keeps charging live `listings.price` for a fixed line until that migration. Precondition: P10M1 applied. The row lock in `checkout_from_cart` loses its UPDATE privilege when P10M1 revokes the buyer's UPDATE. Phase 11's checkout change is the repair. Phase 10 does not edit the function.
 
-**REG-114.** CD-DELTA-7, the AppTopbar cart slot. T05 wires the icon and the count after it lands, and does not start before that. Closes before the Phase 10 exit.
+**REG-114.** Owner is Cursor in P10-T05 under the D4 human sanction. CD-DELTA-7 is withdrawn and was never sent. T05 makes the sanctioned `AppTopbar` edit, updates the kit manifest in that commit, and wires the signed-in buyer's cart count. Closes before the Phase 10 exit.
 
 **No personal data** in any report or repo file.
 
@@ -378,15 +387,15 @@ Commit message: feat(p10-t04): quote, accept, and fixed-price add
 ### T05
 
 ```text
-MODEL: Grok 4.7 · THINKING: Medium
+MODEL: Grok 4.7 · THINKING: High
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 10 T05 from docs/10-ai-development/phase-packs/PHASE_10_CART_QUOTE.md.
 Branch: feature/phase-10-cart-quote.
 
-STOP if CD-DELTA-7 has not landed. REG-114 is the AppTopbar cart slot. Do not restyle AppTopbar and do not invent the slot.
+P66 /cart, composing CartLine. Do not restyle CartLine. Show the goods subtotal and a delivery line that delivery is calculated at checkout (R-DELIVERY). Do not show a delivery figure or a grand total. Do not call checkout_from_cart. Write cartLine.droppedQuote in ar and en, and the other string props already declared on CartLineProps. P13's list has no checkout CTA. Quantity change and remove go through the quantity function and the existing DELETE, which stays under RLS. Guest add still leaves zero cart_items. Blocked is derived (stock or quote_expires_at), not a column. Raise Guard F from 31 to 32 only because this task adds the P66 page.tsx. OD-21 stays 79.
 
-P66 /cart, composing CartLine. Do not restyle the kit. Show the goods subtotal and a delivery line that delivery is calculated at checkout (R-DELIVERY). Do not show a delivery figure or a grand total. Do not call checkout_from_cart. Write cartLine.droppedQuote in ar and en, and the other string props already declared on CartLineProps. P13's list has no checkout CTA. Quantity change and remove go through the quantity function and the existing DELETE, which stays under RLS. Guest add still leaves zero cart_items. Blocked is derived (stock or quote_expires_at), not a column. Add a Cart tab to the phone bottom nav (MobileBottomNav items are props). Wire the top-bar cart icon and its count through the slot CD-DELTA-7 added. Raise Guard F from 31 to 32 only because this task adds the P66 page.tsx. OD-21 stays 79.
+Cart entry, D1 as amended by D4. The bottom-nav Cart tab is app-side: MobileBottomNav items come from AppChrome. Add the tab there. Do not change MobileBottomNav. The top-bar cart button is the recorded human sanction for a Cursor edit of src/components/shared/AppTopbar.tsx, the first human sanction under the kit-integrity rule. Scope, and nothing outside it: optional props onCartClick, cartCount, cartLabel. The button renders only when onCartClick is set. With none of the props, the markup is identical to main. The button is an exact copy of the existing notifications button (same element, same classes, same focus ring), with a lucide cart icon in place of the bell. It shows the same dot indicator when cartCount > 0 and no number. The count goes into the accessible name, which the page passes. cartLabel has no default. Nothing else in AppTopbar.tsx changes. Update docs/00-design/kit-manifest.json in the same commit. Wire onCartClick, cartCount, and cartLabel from AppChrome with the signed-in buyer's cart count. A guest passes no cart props, so the button is absent.
 
-Done-when: /cart renders CartLine for the buyer's rows; the delivery line says delivery is calculated at checkout and there is no delivery figure; a qty change or a remove changes the goods subtotal; an expired custom line is blocked and a dropped restore line shows cartLine.droppedQuote; P13 has no checkout control; the bottom-nav Cart tab and the top-bar cart icon with a count are both present; Guard F pin is 32; REG-114 is closed by the wiring.
+Done-when: /cart renders CartLine for the buyer's rows; the delivery line says delivery is calculated at checkout and there is no delivery figure; a qty change or a remove changes the goods subtotal; an expired custom line is blocked and a dropped restore line shows cartLine.droppedQuote; P13 has no checkout control; the phone bottom nav has a Cart tab and the signed-in top bar shows the cart button (dot when the count is above zero, count in the accessible name, no number); the AppTopbar diff is only the cart button and its three props, and the markup with no props is unchanged; the kit manifest is updated in that commit; Guard F pin is 32; REG-114 is closed by that edit.
 STEP Z
 Author name: jiovanny adel
 Author email: 175926007+Jovo-Jovi@users.noreply.github.com
@@ -396,7 +405,7 @@ git add only the file list in this prompt.
 git push -u origin HEAD. Do not gh pr create. The pull request is opened by the exit task.
 Phase 10 tasks stay on feature/phase-10-cart-quote until that exit PR. Commit on this branch only.
 Do not merge. Do not bypass checks.
-File list: the P66 route, the P13 list, the bottom-nav composition, the top-bar wiring, the cart query and qty/remove actions, messages ar/en, the page-count pin, the tests for the Done-when lines, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_10_CART_QUOTE.md §9.
+File list: the P66 route, the P13 list, AppChrome (bottom-nav Cart tab and the cart props), src/components/shared/AppTopbar.tsx, docs/00-design/kit-manifest.json, the cart query and qty/remove actions, messages ar/en, the page-count pin, the tests for the Done-when lines, SESSION_CONTEXT.md, DEVELOPMENT_JOURNAL.md, PHASE_10_CART_QUOTE.md §9.
 Commit message: feat(p10-t05): cart page and both entry points
 ```
 
@@ -425,7 +434,7 @@ Commit message: test(p10-t06): Phase 10 exit evidence
 
 ## 8. Exit gate
 
-Each case the `BETK_PHASES.md` Phase 10 exit line names is an integration test. AC-CART-1..7 and AC-QTE-1..6 are all in that set. A hidden widget is not a pass. The full integration suite is green. REG-107 is closed before this task reports the exit. REG-114 is closed before this task reports the exit.
+Each case the `BETK_PHASES.md` Phase 10 exit line names is an integration test. AC-CART-1..7 and AC-QTE-1..6 are all in that set. A hidden widget is not a pass. The full integration suite is green. REG-107 is closed before this task reports the exit. REG-114 is closed before this task reports the exit. AppTopbar without the cart props is unchanged.
 
 | # | Exit item | Evidence |
 |---|---|---|
@@ -453,8 +462,8 @@ Each case the `BETK_PHASES.md` Phase 10 exit line names is an integration test. 
 | 22 | Add refuses a guest and a quantity above tracked stock. | Same evidence as rows 1 and 2, through the function. |
 | 23 | A direct `avg_response_hours` write is refused, and the trigger computes the value. | Integration: seller UPDATE of that column errors and the stored value is unchanged. A seller message insert leaves the column equal to the `computeAvgResponseHours` result. |
 | 24 | D2 on P04. | A made-to-order listing shows "Request price". A normal listing (fixed price, not made-to-order) shows no inquiry button. |
-| 25 | Both cart entry points. | The top-bar cart icon shows a count, and the phone bottom nav has a Cart tab. |
-| 26 | REG-114 closed. | The AppTopbar slot has landed (CD-DELTA-7) and T05 has wired the count. This row fails if the slot is still missing. |
+| 25 | Both cart entry points. | The signed-in top bar shows the cart button: a dot when `cartCount` > 0, the count in the accessible name, and no number. The phone bottom nav has a Cart tab. |
+| 26 | REG-114 closed. | T05 made the D4-sanctioned `AppTopbar` edit and wired the signed-in buyer's cart count. AppTopbar without the cart props is unchanged. This row fails if the diff is anything other than the cart button and its three props. |
 
 Phone-NULL submit navigating to `/auth/phone` is Phase 11's exit (FR-AUTH-4). It is not a Phase 10 row.
 
