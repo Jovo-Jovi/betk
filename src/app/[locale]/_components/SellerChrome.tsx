@@ -42,6 +42,7 @@ import {
   Truck,
   RotateCcw,
   Wallet,
+  ExternalLink,
   Menu,
   Moon,
   Sun,
@@ -74,6 +75,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   inbox: <Inbox className="size-5" />,
   status: <ClipboardList className="size-5" />,
   store: <Store className="size-5" />,
+  storefront: <ExternalLink className="size-5" />,
   delivery: <Truck className="size-5" />,
   returns: <RotateCcw className="size-5" />,
   payments: <Wallet className="size-5" />,
@@ -82,7 +84,11 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 /** Ordered nav ids — dashboard, listings, inventory, inbox, status, then the store settings cluster. */
 const NAV_IDS = ["dashboard", "listings", "inventory", "inbox", "status", "store", "delivery", "returns", "payments"] as const;
 
-/** Derive the active nav id from the locale-stripped pathname (longest match). */
+/**
+ * Derive the active nav id from the locale-stripped pathname (longest match).
+ * "storefront" is never returned: that item leaves the console for the public
+ * store, and it must not show as the current page (D3).
+ */
 function activeIdFromPath(pathname: string): string {
   if (pathname.startsWith(routes.seller.storeDelivery)) return "delivery";
   if (pathname.startsWith(routes.seller.storeReturns)) return "returns";
@@ -96,7 +102,7 @@ function activeIdFromPath(pathname: string): string {
   return "";
 }
 
-export function SellerChrome() {
+export function SellerChrome({ storefrontHref }: { storefrontHref?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale() as AppLocale;
@@ -117,15 +123,24 @@ export function SellerChrome() {
   const activeId = activeIdFromPath(pathname);
   const otherLocale: AppLocale = locale === "ar" ? "en" : "ar";
 
-  const sections: SidebarSection[] = [
-    {
-      items: NAV_IDS.map((id) => ({
-        id,
-        icon: NAV_ICONS[id],
-        label: t(`nav.${id}`),
-      })),
-    },
-  ];
+  const items = NAV_IDS.flatMap((id) => {
+    const item = {
+      id,
+      icon: NAV_ICONS[id],
+      label: t(`nav.${id}`),
+    };
+    if (id !== "store" || !storefrontHref) return [item];
+    return [
+      item,
+      {
+        id: "storefront",
+        icon: NAV_ICONS.storefront,
+        label: t("nav.storefront"),
+      },
+    ];
+  });
+
+  const sections: SidebarSection[] = [{ items }];
 
   return (
     <>
@@ -173,8 +188,12 @@ export function SellerChrome() {
         sections={sections}
         activeId={activeId}
         onSelect={(id) => {
-          const to = NAV_ROUTES[id];
-          if (to) startRouteTransition(() => router.push(to));
+          if (id === "storefront") {
+            if (storefrontHref) startRouteTransition(() => router.push(storefrontHref));
+          } else {
+            const to = NAV_ROUTES[id];
+            if (to) startRouteTransition(() => router.push(to));
+          }
           setOpen(false);
         }}
         open={open}
