@@ -569,7 +569,7 @@ BEGIN
       CASE WHEN count(*) = 1 AND bool_and(c.unit_price = l.price AND l.price = 50)
            THEN '50.00' ELSE 'mismatch' END || '|' ||
       min(c.quantity)::text,
-      min(c.id)
+      (array_agg(c.id))[1]
     INTO v_actual, v_cart
     FROM betk.cart_items AS c
     JOIN betk.listings AS l ON l.id = c.listing_id
