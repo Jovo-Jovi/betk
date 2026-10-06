@@ -207,21 +207,21 @@ function line(overrides: Partial<CartPageLine> = {}): CartPageLine {
 
 function renderCart(lines: CartPageLine[], prompts: DroppedQuotePrompt[] = []) {
   return render(
-    React.createElement(
-      NextIntlClientProvider,
-      { locale: "en", messages: en },
-      React.createElement(CartView, { lines, dropped: prompts, currencyLabel: "EGP" }),
-    ),
+    React.createElement(NextIntlClientProvider, {
+      locale: "en",
+      messages: en,
+      children: React.createElement(CartView, { lines, dropped: prompts, currencyLabel: "EGP" }),
+    }),
   );
 }
 
 function renderChrome() {
   return render(
-    React.createElement(
-      NextIntlClientProvider,
-      { locale: "en", messages: en },
-      React.createElement(AppChrome),
-    ),
+    React.createElement(NextIntlClientProvider, {
+      locale: "en",
+      messages: en,
+      children: React.createElement(AppChrome),
+    }),
   );
 }
 
