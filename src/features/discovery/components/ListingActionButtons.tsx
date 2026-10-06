@@ -38,18 +38,22 @@
  * (site origin from configuration + the listing route). This component does
  * not read the request and does not open a channel URL.
  *
- * ADD TO CART (P09 T09, R-C01): the click calls `addToCart`. A guest attempt
- * inserts nothing and this component sends them to login. An authenticated
- * buyer is not given a cart row here (Phase 10 owns that write).
+ * ADD TO CART / REQUEST PRICE (P10 T04, D2): the page passes
+ * `purchaseControl`. Add and Request price never render together. A guest
+ * add inserts nothing and this component sends them to login. A signed-in
+ * add calls `add_fixed_cart_item`. `cartLineExists` shows the catalog
+ * message and a link to `/cart`; the quantity is not changed.
  */
 
 import { useState, useTransition } from "react";
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { routes } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
 import { ShareButton, WishlistButton } from "@/components/shared";
 import { toggleWishlist } from "@/features/discovery/actions/toggleWishlist";
 import { addToCart } from "@/features/discovery/actions/addToCart";
+import type { ListingPurchaseControl } from "@/features/discovery/listingPurchaseControl";
 import { useViewerListingAccess } from "@/features/discovery/hooks/useViewerListingAccess";
 import { InquiryComposer } from "@/features/messaging/components/InquiryComposer";
 import { MessageCircle, BellRing } from "lucide-react";
@@ -62,6 +66,7 @@ export interface ListingActionButtonsProps {
   shareHref?: string;
   shareTitle: string;
   isSoldOut: boolean;
+  purchaseControl: ListingPurchaseControl;
   wishlistAddLabel: string;
   wishlistRemoveLabel: string;
   inquiryLabel: string;
@@ -81,6 +86,7 @@ export function ListingActionButtons({
   shareHref,
   shareTitle,
   isSoldOut,
+  purchaseControl,
   wishlistAddLabel,
   wishlistRemoveLabel,
   inquiryLabel,
@@ -94,8 +100,12 @@ export function ListingActionButtons({
   className,
 }: ListingActionButtonsProps) {
   const router = useRouter();
+  const tErrors = useTranslations("p10Errors");
   const [saved, setSaved] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const [cartTone, setCartTone] = useState<"ok" | "error">("error");
+  const [cartAlreadyHeld, setCartAlreadyHeld] = useState(false);
   const [, startTransition] = useTransition();
   const access = useViewerListingAccess(storeId);
 
@@ -121,64 +131,115 @@ export function ListingActionButtons({
   };
 
   const handleAddToCart = () => {
+    setCartMessage(null);
+    setCartAlreadyHeld(false);
     startTransition(async () => {
       const result = await addToCart(listingId);
-      if (!result.ok && result.reason === "unauthenticated") {
-        goToLogin();
+      if (result.ok) {
+        setCartTone("ok");
+        setCartMessage(tErrors("cartAdded"));
+        return;
       }
+      if (result.reason === "unauthenticated") {
+        goToLogin();
+        return;
+      }
+      if (result.reason === "blocked") {
+        router.push("/blocked");
+        return;
+      }
+      setCartTone("error");
+      setCartMessage(tErrors(result.messageKey));
+      setCartAlreadyHeld(result.messageKey === "cartLineExists");
     });
   };
 
   const isOwnListing = access.status === "authed" && access.isOwnListing;
 
-  const handleInquiryClick = () => {
-    if (isSoldOut) {
-      // Notify-me stays an entry-point placeholder (R-N06, unscoped this phase).
-      goToLogin();
-      return;
-    }
-    if (access.status === "authed") {
-      if (access.isOwnListing) return; // disabled — no click handler needed, belt & suspenders
-      setComposerOpen(true);
-      return;
-    }
-    // guest OR still resolving the session — unchanged placeholder redirect.
+  const handleNotifyClick = () => {
+    // Notify-me stays an entry-point placeholder (R-N06, unscoped this phase).
     goToLogin();
   };
 
-  return (
-    <div className={className ? className : "flex items-center gap-2.5"}>
-      <Button
-        type="button"
-        className="flex-1"
-        onClick={handleInquiryClick}
-        disabled={!isSoldOut && isOwnListing}
-        title={!isSoldOut && isOwnListing ? inquiryOwnListingReason : undefined}
-        aria-disabled={!isSoldOut && isOwnListing}
-      >
-        {isSoldOut ? <BellRing className="size-4" /> : <MessageCircle className="size-4" />}
-        {isSoldOut ? notifyMeLabel : inquiryLabel}
-      </Button>
-      <WishlistButton
-        size="lg"
-        active={saved}
-        addLabel={wishlistAddLabel}
-        removeLabel={wishlistRemoveLabel}
-        onToggle={handleToggleSave}
-      />
-      <Button type="button" variant="outline" onClick={handleAddToCart}>
-        {addToCartLabel}
-      </Button>
-      <ShareButton
-        href={shareHref}
-        shareTitle={shareTitle}
-        actionLabel={shareActionLabel}
-        fallbackLabel={shareFallbackLabel}
-        copiedLabel={shareCopiedLabel}
-        errorLabel={shareErrorLabel}
-      />
+  const handleRequestClick = () => {
+    if (access.status === "authed") {
+      if (access.isOwnListing) return;
+      setComposerOpen(true);
+      return;
+    }
+    goToLogin();
+  };
 
-      {!isSoldOut && (
+  const showRequest = purchaseControl === "request";
+  const showAdd = purchaseControl === "add";
+
+  return (
+    <div className={className ? className : "flex flex-col gap-2"}>
+      <div className="flex items-center gap-2.5">
+        {isSoldOut && (
+          <Button type="button" className="flex-1" onClick={handleNotifyClick}>
+            <BellRing className="size-4" />
+            {notifyMeLabel}
+          </Button>
+        )}
+        {showRequest && (
+          <Button
+            type="button"
+            className={isSoldOut ? undefined : "flex-1"}
+            variant={isSoldOut ? "outline" : "default"}
+            onClick={handleRequestClick}
+            disabled={isOwnListing}
+            title={isOwnListing ? inquiryOwnListingReason : undefined}
+            aria-disabled={isOwnListing}
+          >
+            <MessageCircle className="size-4" />
+            {inquiryLabel}
+          </Button>
+        )}
+        {showAdd && (
+          <Button
+            type="button"
+            className={isSoldOut ? undefined : "flex-1"}
+            variant={isSoldOut ? "outline" : "default"}
+            onClick={handleAddToCart}
+          >
+            {addToCartLabel}
+          </Button>
+        )}
+        <WishlistButton
+          size="lg"
+          active={saved}
+          addLabel={wishlistAddLabel}
+          removeLabel={wishlistRemoveLabel}
+          onToggle={handleToggleSave}
+        />
+        <ShareButton
+          href={shareHref}
+          shareTitle={shareTitle}
+          actionLabel={shareActionLabel}
+          fallbackLabel={shareFallbackLabel}
+          copiedLabel={shareCopiedLabel}
+          errorLabel={shareErrorLabel}
+        />
+      </div>
+      {cartMessage && (
+        <p
+          className={cartTone === "error" ? "text-sm text-destructive" : "text-sm text-foreground"}
+          role="alert"
+        >
+          {cartMessage}
+          {cartAlreadyHeld && (
+            <>
+              {" "}
+              <Link href={routes.buyer.cart} className="font-medium text-foreground underline">
+                {tErrors("viewCart")}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
+      {showRequest && (
         <InquiryComposer
           listingId={listingId}
           open={composerOpen}

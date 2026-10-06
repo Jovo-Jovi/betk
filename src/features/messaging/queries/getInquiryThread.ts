@@ -42,7 +42,8 @@ import { resolveCallerUserId, type MessagingClient } from "./_shared";
 const THREAD_SELECT = `
   id, buyer_id, store_id, status, quantity, delivery_preference, special_requests,
   buyer_first_message, converted_to_order_id, created_at,
-  listings ( id, title_ar, title_en, listing_images ( url, sort_order ) ),
+  quoted_price, quoted_prep_days, quote_expires_at, quoted_at,
+  listings ( id, title_ar, title_en, price, listing_images ( url, sort_order ) ),
   inquiry_messages ( id, sender_id, sender_type, body, is_read, sent_at )
 `;
 
@@ -54,6 +55,7 @@ interface RawListing {
   id: string;
   title_ar: string;
   title_en: string | null;
+  price: number | string | null;
   listing_images: RawImage[] | null;
 }
 interface RawMessage {
@@ -75,6 +77,10 @@ interface RawThreadRow {
   buyer_first_message: string;
   converted_to_order_id: string | null;
   created_at: string;
+  quoted_price: number | string | null;
+  quoted_prep_days: number | null;
+  quote_expires_at: string | null;
+  quoted_at: string | null;
   listings: RawListing | RawListing[] | null;
   inquiry_messages: RawMessage[] | null;
 }
@@ -82,6 +88,15 @@ interface RawThreadRow {
 function asSingle<T>(v: T | T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null;
   return v ?? null;
+}
+
+function asMoney(value: number | string | null | undefined): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 function pickHero(images: RawImage[] | null): string | null {
@@ -159,6 +174,11 @@ export async function getInquiryThread(
     buyerFirstMessage: row.buyer_first_message,
     convertedToOrderId: row.converted_to_order_id,
     createdAt: row.created_at,
+    quotedPrice: asMoney(row.quoted_price),
+    quotedPrepDays: row.quoted_prep_days,
+    quoteExpiresAt: row.quote_expires_at,
+    quotedAt: row.quoted_at,
+    listingPrice: asMoney(listing?.price),
     listing: listing
       ? {
           id: listing.id,

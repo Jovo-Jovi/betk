@@ -20,9 +20,10 @@
  * MARK-READ: `MarkThreadRead` (client, mount-effect) calls `markInquiryRead`
  * — never from this RSC render path.
  *
- * CONFIRMED CTA: guidance-only banner, no link (/checkout is Phase 07 — the
- * dead-link rule, `/seller-landing` precedent). Phase 07 wires
- * `routes.checkout(thread.id)` into this banner's action.
+ * ACCEPT (P10 T04, UI spec P14): `AcceptQuoteButton` calls
+ * `accept_inquiry_quote` and goes to `/cart`. This page has no checkout
+ * button. A past `quote_expires_at` is read-only here; the action still
+ * refuses an expired quote.
  *
  * WHATSAPP DEEP-LINK (REG-45, flagged, NOT built): BETK_UI_SPEC.md L224 pins
  * a "WhatsApp deep-link button" on this page, but the counterpart's phone
@@ -41,12 +42,22 @@ import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/i18n/localizedName";
 import { routes } from "@/constants/routes";
 import { Alert, StatusBadge, type ThreadMessage } from "@/components/shared";
+import { catalogPriceLabels } from "@/i18n/catalogLabels";
 import { MarkThreadRead } from "./_components/MarkThreadRead";
 import { ThreadComposer } from "./_components/ThreadComposer";
+import { AcceptQuoteButton } from "./_components/AcceptQuoteButton";
 
 interface RouteParams {
   locale: string;
   id: string;
+}
+
+function formatMoney(amount: number, locale: AppLocale, currency: string): string {
+  const formatted = new Intl.NumberFormat(locale === "en" ? "en-EG" : "ar-EG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${formatted} ${currency}`;
 }
 
 function formatTime(iso: string, locale: AppLocale): string {
@@ -67,7 +78,10 @@ export default async function InboxThreadPage({ params }: { params: Promise<Rout
   }
 
   const t = await getTranslations({ locale, namespace: "inbox" });
+  const tErrors = await getTranslations({ locale, namespace: "p10Errors" });
   const tDelivery = await getTranslations({ locale, namespace: "store.about.delivery.modes" });
+  const catalogT = await getTranslations({ locale, namespace: "catalog" });
+  const currency = catalogPriceLabels(catalogT).currency;
 
   const statusLabels: Record<string, string> = {
     open: t("status.open"),
@@ -81,7 +95,10 @@ export default async function InboxThreadPage({ params }: { params: Promise<Rout
     ? localizedName({ ar: thread.listing.titleAr, en: thread.listing.titleEn }, locale)
     : t("list.listingFallback");
 
+  const quoteExpired =
+    thread.quoteExpiresAt !== null && Date.parse(thread.quoteExpiresAt) <= Date.now();
   const isReadOnly = thread.status === "declined" || thread.status === "expired";
+  const canAccept = thread.quotedPrice !== null && !isReadOnly && !quoteExpired;
 
   const messages: ThreadMessage[] = thread.messages.map((m) => ({
     id: m.id,
@@ -161,6 +178,32 @@ export default async function InboxThreadPage({ params }: { params: Promise<Rout
           title={t("thread.closedBanner.expiredTitle")}
           message={t("thread.closedBanner.expiredMessage")}
         />
+      )}
+
+      {thread.quotedPrice !== null && (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+          <p>
+            {t("thread.accept.price", {
+              price: formatMoney(thread.quotedPrice, locale, currency),
+            })}
+          </p>
+          {thread.quotedPrepDays !== null && (
+            <p>{t("thread.accept.prep", { days: thread.quotedPrepDays })}</p>
+          )}
+          {thread.listingPrice !== null && (
+            <p className="text-muted-foreground">
+              {t("thread.accept.listingPrice", {
+                price: formatMoney(thread.listingPrice, locale, currency),
+              })}
+            </p>
+          )}
+          {quoteExpired && (
+            <p className="text-destructive" role="status">
+              {tErrors("quoteExpired")}
+            </p>
+          )}
+          {canAccept && <AcceptQuoteButton inquiryId={thread.id} label={t("thread.accept.label")} />}
+        </div>
       )}
 
       <ThreadComposer

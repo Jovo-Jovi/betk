@@ -107,6 +107,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListingActionButtons } from "@/features/discovery/components/ListingActionButtons";
 import { MoreFromStoreRail } from "@/features/discovery/components/MoreFromStoreRail";
 import { deriveStockDisplayProps, isListingSoldOut } from "@/features/discovery/listingStockDisplay";
+import { listingPurchaseControl } from "@/features/discovery/listingPurchaseControl";
 
 export const revalidate = 60;
 
@@ -247,6 +248,10 @@ export default async function ListingDetailPage({
             shareHref={publicListingShareUrl(listing.id, locale) ?? undefined}
             shareTitle={title}
             isSoldOut={soldOut}
+            purchaseControl={listingPurchaseControl({
+              price: listing.price,
+              isMadeToOrder: listing.isMadeToOrder,
+            })}
             wishlistAddLabel={wishlistLabels.addLabel}
             wishlistRemoveLabel={wishlistLabels.removeLabel}
             inquiryLabel={t("cta.inquiry")}

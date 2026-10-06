@@ -85,7 +85,33 @@ type BaseFailReason = "unauthenticated" | "blocked" | "invalid" | "not_found" | 
 
 export type CreateInquiryResult =
   | { ok: true; inquiryId: string }
-  | { ok: false; reason: Exclude<BaseFailReason, "not_found"> | "listing_unavailable" };
+  | {
+      ok: false;
+      reason: Exclude<BaseFailReason, "not_found"> | "listing_unavailable" | "listing_ineligible";
+    };
+
+/**
+ * sendInquiryQuote — P37. Price and prep are validated here. The band, the
+ * eligibility rule, and the validity hours stay in `send_inquiry_quote`.
+ */
+export const sendInquiryQuoteSchema = z.object({
+  inquiryId: z.string().uuid(),
+  quotedPrice: z.number().positive().finite().max(99_999_999.99),
+  prepDays: z.number().int().min(0).max(32_767),
+});
+export type SendInquiryQuoteInput = z.input<typeof sendInquiryQuoteSchema>;
+
+export type QuoteActionFailure = {
+  ok: false;
+  reason: BaseFailReason | "refused";
+  messageKey: string;
+};
+
+export type SendInquiryQuoteResult = { ok: true } | QuoteActionFailure;
+
+export type AcceptInquiryQuoteResult =
+  | { ok: true; cartItemId: string }
+  | QuoteActionFailure;
 
 export type SendInquiryMessageResult =
   | { ok: true; messageId: string }

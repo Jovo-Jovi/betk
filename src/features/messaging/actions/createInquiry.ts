@@ -81,7 +81,7 @@ export async function createInquiry(input: CreateInquiryInput): Promise<CreateIn
   const { data: listing, error: listingErr } = await supabase
     .schema("betk")
     .from("listings")
-    .select("store_id")
+    .select("store_id, price, is_made_to_order")
     .eq("id", p.listingId)
     .maybeSingle();
 
@@ -90,6 +90,11 @@ export async function createInquiry(input: CreateInquiryInput): Promise<CreateIn
     return { ok: false, reason: "error" };
   }
   if (!listing) return { ok: false, reason: "listing_unavailable" };
+
+  // D2 / R-Q01: a price request is only for made-to-order or unpriced listings.
+  if (listing.price !== null && listing.is_made_to_order !== true) {
+    return { ok: false, reason: "listing_ineligible" };
+  }
 
   const insert: InquiryInsert = {
     buyer_id: userId,

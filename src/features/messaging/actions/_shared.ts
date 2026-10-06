@@ -20,6 +20,9 @@ import { computeAvgResponseHours } from "../messagingRules";
  * computeAvgResponseHours). Cheap at MVP scale; a candidate analytics/cron job
  * post-MVP.
  *
+ * P10 T04: no action calls this. `trg_recompute_avg_response_hours` writes the
+ * column. The helper stays so the formula is still in the app.
+ *
  * @returns a DB error message when a read/write failed, else null.
  */
 export async function recomputeSellerAvgResponseHours(

@@ -187,6 +187,8 @@ async function seedListing(storeId: string, categoryId: string): Promise<string>
       price: 100,
       price_type: "fixed",
       status: "active",
+      // Priced made-to-order stays eligible for a price request (D2, R-Q01).
+      is_made_to_order: true,
       prep_days: 1,
       weight_g: 1,
       length_mm: 1,
