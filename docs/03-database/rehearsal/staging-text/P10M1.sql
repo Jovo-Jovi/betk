@@ -14,8 +14,38 @@
 -- limits the row to the buyer. No price, quantity, listing, or inquiry
 -- column is granted.
 --
+-- R-FREEZE (planning chat, 2026-10-06). checkout_from_cart prices a
+-- custom line at the inquiry's live quoted_price
+-- (supabase/migrations/20261003082041_v2_08_functions.sql line 869, and
+-- order_items.unit_price at line 1044). send_inquiry_quote refuses with
+-- BETK_QUOTE_LINE_HELD when any cart_items row references the inquiry,
+-- before the quote UPDATE. The function is SECURITY DEFINER, so the
+-- check sees every buyer's rows. An expired line is cleared by removing
+-- the line, then a fresh quote, then accept.
+--
+-- R-AVAIL (planning chat, 2026-10-06). add_fixed_cart_item,
+-- accept_inquiry_quote, and send_inquiry_quote each refuse when the
+-- listing is not status 'active', when deleted_at is set, or when its
+-- store is not status 'active'. The store test is the public arm of
+-- stores_public (R-S07): status = 'active'. Owner and admin do not
+-- bypass it. Codes: add listing BETK_CART_LISTING_UNAVAILABLE, add store
+-- BETK_CART_STORE_INACTIVE, accept and send listing
+-- BETK_QUOTE_LISTING_UNAVAILABLE, accept and send store
+-- BETK_QUOTE_STORE_INACTIVE.
+--
+-- R-DECLINED (planning chat, 2026-10-06). accept_inquiry_quote and
+-- send_inquiry_quote refuse with BETK_QUOTE_DECLINED when the inquiry
+-- status is 'declined'. Live inquiry_status (pg_enum, 2026-10-06):
+-- open, replied, confirmed, declined, expired. The other four are not
+-- refused by this check.
+--
+-- R-TRIGGER (planning chat, 2026-10-06).
+-- trg_recompute_avg_response_hours fires only when
+-- NEW.sender_type = 'seller'. The function body is unchanged.
+--
 -- Sources for the bodies: PHASE_10_CART_QUOTE.md §5 and §6 (R-ENFORCE,
--- R-107, R-LOCK), BETK_PRD.md R-C01, R-C04, R-C06, R-Q01-R-Q05,
+-- R-107, R-LOCK, R-FREEZE, R-AVAIL, R-DECLINED, R-TRIGGER), BETK_PRD.md
+-- R-C01, R-C04, R-C06, R-Q01-R-Q05,
 -- BETK_ERD.md §6.1 cart_items, computeAvgResponseHours in
 -- src/features/messaging/messagingRules.ts lines 82-98.
 -- Live facts used below were read 2026-10-06 (MCP execute_sql and
@@ -30,6 +60,7 @@
 -- fixed line for the same listing is refused; quantity changes go through
 -- set_cart_item_quantity. Tracked stock (stock_qty not null) bounds the
 -- quantity. Made-to-order and unpriced listings are not this function.
+-- R-AVAIL: not active, deleted, or a store that is not active.
 CREATE OR REPLACE FUNCTION betk.add_fixed_cart_item(
   p_listing_id uuid,
   p_quantity smallint
@@ -47,6 +78,7 @@ DECLARE
   v_status betk.listing_status;
   v_price_type betk.price_type;
   v_deleted timestamptz;
+  v_store_status betk.store_status;
   v_id uuid;
 BEGIN
   IF v_uid IS NULL THEN
@@ -56,12 +88,16 @@ BEGIN
     RAISE EXCEPTION 'BETK_CART_QUANTITY';
   END IF;
 
-  SELECT l.price, l.stock_qty, l.is_made_to_order, l.status, l.price_type, l.deleted_at
-    INTO v_price, v_stock, v_made, v_status, v_price_type, v_deleted
+  SELECT l.price, l.stock_qty, l.is_made_to_order, l.status, l.price_type, l.deleted_at, s.status
+    INTO v_price, v_stock, v_made, v_status, v_price_type, v_deleted, v_store_status
   FROM betk.listings AS l
+  LEFT JOIN betk.stores AS s ON s.id = l.store_id
   WHERE l.id = p_listing_id;
   IF NOT FOUND OR v_deleted IS NOT NULL OR v_status IS DISTINCT FROM 'active'::betk.listing_status THEN
     RAISE EXCEPTION 'BETK_CART_LISTING_UNAVAILABLE';
+  END IF;
+  IF v_store_status IS DISTINCT FROM 'active'::betk.store_status THEN
+    RAISE EXCEPTION 'BETK_CART_STORE_INACTIVE';
   END IF;
   IF v_made
      OR v_price IS NULL
@@ -168,7 +204,9 @@ GRANT EXECUTE ON FUNCTION betk.set_cart_item_quantity(uuid, smallint) TO authent
 
 -- Quote accept. Own inquiry, quote present, quote_expires_at after now().
 -- One custom cart line at quoted_price. Does not rewrite an existing line.
--- Does not re-check the band. No phone check.
+-- Does not re-check the band. No phone check. R-DECLINED refuses status
+-- 'declined'. R-AVAIL refuses a listing that is not active, is deleted,
+-- or whose store is not active.
 CREATE OR REPLACE FUNCTION betk.accept_inquiry_quote(p_inquiry_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -183,20 +221,27 @@ DECLARE
   v_prep smallint;
   v_expires timestamptz;
   v_quoted_at timestamptz;
+  v_inquiry_status betk.inquiry_status;
+  v_listing_status betk.listing_status;
+  v_deleted timestamptz;
+  v_store_status betk.store_status;
   v_id uuid;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'BETK_UNAUTHENTICATED';
   END IF;
 
-  SELECT i.listing_id, i.quantity, i.quoted_price, i.quoted_prep_days, i.quote_expires_at, i.quoted_at
-    INTO v_listing_id, v_qty, v_quoted_price, v_prep, v_expires, v_quoted_at
+  SELECT i.listing_id, i.quantity, i.quoted_price, i.quoted_prep_days, i.quote_expires_at, i.quoted_at, i.status
+    INTO v_listing_id, v_qty, v_quoted_price, v_prep, v_expires, v_quoted_at, v_inquiry_status
   FROM betk.inquiries AS i
   WHERE i.id = p_inquiry_id
     AND i.buyer_id = v_uid
   FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'BETK_QUOTE_NOT_FOUND';
+  END IF;
+  IF v_inquiry_status = 'declined'::betk.inquiry_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_DECLINED';
   END IF;
   IF v_quoted_price IS NULL
      OR v_prep IS NULL
@@ -209,6 +254,18 @@ BEGIN
   END IF;
   IF v_qty IS NULL OR v_qty < 1 THEN
     v_qty := 1;
+  END IF;
+
+  SELECT l.status, l.deleted_at, s.status
+    INTO v_listing_status, v_deleted, v_store_status
+  FROM betk.listings AS l
+  LEFT JOIN betk.stores AS s ON s.id = l.store_id
+  WHERE l.id = v_listing_id;
+  IF NOT FOUND OR v_deleted IS NOT NULL OR v_listing_status IS DISTINCT FROM 'active'::betk.listing_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_LISTING_UNAVAILABLE';
+  END IF;
+  IF v_store_status IS DISTINCT FROM 'active'::betk.store_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_STORE_INACTIVE';
   END IF;
 
   IF EXISTS (
@@ -246,7 +303,10 @@ GRANT EXECUTE ON FUNCTION betk.accept_inquiry_quote(uuid) TO authenticated;
 -- so an unconfigured key writes nothing. Prep null or negative is refused;
 -- zero is legal (column check >= 0). quote_expires_at comes from
 -- quote_validity_hours. Empty or non-positive-integer fails closed.
--- Does not write status. Does not touch cart_items.
+-- Does not write status. Does not update cart_items. R-FREEZE reads
+-- cart_items and refuses with BETK_QUOTE_LINE_HELD before the UPDATE.
+-- R-DECLINED refuses status 'declined'. R-AVAIL refuses a listing that
+-- is not active, is deleted, or whose store is not active.
 CREATE OR REPLACE FUNCTION betk.send_inquiry_quote(
   p_inquiry_id uuid,
   p_quoted_price numeric,
@@ -268,6 +328,10 @@ DECLARE
   v_raw text;
   v_hours integer;
   v_expires timestamptz;
+  v_inquiry_status betk.inquiry_status;
+  v_listing_status betk.listing_status;
+  v_deleted timestamptz;
+  v_store_status betk.store_status;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'BETK_UNAUTHENTICATED';
@@ -278,8 +342,8 @@ BEGIN
     RAISE EXCEPTION 'BETK_QUOTE_NOT_OWNER';
   END IF;
 
-  SELECT i.listing_id
-    INTO v_listing_id
+  SELECT i.listing_id, i.status
+    INTO v_listing_id, v_inquiry_status
   FROM betk.inquiries AS i
   WHERE i.id = p_inquiry_id
     AND i.store_id = v_store
@@ -287,12 +351,30 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'BETK_QUOTE_NOT_OWNER';
   END IF;
+  -- DEFINER: this sees every buyer's cart_items row. No buyer filter.
+  IF EXISTS (
+    SELECT 1
+    FROM betk.cart_items AS c
+    WHERE c.inquiry_id = p_inquiry_id
+  ) THEN
+    RAISE EXCEPTION 'BETK_QUOTE_LINE_HELD';
+  END IF;
+  IF v_inquiry_status = 'declined'::betk.inquiry_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_DECLINED';
+  END IF;
 
-  SELECT l.price, l.is_made_to_order
-    INTO v_list_price, v_made
+  SELECT l.price, l.is_made_to_order, l.status, l.deleted_at, s.status
+    INTO v_list_price, v_made, v_listing_status, v_deleted, v_store_status
   FROM betk.listings AS l
+  LEFT JOIN betk.stores AS s ON s.id = l.store_id
   WHERE l.id = v_listing_id;
-  IF NOT FOUND OR NOT (v_made OR v_list_price IS NULL) THEN
+  IF NOT FOUND OR v_deleted IS NOT NULL OR v_listing_status IS DISTINCT FROM 'active'::betk.listing_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_LISTING_UNAVAILABLE';
+  END IF;
+  IF v_store_status IS DISTINCT FROM 'active'::betk.store_status THEN
+    RAISE EXCEPTION 'BETK_QUOTE_STORE_INACTIVE';
+  END IF;
+  IF NOT (v_made OR v_list_price IS NULL) THEN
     RAISE EXCEPTION 'BETK_QUOTE_LISTING_INELIGIBLE';
   END IF;
 
@@ -421,9 +503,11 @@ $function$;
 REVOKE EXECUTE ON FUNCTION betk.recompute_seller_avg_response_hours() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_recompute_avg_response_hours ON betk.inquiry_messages;
+-- R-TRIGGER: seller messages only. The function body above is unchanged.
 CREATE TRIGGER trg_recompute_avg_response_hours
   AFTER INSERT ON betk.inquiry_messages
   FOR EACH ROW
+  WHEN (NEW.sender_type = 'seller')
   EXECUTE FUNCTION betk.recompute_seller_avg_response_hours();
 
 -- Table UPDATE goes away. The four columns the approval writers still
