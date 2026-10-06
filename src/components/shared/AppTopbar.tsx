@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Search, Bell, Moon, Sun, User } from "lucide-react";
+import { Search, Bell, Moon, Sun, User, ShoppingCart } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 /**
@@ -44,6 +44,14 @@ export interface AppTopbarProps {
    * (opacity-60 + cursor-progress). Zero visual change when unset.
    */
   langPending?: boolean;
+  /**
+   * D4 human sanction (2026-10-06). The button renders only when onCartClick
+   * is set. cartLabel has no default. With none of these props the markup
+   * matches the file before this button.
+   */
+  onCartClick?: () => void;
+  cartCount?: number;
+  cartLabel?: string;
 }
 
 export function AppTopbar({
@@ -51,6 +59,7 @@ export function AppTopbar({
   logoSrc = "/logo/beh.png", notifCount = 0, onNotifClick, avatar, onAvatarClick, isDark = false, onThemeToggle, onLogoClick,
   notifLabel = "الإشعارات", themeLabel = "تبديل المظهر", accountLabel = "حسابي", className,
   lang = "ar", langLabel = "تغيير اللغة", onLanguageToggle, langPending = false,
+  onCartClick, cartCount = 0, cartLabel,
 }: AppTopbarProps) {
   return (
     <header className={cn("sticky top-0 z-50 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-card px-4 shadow-sm", className)}>
@@ -74,6 +83,12 @@ export function AppTopbar({
         <button type="button" onClick={onThemeToggle} aria-label={themeLabel} className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {isDark ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
         </button>
+        {onCartClick && (
+          <button type="button" onClick={onCartClick} aria-label={cartLabel} className="relative flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <ShoppingCart className="size-[19px]" />
+            {cartCount > 0 && <span className="absolute end-2 top-1.5 size-2 rounded-full border-2 border-card bg-destructive" />}
+          </button>
+        )}
         <button type="button" onClick={onNotifClick} aria-label={notifLabel} className="relative flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Bell className="size-[19px]" />
           {notifCount > 0 && <span className="absolute end-2 top-1.5 size-2 rounded-full border-2 border-card bg-destructive" />}

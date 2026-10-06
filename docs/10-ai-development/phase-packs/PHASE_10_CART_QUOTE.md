@@ -483,7 +483,7 @@ Each case the `BETK_PHASES.md` Phase 10 exit line names is an integration test. 
 
 Phone-NULL submit navigating to `/auth/phone` is Phase 11's exit (FR-AUTH-4). It is not a Phase 10 row.
 
-REG-79 stays pinned B. This phase does not close it by adding a cart phone check. REG-82 stays the closed product pin; row 7 is the implementation evidence. REG-93 stays open for Phase 11. REG-113 stays open for Phase 11. REG-115 stays open for Phase 11.
+REG-79 stays pinned B. This phase does not close it by adding a cart phone check. REG-82 stays the closed product pin; row 7 is the implementation evidence. REG-93 stays open for Phase 11. REG-113 stays open for Phase 11. REG-114 is closed in T05. REG-115 stays open for Phase 11.
 
 
 ## 9. Results tracker
@@ -495,3 +495,4 @@ REG-79 stays pinned B. This phase does not close it by adding a cart phone check
 | T02 | Done | `.github/workflows/p10-db.yml` and `docs/03-database/rehearsal/p10/asserts.sql`. Pin method is `p09-db.yml` (delete, then checkout of `dda164e10569569605735972663a6d00ae8c318f`). LF md5 gate before apply. 41 cases plus `all_pass`. Green run [37439157455](https://github.com/Jovo-Jovi/betk/actions/runs/37439157455) on `73d7c2e`. Staging not written. |
 | T03 | Done | Applied `20261006100204` / `v2_10_cart_quote`. Stored statement md5 `1b148df55a578cd1d20556d90adc65b3`, 18635 bytes. Ledger 42, 1:1. REG-107 closed. The app `avg_response_hours` call stays until T04. |
 | T04 | Done | Quote, accept, and fixed-price add. REG-116 minted and closed (T03 history-statement process; human RATIFY 2026-10-06). P36 checked, no mismatch. The app no longer writes `avg_response_hours`. Unit 9 passed. Integration 4 passed. `inquiry.writeLayer` 14 passed. |
+| T05 | Done | P66 `/cart` and both entry points. REG-114 closed. None taken. Guard F pin 32 (OD-21 stays 79). AppTopbar hash `617d482fe64e5fcd102f3e356d501493f53b568d17b5e7765ef9d80a1eb8924e`. R-NEWQUOTE, R-DROPPED, R-BLOCKED. Unit `p10t05.cart.unit.test.ts` 21 passed. `pnpm typecheck` and `pnpm guards` exit 0. |

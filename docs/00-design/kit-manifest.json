@@ -9,7 +9,7 @@
     "src/components/shared/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "src/components/shared/AddressForm.tsx": "a0280437de419f59fd2bda5ec0e0475c71e954a071f7b19b31c98e7e3634223d",
     "src/components/shared/Alert.tsx": "5bc1339d777e324c3f602e61e6e53d29c67f333b1abc95b9b0e319f58ca76d16",
-    "src/components/shared/AppTopbar.tsx": "8fac1d6396c3138c2b00d61e9fd5b97b74b5350eb4d91274a103ab2556c6b9d6",
+    "src/components/shared/AppTopbar.tsx": "617d482fe64e5fcd102f3e356d501493f53b568d17b5e7765ef9d80a1eb8924e",
     "src/components/shared/CartLine.tsx": "b6cc559b1c9c453b85b7586ee696f63a280a0016698f533c6f08904f9f492055",
     "src/components/shared/CatalogSkeletons.tsx": "5bd6f8c4ed227ce9b706545296c862b6e8bb69112cfa608c5f89dd7c28026ac8",
     "src/components/shared/CategoryGrid.tsx": "5a86ac151bf15c2ecaf49bf41028c4c5e640635da006a9217a05c7cabdd5c34e",

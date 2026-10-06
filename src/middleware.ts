@@ -36,7 +36,7 @@ import { routing } from "@/i18n/routing";
  *   /blocked        /en/blocked         /blocked        public   (unchanged)
  *   /account        /en/account         /account        buyer    (unchanged)
  *   /orders         /en/orders          /orders         buyer    (unchanged)
- *   /wishlist,/inbox,/notifications,/checkout,/disputes  → buyer  (unchanged)
+ *   /wishlist,/cart,/inbox,/notifications,/checkout,/disputes  → buyer
  *   /seller         /en/seller          /seller         seller   (unchanged)
  *   /seller/status  /en/seller/status   /seller/status  seller   (unchanged, R-S04 loop-safe)
  *   /seller/onboarding /en/seller/onboarding /seller/onboarding seller-gate → AUTH-ONLY (Phase 04 T02)
@@ -66,6 +66,7 @@ const LOGIN_ROUTE = "/auth/login";
 const BUYER_PREFIXES = [
   "/account",
   "/wishlist",
+  "/cart",
   "/orders",
   "/inbox",
   "/notifications",

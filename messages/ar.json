@@ -32,9 +32,41 @@
       "home": "الرئيسية",
       "search": "بحث",
       "wishlist": "المفضلة",
+      "cart": "السلة",
       "inbox": "الرسائل",
       "account": "حسابي"
-    }
+    },
+    "cartLabel": "السلة، {count} من العناصر"
+  },
+  "cart": {
+    "pageTitle": "السلة",
+    "goodsSubtotal": "مجموع البضاعة",
+    "deliveryCalculated": "يُحسب التوصيل عند إتمام الطلب",
+    "empty": {
+      "message": "سلتك فارغة",
+      "hint": "ستظهر هنا القطع التي تضيفها.",
+      "cta": "تصفح الإعلانات"
+    },
+    "error": "حدث خطأ ما، يرجى المحاولة مجدداً.",
+    "removeTitle": "إزالة هذه القطعة؟",
+    "removeMessage": "ستخرج من السلة.",
+    "removeConfirm": "أزل من السلة",
+    "removeCancel": "إلغاء",
+    "listingFallback": "الإعلان",
+    "storeFallback": "المتجر"
+  },
+  "cartLine": {
+    "increase": "زيادة الكمية",
+    "decrease": "إنقاص الكمية",
+    "remove": "إزالة",
+    "blockedStock": "نفدت الكمية",
+    "blockedUnavailable": "لم يعد متاحاً",
+    "blockedQuote": "انتهت صلاحية عرض السعر",
+    "droppedQuote": "انتهت صلاحية عرض السعر بعد إلغاء الطلب.",
+    "requestNewQuote": "اطلب عرض سعر جديد",
+    "custom": "حسب الطلب",
+    "error": "تعذّر تحديث هذه القطعة.",
+    "statusQuantity": "الكمية {count}"
   },
   "console": {
     "subtitle": "لوحة البائع",

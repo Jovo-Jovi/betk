@@ -32,9 +32,41 @@
       "home": "Home",
       "search": "Search",
       "wishlist": "Wishlist",
+      "cart": "Cart",
       "inbox": "Messages",
       "account": "Account"
-    }
+    },
+    "cartLabel": "Cart, {count} items"
+  },
+  "cart": {
+    "pageTitle": "Cart",
+    "goodsSubtotal": "Goods subtotal",
+    "deliveryCalculated": "Delivery is calculated at checkout",
+    "empty": {
+      "message": "Your cart is empty",
+      "hint": "Items you add will show up here.",
+      "cta": "Browse listings"
+    },
+    "error": "Something went wrong. Please try again.",
+    "removeTitle": "Remove this item?",
+    "removeMessage": "It will leave your cart.",
+    "removeConfirm": "Remove from cart",
+    "removeCancel": "Cancel",
+    "listingFallback": "Listing",
+    "storeFallback": "Store"
+  },
+  "cartLine": {
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "remove": "Remove",
+    "blockedStock": "Out of stock",
+    "blockedUnavailable": "No longer available",
+    "blockedQuote": "This quote has expired",
+    "droppedQuote": "This quote expired after the order was cancelled.",
+    "requestNewQuote": "Request a new quote",
+    "custom": "Custom",
+    "error": "Could not update this item.",
+    "statusQuantity": "Quantity {count}"
   },
   "console": {
     "subtitle": "Seller console",

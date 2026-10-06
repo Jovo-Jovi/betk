@@ -77,6 +77,21 @@ export const setCartItemQuantitySchema = z.object({
 export type SetCartItemQuantityInput = z.input<typeof setCartItemQuantitySchema>;
 export type SetCartItemQuantityResult = { ok: true } | CartActionFailure;
 
+/** Remove, or release a held expired quote. The id is the cart line. */
+export const cartItemIdInputSchema = z.object({
+  cartItemId: z.string().uuid(),
+});
+export type CartItemIdInput = z.infer<typeof cartItemIdInputSchema>;
+
+/** No-arg cart count. Parsed before the read so the action stays Zod-gated. */
+export const buyerCartCountInputSchema = z.object({}).strict();
+
+export type RemoveCartItemResult = { ok: true } | CartActionFailure;
+
+export type ReleaseHeldQuoteLineResult =
+  | { ok: true; inquiryId: string }
+  | CartActionFailure;
+
 /**
  * Shared discriminated result for both discovery toggle actions
  * (`toggleWishlist` / `toggleFollow`). Lives here (not in a `"use server"`
