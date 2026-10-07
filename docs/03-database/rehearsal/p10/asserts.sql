@@ -1,6 +1,8 @@
 -- T02 CI proof of P10M1 on the local stack only.
 -- One result set: name, expected, actual, pass.
--- CASE_COUNT is 41 recorded cases. all_pass checks that count.
+-- CASE_COUNT is 49 recorded cases. all_pass checks that count.
+-- Cases 42-49 are the R-ROW7 reads. They are DML inside this
+-- transaction. The closing ROLLBACK undoes them. No rule is disabled.
 -- Do not change an expected value to match a wrong actual.
 --
 -- This file issues no DDL and disables no protection. No CREATE, ALTER,
@@ -28,6 +30,7 @@ BEGIN;
 DO $cases$
 DECLARE
   v_buyer uuid := 'c1000000-0000-4000-8000-000000000001';
+  v_buyer_b uuid := 'c1000000-0000-4000-8000-000000000009';
   v_seller uuid := 'c1000000-0000-4000-8000-000000000002';
   v_susp uuid := 'c1000000-0000-4000-8000-000000000003';
   v_formula uuid := 'c1000000-0000-4000-8000-000000000004';
@@ -59,6 +62,11 @@ DECLARE
   v_iq_declined uuid := 'c4000000-0000-4000-8000-00000000000b';
   v_iq_formula uuid := 'c4000000-0000-4000-8000-00000000000c';
   v_address uuid := 'c5000000-0000-4000-8000-000000000001';
+  v_iq_row7 uuid := 'c4000000-0000-4000-8000-00000000000d';
+  v_master uuid := 'c6000000-0000-4000-8000-000000000001';
+  v_order uuid := 'c6000000-0000-4000-8000-000000000002';
+  v_item uuid := 'c6000000-0000-4000-8000-000000000003';
+  v_hist uuid := 'c6000000-0000-4000-8000-000000000004';
   v_cart uuid;
   v_arts uuid;
   v_msg text;
@@ -117,7 +125,8 @@ BEGIN
     (v_applicant, 'seller', 'active', '01093000005'),
     (v_approve, 'seller', 'active', '01093000006'),
     (v_reject, 'seller', 'active', '01093000007'),
-    (v_admin, 'admin', 'active', '01093000008');
+    (v_admin, 'admin', 'active', '01093000008'),
+    (v_buyer_b, 'buyer', 'active', '01093000009');
 
   INSERT INTO betk.seller_profiles (id, status) VALUES
     (v_seller, 'active'),
@@ -210,6 +219,44 @@ BEGIN
 
   INSERT INTO betk.addresses (id, buyer_id, governorate, city, street_address)
   VALUES (v_address, v_buyer, 'CI-NOWHERE', 'CI', '1');
+
+  -- R-ROW7 fixture. Inserting cancelled does not fire trg_enforce_order_transition
+  -- (BEFORE UPDATE only). inquiry_id on the order stays null so the conversion
+  -- trigger does not run. The custom link is the order item. v_mto stock is
+  -- null, so the stock trigger returns without a write. History is an INSERT.
+  -- The closing ROLLBACK undoes it. No rule, trigger, or policy is changed.
+  INSERT INTO betk.inquiries (
+    id, buyer_id, store_id, listing_id, quantity, buyer_first_message,
+    status, quoted_price, quoted_prep_days, quoted_at, quote_expires_at
+  ) VALUES (
+    v_iq_row7, v_buyer, v_store, v_mto, 1, 'ci-row7',
+    'replied', 80, 1, timestamptz '2026-06-01 00:00:00+00',
+    timestamptz '2026-07-01 00:00:00+00'
+  );
+  INSERT INTO betk.master_orders (
+    id, buyer_id, betk_ref, combined_delivery_total
+  ) VALUES (
+    v_master, v_buyer, 'p10-row7-m', 0
+  );
+  INSERT INTO betk.seller_orders (
+    id, buyer_id, store_id, delivery_method, subtotal, delivery_fee,
+    total_amount, status, master_order_id, betk_ref
+  ) VALUES (
+    v_order, v_buyer, v_store, 'delivery', 80, 0, 80, 'cancelled',
+    v_master, 'p10-row7-s'
+  );
+  INSERT INTO betk.order_items (
+    id, order_id, listing_id, listing_title_ar, quantity, unit_price,
+    subtotal, is_custom, inquiry_id
+  ) VALUES (
+    v_item, v_order, v_mto, 'CI row7', 1, 80, 80, true, v_iq_row7
+  );
+  INSERT INTO betk.order_status_history (
+    id, order_id, from_status, to_status, changed_by_type, notes, created_at
+  ) VALUES (
+    v_hist, v_order, 'pending', 'cancelled', 'system', 'p10-row7',
+    timestamptz '2026-06-15 08:30:00+00'
+  );
 
   INSERT INTO betk.agreement_acceptances (user_id, document, version_label, status)
   VALUES (v_applicant, 'seller_agreement', 'CI-P10', 'accepted');
@@ -1133,13 +1180,105 @@ BEGIN
     'actual', v_actual, 'pass', v_actual = 'BETK_CHECKOUT_RATE_MISSING|kept'
   ));
 
+  -- 42-45. R-ROW7. Buyer A (authenticated, JWT sub A) reads its cancelled
+  -- seller order, the custom order item, the cancelled history timestamp,
+  -- and the inquiry quote. Explicit columns only.
+  PERFORM set_config('request.jwt.claim.sub', v_buyer::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_buyer, 'role', 'authenticated')::text, true);
+  EXECUTE 'SET ROLE authenticated';
+  SELECT coalesce(string_agg(status::text, ','), 'none')
+  INTO v_actual
+  FROM betk.seller_orders
+  WHERE id = v_order;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_a_seller_order', 'expected', 'cancelled',
+    'actual', v_actual, 'pass', v_actual = 'cancelled'
+  ));
+  SELECT coalesce(string_agg(
+    CASE WHEN is_custom AND inquiry_id = v_iq_row7 THEN 'custom' ELSE 'other' END, ','
+  ), 'none')
+  INTO v_actual
+  FROM betk.order_items
+  WHERE id = v_item;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_a_order_item', 'expected', 'custom',
+    'actual', v_actual, 'pass', v_actual = 'custom'
+  ));
+  SELECT coalesce(string_agg(
+    to_status::text || '|' || to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
+    ','
+  ), 'none')
+  INTO v_actual
+  FROM betk.order_status_history
+  WHERE id = v_hist
+    AND to_status = 'cancelled';
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_a_history', 'expected', 'cancelled|2026-06-15 08:30:00',
+    'actual', v_actual, 'pass', v_actual = 'cancelled|2026-06-15 08:30:00'
+  ));
+  SELECT coalesce(string_agg(
+    status::text || '|' || to_char(quote_expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
+    ','
+  ), 'none')
+  INTO v_actual
+  FROM betk.inquiries
+  WHERE id = v_iq_row7;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_a_inquiry', 'expected', 'replied|2026-07-01 00:00:00',
+    'actual', v_actual, 'pass', v_actual = 'replied|2026-07-01 00:00:00'
+  ));
+  EXECUTE 'RESET ROLE';
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
+  PERFORM set_config('request.jwt.claims', '{}', true);
+
+  -- 46-49. Buyer B reads none of A's rows.
+  PERFORM set_config('request.jwt.claim.sub', v_buyer_b::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_buyer_b, 'role', 'authenticated')::text, true);
+  EXECUTE 'SET ROLE authenticated';
+  SELECT coalesce(string_agg(status::text, ','), '0')
+  INTO v_actual
+  FROM betk.seller_orders
+  WHERE id = v_order;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_b_seller_order', 'expected', '0',
+    'actual', v_actual, 'pass', v_actual = '0'
+  ));
+  SELECT count(*)::text INTO v_actual
+  FROM betk.order_items
+  WHERE id = v_item;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_b_order_item', 'expected', '0',
+    'actual', v_actual, 'pass', v_actual = '0'
+  ));
+  SELECT count(*)::text INTO v_actual
+  FROM betk.order_status_history
+  WHERE id = v_hist;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_b_history', 'expected', '0',
+    'actual', v_actual, 'pass', v_actual = '0'
+  ));
+  SELECT count(*)::text INTO v_actual
+  FROM betk.inquiries
+  WHERE id = v_iq_row7;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'row7_b_inquiry', 'expected', '0',
+    'actual', v_actual, 'pass', v_actual = '0'
+  ));
+  EXECUTE 'RESET ROLE';
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
+  PERFORM set_config('request.jwt.claims', '{}', true);
+
   SELECT coalesce(bool_and((e->>'pass')::boolean), false), count(*)::integer
   INTO v_all, v_n
   FROM jsonb_array_elements(v_rows) AS e;
   v_actual := v_all::text || '|' || v_n::text;
   v_rows := v_rows || jsonb_build_array(jsonb_build_object(
-    'name', 'all_pass', 'expected', 'true|41',
-    'actual', v_actual, 'pass', v_actual = 'true|41'
+    'name', 'all_pass', 'expected', 'true|49',
+    'actual', v_actual, 'pass', v_actual = 'true|49'
   ));
 
   PERFORM set_config('p10.results', v_rows::text, true);
