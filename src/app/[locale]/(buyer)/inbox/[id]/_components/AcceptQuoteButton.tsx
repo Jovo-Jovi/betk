@@ -11,6 +11,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { routes } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
 import { acceptInquiryQuote } from "@/features/messaging/actions/acceptInquiryQuote";
+import { notifyCartUpdated } from "@/features/cart/cartEvents";
 
 export interface AcceptQuoteButtonProps {
   inquiryId: string;
@@ -30,6 +31,7 @@ export function AcceptQuoteButton({ inquiryId, label }: AcceptQuoteButtonProps) 
     startTransition(async () => {
       const res = await acceptInquiryQuote({ inquiryId });
       if (res.ok) {
+        notifyCartUpdated();
         router.push(routes.buyer.cart);
         return;
       }
