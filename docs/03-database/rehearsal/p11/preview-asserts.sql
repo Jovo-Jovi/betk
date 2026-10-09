@@ -595,6 +595,8 @@ BEGIN
   ));
 
   -- 10. One numeric result. Not a set. No OUT argument for a per-seller fee.
+  -- pg_get_function_result reports numeric. The (10,2) typmod is in the
+  -- bound P11M2 source and is not kept on pg_proc.prorettype.
   SELECT pg_get_function_result(p.oid)
       || '|' || p.proretset::text
       || '|' || coalesce(p.proargmodes::text, 'in')
@@ -606,9 +608,9 @@ BEGIN
     AND p.proname = 'checkout_delivery_preview';
   v_rows := v_rows || jsonb_build_array(jsonb_build_object(
     'name', 'preview_no_per_seller_fee',
-    'expected', 'numeric(10,2)|false|in|38.00',
+    'expected', 'numeric|false|in|38.00',
     'actual', coalesce(v_shape, 'none'),
-    'pass', v_shape = 'numeric(10,2)|false|in|38.00'
+    'pass', v_shape = 'numeric|false|in|38.00'
   ));
 
   -- 11. Same cart. Destination governorate changes the sum.
