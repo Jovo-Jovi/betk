@@ -717,7 +717,7 @@ Each item below is evidence on the exit task. A hidden widget is not a pass. Int
 | Task | Status | Evidence pointer |
 |---|---|---|
 | T00 | Not started | |
-| T01 | Not started | |
+| T01 | Done | `feature/phase-11-checkout` from `origin/main` `c9fbd1ab00de79634077e3544df61e904bf335cc` (PR #81). Guard F pin 33; OD-21 stays 79. One upsert under `addr_self` (no unique default; `20260622082812` line 34, `20260622083052` line 19). First address uses that statement. Delete leaves no default. Unit `p11t01.addressBook.unit.test.ts` 11 passed. Integration `addressBook.p11t01.test.ts` 1 passed. `fullName` and `phone` are not written. No migration. |
 | T02 | Not started | |
 | T03 | Not started | |
 | T04 | Not started | |

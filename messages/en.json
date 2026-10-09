@@ -189,6 +189,7 @@
   "account": {
     "title": "Account",
     "pageTitle": "Profile",
+    "addressesLink": "Addresses",
     "phoneAddBanner": "To complete a purchase or any transaction, you must add a verified phone number.",
     "addPhoneLink": "Add phone number",
     "identityInfoLabel": "Account details",
@@ -231,6 +232,39 @@
         "dark": "Dark",
         "system": "System"
       }
+    }
+  },
+  "addresses": {
+    "pageTitle": "Address book",
+    "empty": "No saved addresses",
+    "emptyHint": "Add an address to use at checkout.",
+    "add": "Add address",
+    "noDefault": "No default address",
+    "defaultBadge": "Default",
+    "setDefault": "Set as default",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this address?",
+    "deleteBody": "The address will be removed. If it was the default, no other address is chosen.",
+    "confirmDelete": "Delete address",
+    "cancel": "Cancel",
+    "label": "Label (optional)",
+    "makeDefault": "Use as the default address",
+    "saveError": "The address could not be saved.",
+    "deleteError": "The address could not be deleted.",
+    "inUse": "This address is on an order, so it stays in the book.",
+    "invalid": "Check the address fields and try again.",
+    "loadError": "The address book could not be loaded.",
+    "formAdd": "New address",
+    "formEdit": "Edit address",
+    "form": {
+      "fullName": "Full name",
+      "phone": "Phone",
+      "governorate": "Governorate",
+      "city": "City",
+      "addressLine": "Street address",
+      "notes": "Building notes (optional)",
+      "save": "Save address"
     }
   },
   "legal": {
