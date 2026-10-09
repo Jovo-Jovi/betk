@@ -1,0 +1,359 @@
+# T02. Integration (local stack). Not a required check.
+# Making it required is a human decision after the Phase 11 exit.
+# This file does not change branch protection.
+# It does not read staging secrets and does not call the staging project.
+#
+# Own workflow, the way .github/workflows/p10-db.yml is separate from ci.yml.
+# ci.yml is not edited. Integration (staging) stays
+# `pnpm exec vitest run tests/integration` (ci.yml job integration-staging).
+# The smoke test lives at tests/local-stack/orderHistory.smoke.ts, which that
+# command does not include.
+#
+# Path filter uses the same diff as Integration (staging)
+# (.github/workflows/ci.yml, job integration-staging, step
+# "Detect integration paths"):
+#   changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- src/ tests/ supabase/)"
+# This job also includes .github/workflows/integration-local.yml.
+# On push and pull_request, no matching diff skips the rest of the job and
+# the job stays green. workflow_dispatch always runs.
+#
+# Migrations come from this checkout. No older SHA is pinned.
+# The held-out M5 step follows p10-db.yml: hold
+# 20261002081523_v2_08_n27_masters.sql through
+# 20261004172620_v2_09_approval_state_actor.sql, replace M5's staging-bound
+# block from docs/03-database/rehearsal/run/06_M5.sql on the runner only,
+# apply those held files after the rehearsal seed, then apply later
+# migrations from this tree (they cannot apply during supabase start,
+# because they follow objects M5 creates).
+#
+# Services the tests need: db, auth (gotrue), rest (postgrest).
+# Kong stays because the tests call the API URL from `supabase status`;
+# auth and rest are reached through that gateway.
+# Excluded: realtime, storage-api, imgproxy, mailpit, postgres-meta,
+# studio, edge-runtime, logflare, vector, supavisor.
+# p10-db.yml excludes that list plus gotrue, kong, and postgrest.
+
+name: Integration local
+
+on:
+  push:
+    branches:
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-local:
+    name: Integration (local stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect local-stack paths
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Same diff method as Integration (staging) in .github/workflows/ci.yml
+          # (job integration-staging, step "Detect integration paths"), plus this file.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "workflow_dispatch — running Integration (local stack)."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${BASE_SHA}" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base commit — running Integration (local stack)."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- src/ tests/ supabase/ .github/workflows/integration-local.yml)"
+          if [ -n "$changed" ]; then
+            echo "src/, tests/, supabase/, or this workflow changed — running Integration (local stack):"
+            echo "$changed" | sed 's/^/  - /'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No src/, tests/, supabase/, or workflow changes — skipping Integration (local stack)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.detect.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Hold M5 through the Phase 09 migrations, and later migrations
+        if: steps.detect.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/held/later"
+          mv supabase/migrations/20261002081523_v2_08_n27_masters.sql "$RUNNER_TEMP/held/M5.sql"
+          mv supabase/migrations/20261002081631_v2_08_rename_seller_orders.sql "$RUNNER_TEMP/held/M6.sql"
+          mv supabase/migrations/20261003075902_v2_08_grants_and_policies.sql "$RUNNER_TEMP/held/M7.sql"
+          mv supabase/migrations/20261003082041_v2_08_functions.sql "$RUNNER_TEMP/held/M8.sql"
+          mv supabase/migrations/20261003214258_v2_09_publish_and_submit.sql "$RUNNER_TEMP/held/P09M1.sql"
+          mv supabase/migrations/20261004172620_v2_09_approval_state_actor.sql "$RUNNER_TEMP/held/P09M2.sql"
+          for file in supabase/migrations/*.sql; do
+            base="$(basename "$file")"
+            ver="${base%%_*}"
+            if [[ "$ver" > "20261004172620" ]]; then
+              mv "$file" "$RUNNER_TEMP/held/later/$base"
+            fi
+          done
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          held = Path(os.environ["RUNNER_TEMP"]) / "held"
+          pinned = (held / "M5.sql").read_text(encoding="utf-8")
+          rehearsal = Path("docs/03-database/rehearsal/run/06_M5.sql").read_text(encoding="utf-8")
+          start = "-- >>> STAGING-BOUND LITERALS"
+          end_marker = "-- <<< STAGING-BOUND LITERALS"
+
+          def span(text):
+              a = text.index(start)
+              b = text.index(end_marker) + len(end_marker)
+              return a, b
+
+          pa, pb = span(pinned)
+          ra, rb = span(rehearsal)
+          (held / "M5-ci.sql").write_text(
+              pinned[:pa] + rehearsal[ra:rb] + pinned[pb:],
+              encoding="utf-8",
+          )
+          PY
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          later=$(find "$RUNNER_TEMP/held/later" -name '*.sql' | wc -l)
+          echo "migrations_at_start=$n"
+          echo "later_migrations=$later"
+          test "$n" -eq 35
+          test "$later" -ge 1
+          test -f "$RUNNER_TEMP/held/later/20261006100204_v2_10_cart_quote.sql"
+
+      - name: Install Supabase CLI 2.106.0
+        if: steps.detect.outputs.run == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.106.0
+
+      - name: Disable seed and secret-backed auth blocks in a job-local config copy
+        if: steps.detect.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          python3 << 'PY'
+          from pathlib import Path
+          path = Path("supabase/config.toml")
+          text = path.read_text(encoding="utf-8")
+          replacements = {
+              (
+                  "[db.seed]\n"
+                  "# If enabled, seeds the database after migrations during a db reset.\n"
+                  "enabled = true\n"
+              ): (
+                  "[db.seed]\n"
+                  "# Job-local copy only. seed.sql is absent. Never committed.\n"
+                  "enabled = false\n"
+              ),
+              "[auth.hook.send_sms]\nenabled = true\n": "[auth.hook.send_sms]\nenabled = false\n",
+              "[auth.external.google]\nenabled = true\n": "[auth.external.google]\nenabled = false\n",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"config block not found: {old.splitlines()[0]}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Start local Supabase
+        id: start
+        if: steps.detect.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          supabase start --exclude realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Apply held migrations, later migrations, and the CI settings seed
+        if: steps.detect.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
+          test "$(printf '%s\n' "$db" | wc -l)" -eq 1
+          echo "DB_CONTAINER=$db" >> "$GITHUB_ENV"
+          apply() {
+            name="$1"
+            file="$2"
+            echo "===== ${name} $(basename "$file") ====="
+            docker exec -i "$db" psql \
+              -U postgres \
+              -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -P pager=off \
+              -c "SET TIME ZONE 'UTC'" \
+              -f - < "$file"
+          }
+          echo "===== sentinel ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "CREATE SCHEMA IF NOT EXISTS rehearsal; CREATE TABLE IF NOT EXISTS rehearsal.sentinel (note text PRIMARY KEY); INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only') ON CONFLICT DO NOTHING;"
+          apply seed docs/03-database/rehearsal/run/04_seed_shape.sql
+          apply M5 "$RUNNER_TEMP/held/M5-ci.sql"
+          apply M6 "$RUNNER_TEMP/held/M6.sql"
+          apply M7 "$RUNNER_TEMP/held/M7.sql"
+          apply M8 "$RUNNER_TEMP/held/M8.sql"
+          apply P09M1 "$RUNNER_TEMP/held/P09M1.sql"
+          apply P09M2 "$RUNNER_TEMP/held/P09M2.sql"
+          while IFS= read -r file; do
+            apply later "$file"
+          done < <(find "$RUNNER_TEMP/held/later" -name '*.sql' | sort)
+          echo "===== CI settings seed ====="
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          Path(os.environ["RUNNER_TEMP"], "ci-settings.sql").write_text(
+              """\
+          SET TIME ZONE 'UTC';
+          DO $$
+          DECLARE
+            n int;
+          BEGIN
+            UPDATE betk.admin_settings
+            SET value = 'CI TEST VALUE',
+                description = 'CI TEST VALUE'
+            WHERE key IN (
+              'payment_window_minutes',
+              'agreement_buyer_terms_version',
+              'agreement_seller_agreement_version',
+              'agreement_return_policy_version',
+              'agreement_privacy_version'
+            );
+            GET DIAGNOSTICS n = ROW_COUNT;
+            IF n <> 5 THEN
+              RAISE EXCEPTION 'CI settings seed updated % rows, expected 5', n;
+            END IF;
+          END $$;
+          """,
+              encoding="utf-8",
+          )
+          PY
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -f - < "$RUNNER_TEMP/ci-settings.sql"
+          echo "===== reload PostgREST schema ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -c "NOTIFY pgrst, 'reload schema';"
+          rest=$(docker ps --format '{{.Names}}' | grep '^supabase_rest_')
+          test "$(printf '%s\n' "$rest" | wc -l)" -eq 1
+          docker restart "$rest" >/dev/null
+          ready=0
+          for _ in $(seq 1 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:54321/rest/v1/ || true)"
+            if [ "$code" = "401" ] || [ "$code" = "200" ]; then
+              echo "postgrest_http=$code"
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+
+      - name: Read local keys from supabase status
+        if: steps.detect.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          supabase status -o env > "$RUNNER_TEMP/status.env"
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          text = Path(os.environ["RUNNER_TEMP"], "status.env").read_text(encoding="utf-8")
+          vals = {}
+          for line in text.splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+              if line.startswith("export "):
+                  line = line[len("export "):]
+              if "=" not in line:
+                  continue
+              key, value = line.split("=", 1)
+              vals[key.strip()] = value.strip().strip('"').strip("'")
+
+          api = vals["API_URL"].rstrip("/")
+          host = urlparse(api).hostname or ""
+          ref = host.split(".")[0]
+          if host not in ("127.0.0.1", "localhost"):
+              raise SystemExit(f"refusing non-local API host {host}")
+          if "sojmjvohiziapiwkzsjg" in api:
+              raise SystemExit("refusing staging API URL")
+          anon = vals["ANON_KEY"]
+          service = vals["SERVICE_ROLE_KEY"]
+          if not anon or not service:
+              raise SystemExit("local status did not print anon and service keys")
+
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as handle:
+              handle.write(f"NEXT_PUBLIC_SUPABASE_URL={api}\n")
+              handle.write(f"NEXT_PUBLIC_SUPABASE_ANON_KEY={anon}\n")
+              handle.write(f"SUPABASE_SERVICE_KEY={service}\n")
+              handle.write(f"RLS_ALLOW_PROJECT_REF={ref}\n")
+              handle.write("BETK_LOCAL_STACK=1\n")
+          print(f"api_url={api}")
+          print(f"project_ref={ref}")
+          PY
+
+      - name: Local stack tests
+        if: steps.detect.outputs.run == 'true'
+        env:
+          BETK_LOCAL_STACK: "1"
+        run: |
+          set -euo pipefail
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *)
+              echo "refusing non-local API URL"
+              exit 1
+              ;;
+          esac
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$SUPABASE_SERVICE_KEY"
+          test -n "$RLS_ALLOW_PROJECT_REF"
+          echo "api_url=$NEXT_PUBLIC_SUPABASE_URL"
+          echo "project_ref=$RLS_ALLOW_PROJECT_REF"
+          pnpm exec vitest run --config vitest.local-stack.config.ts --reporter=verbose \
+            tests/integration/addressBook.p11t01.test.ts \
+            tests/local-stack/orderHistory.smoke.ts
+
+      - name: Stop local Supabase
+        if: always() && steps.detect.outputs.run == 'true'
+        run: supabase stop --no-backup || true
