@@ -136,8 +136,9 @@ describeOrSkip("P09 T05 — buyer terms gate (staging)", () => {
 
     expect(buyer).toEqual({ ok: true, label: "STAGING-DRAFT-1" });
     expect(seller).toEqual({ ok: true, label: "STAGING-DRAFT-1" });
-    expect(returns).toEqual({ ok: true, label: "" });
-    expect(privacy).toEqual({ ok: true, label: "" });
+    // D-98-99 (2026-10-09): staging return_policy and privacy labels.
+    expect(returns).toEqual({ ok: true, label: "STAGING-DRAFT-1" });
+    expect(privacy).toEqual({ ok: true, label: "STAGING-DRAFT-1" });
   });
 
   it("AC-AGR-1: signup without acceptance writes no profile and no acceptance", async () => {
