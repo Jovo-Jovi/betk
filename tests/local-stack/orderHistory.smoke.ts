@@ -77,8 +77,26 @@ describe("P11 T02 local stack order history", () => {
       `order_status_history committed id=${historyId} order_id=${orderId} notes=${CI_TEST_VALUE}`,
     );
 
-    const removed = await db.from("order_status_history").delete().eq("id", historyId);
-    if (removed.error) throw new Error(removed.error.message);
+    // no_delete_order_history is ON DELETE DO INSTEAD NOTHING
+    // (supabase/migrations/20260622082857_messaging_orders.sql).
+    // The JS client's delete() sends DELETE RETURNING, which Postgres
+    // rejects on that rule. return=minimal is a DELETE with no RETURNING.
+    const removed = await fetch(
+      `${url}/rest/v1/order_status_history?id=eq.${historyId}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Accept-Profile": "betk",
+          "Content-Profile": "betk",
+          Prefer: "return=minimal",
+        },
+      },
+    );
+    if (!removed.ok) {
+      throw new Error(`delete failed: ${removed.status} ${await removed.text()}`);
+    }
 
     const still = await db
       .from("order_status_history")
