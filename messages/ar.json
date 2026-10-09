@@ -32,9 +32,41 @@
       "home": "الرئيسية",
       "search": "بحث",
       "wishlist": "المفضلة",
+      "cart": "السلة",
       "inbox": "الرسائل",
       "account": "حسابي"
-    }
+    },
+    "cartLabel": "السلة، {count} من العناصر"
+  },
+  "cart": {
+    "pageTitle": "السلة",
+    "goodsSubtotal": "مجموع البضاعة",
+    "deliveryCalculated": "يُحسب التوصيل عند إتمام الطلب",
+    "empty": {
+      "message": "سلتك فارغة",
+      "hint": "ستظهر هنا القطع التي تضيفها.",
+      "cta": "تصفح الإعلانات"
+    },
+    "error": "حدث خطأ ما، يرجى المحاولة مجدداً.",
+    "removeTitle": "إزالة هذه القطعة؟",
+    "removeMessage": "ستخرج من السلة.",
+    "removeConfirm": "أزل من السلة",
+    "removeCancel": "إلغاء",
+    "listingFallback": "الإعلان",
+    "storeFallback": "المتجر"
+  },
+  "cartLine": {
+    "increase": "زيادة الكمية",
+    "decrease": "إنقاص الكمية",
+    "remove": "إزالة",
+    "blockedStock": "نفدت الكمية",
+    "blockedUnavailable": "لم يعد متاحاً",
+    "blockedQuote": "انتهت صلاحية عرض السعر",
+    "droppedQuote": "انتهت صلاحية عرض السعر بعد إلغاء الطلب.",
+    "requestNewQuote": "اطلب عرض سعر جديد",
+    "custom": "حسب الطلب",
+    "error": "تعذّر تحديث هذه القطعة.",
+    "statusQuantity": "الكمية {count}"
   },
   "console": {
     "subtitle": "لوحة البائع",
@@ -459,13 +491,13 @@
       "remove": "إزالة من المفضلة"
     },
     "cta": {
-      "inquiry": "استفسر الآن",
+      "inquiry": "اطلب السعر",
       "inquiryOwnListingReason": "لا يمكنك الاستفسار عن إعلانك الخاص",
       "notifyMe": "أعلمني عند التوفر",
       "addToCart": "أضف إلى السلة"
     },
     "composer": {
-      "title": "استفسار عن هذا الإعلان",
+      "title": "اطلب السعر",
       "messageLabel": "رسالتك",
       "messagePlaceholder": "اكتب استفسارك عن المنتج أو الخدمة…",
       "quantityLabel": "الكمية (اختياري)",
@@ -478,7 +510,8 @@
       "cancel": "إلغاء",
       "errorRequired": "يرجى كتابة رسالتك",
       "errorGeneric": "تعذر إرسال الاستفسار، حاول مرة أخرى",
-      "errorUnavailable": "هذا الإعلان غير متاح حاليًا"
+      "errorUnavailable": "هذا الإعلان غير متاح حاليًا",
+      "errorIneligible": "هذا الإعلان غير متاح لطلب سعر"
     },
     "reviews": {
       "title": "تقييمات المتجر",
@@ -564,6 +597,12 @@
         "declinedMessage": "رفض البائع هذا الاستفسار، ولا يمكن إرسال رسائل جديدة فيه",
         "expiredTitle": "انتهت صلاحية الاستفسار",
         "expiredMessage": "انتهت صلاحية هذا الاستفسار، ولا يمكن إرسال رسائل جديدة فيه"
+      },
+      "accept": {
+        "label": "قبول السعر",
+        "price": "السعر المعروض: {price}",
+        "prep": "مدة التجهيز: {days} يوم",
+        "listingPrice": "سعر الإعلان: {price}"
       }
     }
   },
@@ -1087,9 +1126,44 @@
           "failed": "تعذّر رفض الاستفسار، حاول مرة أخرى",
           "notFound": "هذا الاستفسار غير موجود أو لا يخصك",
           "invalidState": "لا يمكن رفض هذا الاستفسار بعد الآن"
+        },
+        "quote": {
+          "priceLabel": "السعر المعروض",
+          "prepLabel": "أيام التجهيز",
+          "submit": "إرسال السعر",
+          "submitting": "جارٍ الإرسال…",
+          "listingPrice": "سعر الإعلان: {price}",
+          "success": "تم إرسال السعر",
+          "invalid": "أدخل السعر ومدة التجهيز"
         }
       }
     }
+  },
+  "p10Errors": {
+    "generic": "حدث خطأ. حاول مرة أخرى.",
+    "unauthenticated": "سجّل الدخول للمتابعة.",
+    "cartAdded": "أُضيف إلى سلتك.",
+    "cartQuantity": "أدخل كمية لا تقل عن 1.",
+    "cartListingUnavailable": "هذا الإعلان غير متاح.",
+    "cartStoreInactive": "هذا المتجر غير متاح.",
+    "cartNotFixed": "لا يمكن إضافة هذا الإعلان بسعر ثابت.",
+    "cartLineExists": "هذا المنتج موجود في سلتك بالفعل.",
+    "cartOutOfStock": "الكمية أكبر من المتاح في المخزون.",
+    "cartLineNotFound": "لم يُعثر على هذا العنصر في السلة.",
+    "quoteNotFound": "لم يُعثر على هذا السعر.",
+    "quoteDeclined": "تم رفض هذا الاستفسار.",
+    "quoteAbsent": "لا يوجد سعر لقبوله بعد.",
+    "quoteExpired": "انتهت صلاحية هذا السعر.",
+    "quoteListingUnavailable": "هذا الإعلان غير متاح.",
+    "quoteStoreInactive": "هذا المتجر غير متاح.",
+    "quoteNotOwner": "لم يُعثر على هذا الاستفسار.",
+    "quoteLineHeld": "المشتري يحتفظ بهذا السعر في سلته بالفعل.",
+    "quoteListingIneligible": "هذا الإعلان غير متاح لطلب سعر.",
+    "quotePrepRequired": "أدخل مدة التجهيز بالأيام.",
+    "quotePrice": "أدخل سعرًا أكبر من صفر.",
+    "quoteOutOfBand": "يجب ألا يقل السعر عن سعر الإعلان وألا يتجاوز السقف المسموح.",
+    "quoteValidityUnconfigured": "لا يمكن إرسال السعر الآن.",
+    "viewCart": "عرض السلة"
   },
   "admin": {
     "approvals": {

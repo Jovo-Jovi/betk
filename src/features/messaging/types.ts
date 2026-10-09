@@ -90,6 +90,12 @@ export interface InquiryThread {
   buyerFirstMessage: string;
   convertedToOrderId: string | null;
   createdAt: string;
+  quotedPrice: number | null;
+  quotedPrepDays: number | null;
+  quoteExpiresAt: string | null;
+  quotedAt: string | null;
+  /** Floor of the band. Null when the listing is unpriced or unreadable. */
+  listingPrice: number | null;
   listing: InquiryListingContext | null;
   messages: InquiryMessage[];
   /**

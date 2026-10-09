@@ -37,6 +37,8 @@ export { getOwnAvgResponseHours } from "./queries/getOwnAvgResponseHours";
 // ── Write layer (Server Actions) ────────────────────────────────────────────
 export { createInquiry } from "./actions/createInquiry";
 export { sendInquiryMessage } from "./actions/sendInquiryMessage";
+export { sendInquiryQuote } from "./actions/sendInquiryQuote";
+export { acceptInquiryQuote } from "./actions/acceptInquiryQuote";
 export { confirmInquiry } from "./actions/confirmInquiry";
 export { declineInquiry } from "./actions/declineInquiry";
 export { markInquiryRead } from "./actions/markInquiryRead";

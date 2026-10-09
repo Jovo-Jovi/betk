@@ -32,9 +32,41 @@
       "home": "Home",
       "search": "Search",
       "wishlist": "Wishlist",
+      "cart": "Cart",
       "inbox": "Messages",
       "account": "Account"
-    }
+    },
+    "cartLabel": "Cart, {count} items"
+  },
+  "cart": {
+    "pageTitle": "Cart",
+    "goodsSubtotal": "Goods subtotal",
+    "deliveryCalculated": "Delivery is calculated at checkout",
+    "empty": {
+      "message": "Your cart is empty",
+      "hint": "Items you add will show up here.",
+      "cta": "Browse listings"
+    },
+    "error": "Something went wrong. Please try again.",
+    "removeTitle": "Remove this item?",
+    "removeMessage": "It will leave your cart.",
+    "removeConfirm": "Remove from cart",
+    "removeCancel": "Cancel",
+    "listingFallback": "Listing",
+    "storeFallback": "Store"
+  },
+  "cartLine": {
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "remove": "Remove",
+    "blockedStock": "Out of stock",
+    "blockedUnavailable": "No longer available",
+    "blockedQuote": "This quote has expired",
+    "droppedQuote": "This quote expired after the order was cancelled.",
+    "requestNewQuote": "Request a new quote",
+    "custom": "Custom",
+    "error": "Could not update this item.",
+    "statusQuantity": "Quantity {count}"
   },
   "console": {
     "subtitle": "Seller console",
@@ -459,13 +491,13 @@
       "remove": "Remove from wishlist"
     },
     "cta": {
-      "inquiry": "Inquire now",
+      "inquiry": "Request price",
       "inquiryOwnListingReason": "You can't inquire about your own listing",
       "notifyMe": "Notify me when back",
       "addToCart": "Add to cart"
     },
     "composer": {
-      "title": "Inquire about this listing",
+      "title": "Request a price",
       "messageLabel": "Your message",
       "messagePlaceholder": "Write your question about this product or service…",
       "quantityLabel": "Quantity (optional)",
@@ -478,7 +510,8 @@
       "cancel": "Cancel",
       "errorRequired": "Please write your message",
       "errorGeneric": "Couldn't send the inquiry, try again",
-      "errorUnavailable": "This listing is no longer available"
+      "errorUnavailable": "This listing is no longer available",
+      "errorIneligible": "This listing is not open for a price request"
     },
     "reviews": {
       "title": "Store reviews",
@@ -564,6 +597,12 @@
         "declinedMessage": "The seller declined this inquiry — no new messages can be sent here",
         "expiredTitle": "Inquiry expired",
         "expiredMessage": "This inquiry has expired — no new messages can be sent here"
+      },
+      "accept": {
+        "label": "Accept quote",
+        "price": "Quoted price: {price}",
+        "prep": "Preparation: {days} days",
+        "listingPrice": "Listing price: {price}"
       }
     }
   },
@@ -1087,9 +1126,44 @@
           "failed": "Couldn't decline the inquiry, try again",
           "notFound": "This inquiry doesn't exist or isn't yours",
           "invalidState": "This inquiry can no longer be declined"
+        },
+        "quote": {
+          "priceLabel": "Quoted price",
+          "prepLabel": "Preparation days",
+          "submit": "Send quote",
+          "submitting": "Sending…",
+          "listingPrice": "Listing price: {price}",
+          "success": "Quote sent",
+          "invalid": "Enter a price and the preparation time"
         }
       }
     }
+  },
+  "p10Errors": {
+    "generic": "Something went wrong. Please try again.",
+    "unauthenticated": "Sign in to continue.",
+    "cartAdded": "Added to your cart.",
+    "cartQuantity": "Enter a quantity of at least 1.",
+    "cartListingUnavailable": "This listing is not available.",
+    "cartStoreInactive": "This store is not available.",
+    "cartNotFixed": "This listing cannot be added at a fixed price.",
+    "cartLineExists": "This item is already in your cart.",
+    "cartOutOfStock": "That quantity is more than the available stock.",
+    "cartLineNotFound": "That cart item was not found.",
+    "quoteNotFound": "This quote was not found.",
+    "quoteDeclined": "This inquiry was declined.",
+    "quoteAbsent": "There is no quote to accept yet.",
+    "quoteExpired": "This quote has expired.",
+    "quoteListingUnavailable": "This listing is not available.",
+    "quoteStoreInactive": "This store is not available.",
+    "quoteNotOwner": "This inquiry was not found.",
+    "quoteLineHeld": "The buyer already holds this quote in their cart.",
+    "quoteListingIneligible": "This listing is not open for a price request.",
+    "quotePrepRequired": "Enter the preparation time in days.",
+    "quotePrice": "Enter a price greater than zero.",
+    "quoteOutOfBand": "The price must be at least the listing price and no higher than the allowed ceiling.",
+    "quoteValidityUnconfigured": "A quote cannot be sent right now.",
+    "viewCart": "View cart"
   },
   "admin": {
     "approvals": {

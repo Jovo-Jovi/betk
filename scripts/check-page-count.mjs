@@ -11,9 +11,10 @@
  * the built files: 26 page.tsx files, each mapped to one P-number inside that
  * 79. Phase 09 T05 adds P67–P70 (four page.tsx files) and raises the pin to
  * 30. Phase 09 T08 adds P49 and raises the pin to 31 in the same commit as
- * the UI_SPEC reconciliation. This guard locks that built count. It fails
- * when the physical count is not 31, and it fails when the count exceeds
- * the 79 freeze. It does not demand a file for every unbuilt spec page.
+ * the UI_SPEC reconciliation. Phase 10 T05 adds P66 and raises the pin to 32
+ * in that commit. This guard locks that built count. It fails when the
+ * physical count is not 32, and it fails when the count exceeds the 79
+ * freeze. It does not demand a file for every unbuilt spec page.
  *
  * Run: node scripts/check-page-count.mjs
  * Exit 0 = clean; exit 1 = the count diverged.
@@ -31,8 +32,9 @@ export const OD21_PAGE_FREEZE = 79;
 /**
  * Physical page.tsx files under src/app. 26 at B4-FIX2. Phase 09 T05
  * raises the pin to 30 for P67–P70. Phase 09 T08 raises it to 31 for P49.
+ * Phase 10 T05 raises it to 32 for P66 /cart. OD-21 stays 79.
  */
-export const PINNED_PAGE_COUNT = 31;
+export const PINNED_PAGE_COUNT = 32;
 
 /**
  * @param {string} appDir

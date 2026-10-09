@@ -31,18 +31,21 @@
 import { useEffect, useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
-import { Home, Search, Heart, MessageSquare, User } from "lucide-react";
+import { Home, Search, Heart, ShoppingCart, MessageSquare, User } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { AppTopbar, MobileBottomNav, RouteProgress } from "@/components/shared";
 import type { BottomNavItem } from "@/components/shared/MobileBottomNav";
 import { routes } from "@/constants/routes";
+import { getBuyerCartCount } from "@/features/cart/actions/getBuyerCartCount";
+import { CART_UPDATED_EVENT } from "@/features/cart/cartEvents";
 
 /** Bottom-nav item id → canonical (locale-neutral) route. */
 const NAV_ROUTES: Record<string, string> = {
   home: routes.home,
   search: routes.search,
   wishlist: routes.buyer.wishlist,
+  cart: routes.buyer.cart,
   inbox: routes.buyer.inbox,
   account: routes.buyer.account,
 };
@@ -52,6 +55,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   home: <Home className="size-[22px]" />,
   search: <Search className="size-[22px]" />,
   wishlist: <Heart className="size-[22px]" />,
+  cart: <ShoppingCart className="size-[22px]" />,
   inbox: <MessageSquare className="size-[22px]" />,
   account: <User className="size-[22px]" />,
 };
@@ -61,6 +65,7 @@ function activeIdFromPath(pathname: string): string {
   if (pathname === routes.home) return "home";
   if (pathname.startsWith(routes.search)) return "search";
   if (pathname.startsWith(routes.buyer.wishlist)) return "wishlist";
+  if (pathname === routes.buyer.cart || pathname.startsWith(`${routes.buyer.cart}/`)) return "cart";
   if (pathname.startsWith(routes.buyer.inbox)) return "inbox";
   if (pathname.startsWith(routes.buyer.account)) return "account";
   return "";
@@ -73,6 +78,7 @@ export function AppChrome() {
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [themeMounted, setThemeMounted] = useState(false);
+  const [cartCount, setCartCount] = useState<number | null>(null);
   const [isLocalePending, startLocaleTransition] = useTransition();
   const [isRoutePending, startRouteTransition] = useTransition();
   const t = useTranslations("chrome");
@@ -82,6 +88,28 @@ export function AppChrome() {
     setThemeMounted(true);
   }, []);
 
+  // Client fetch after mount. The public layout stays free of cookies, so the
+  // first paint matches a guest (no cart props). A number, including 0, shows
+  // the button. Null keeps it absent.
+  useEffect(() => {
+    let cancelled = false;
+    function pull() {
+      void getBuyerCartCount()
+        .then((count) => {
+          if (!cancelled) setCartCount(count);
+        })
+        .catch(() => {
+          if (!cancelled) setCartCount(null);
+        });
+    }
+    pull();
+    window.addEventListener(CART_UPDATED_EVENT, pull);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CART_UPDATED_EVENT, pull);
+    };
+  }, [pathname]);
+
   // Server and the first client render both pass false. next-themes resolves
   // the real theme only after mount, and that swap was a hydration mismatch.
   const isDark = themeMounted && resolvedTheme === "dark";
@@ -89,7 +117,7 @@ export function AppChrome() {
   const otherLocale: AppLocale = locale === "ar" ? "en" : "ar";
 
   // Locale-aware bottom-nav items: default icons + next-intl labels (ar/en).
-  const navItems: BottomNavItem[] = ["home", "search", "wishlist", "inbox", "account"].map((id) => ({
+  const navItems: BottomNavItem[] = ["home", "search", "wishlist", "cart", "inbox", "account"].map((id) => ({
     id,
     icon: NAV_ICONS[id],
     label: t(`nav.${id}`),
@@ -127,6 +155,13 @@ export function AppChrome() {
         onLogoClick={() => startRouteTransition(() => router.push(routes.home))}
         onNotifClick={() => startRouteTransition(() => router.push(routes.buyer.notifications))}
         onAvatarClick={() => startRouteTransition(() => router.push(routes.buyer.account))}
+        {...(cartCount == null
+          ? {}
+          : {
+              onCartClick: () => startRouteTransition(() => router.push(routes.buyer.cart)),
+              cartCount,
+              cartLabel: t("cartLabel", { count: cartCount }),
+            })}
       />
       <MobileBottomNav
         items={navItems}

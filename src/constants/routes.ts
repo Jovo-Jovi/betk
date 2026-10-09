@@ -97,6 +97,9 @@ const buyerRoutes = {
   /** `/wishlist` — Wishlist & Saved */
   wishlist: "/wishlist",
 
+  /** `/cart` — P66. The page is T05. T04 links here. */
+  cart: "/cart",
+
   /** `/inbox` — Buyer Inbox list */
   inbox: "/inbox",
 

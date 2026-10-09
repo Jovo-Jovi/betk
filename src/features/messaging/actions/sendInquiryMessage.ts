@@ -14,10 +14,10 @@
  *   • Status lifecycle open→replied (UI_SPEC L482): the seller's FIRST reply
  *     flips `status` open→'replied' (guarded so it never downgrades a
  *     confirmed/declined inquiry) via `inq_update` (store/admin).
- *   • avg_response_hours (DECISION 2 / Option A): recomputed for the caller's own
- *     profile on the seller's FIRST reply (recomputeSellerAvgResponseHours).
- * Both are BEST-EFFORT — the message is already sent, so a failure is logged,
- * not surfaced as a send failure.
+ *   • avg_response_hours is written by `trg_recompute_avg_response_hours`
+ *     (P10M1). This action does not update the column.
+ * The status flip is BEST-EFFORT — the message is already sent, so a failure
+ * is logged, not surfaced as a send failure.
  *
  * REG-43 (DECISION 4 — DERIVE-AT-READ): `last_message_at` is NOT written; the
  * inbox ordering derives from message sent_at (see the queries). A buyer's reply
@@ -45,7 +45,6 @@ import { setFeatureContext, captureTaggedError } from "@/services/sentry";
 import { captureServerEvent } from "@/services/posthog.server";
 import { resolveParticipant } from "../messagingRules";
 import { resolveCallerScope } from "../queries/_shared";
-import { recomputeSellerAvgResponseHours } from "./_shared";
 
 type MessageInsert = Database["betk"]["Tables"]["inquiry_messages"]["Insert"];
 
@@ -142,14 +141,6 @@ export async function sendInquiryMessage(
       .eq("status", "open");
     if (statusErr) {
       captureTaggedError(statusErr, "messaging", { extra: { step: "flipReplied", inquiryId } });
-    }
-
-    // DECISION 2 / Option A — recompute the response metric (own profile).
-    const metricErr = await recomputeSellerAvgResponseHours(supabase, userId, scope.storeId);
-    if (metricErr) {
-      captureTaggedError(new Error(`avg_response_hours: ${metricErr}`), "messaging", {
-        extra: { step: "recomputeMetric", inquiryId },
-      });
     }
   }
 

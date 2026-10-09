@@ -32,12 +32,10 @@
  * can't share across `(buyer)`/`(seller)`; the `Field.tsx`-per-folder
  * precedent already established this repo-wide duplication pattern).
  *
- * CONFIRM / DECLINE: `InquiryStatusActions` (client) wires `confirmInquiry` +
- * `declineInquiry` (T02, both built — UI_SPEC L481 pins the decline surface
- * too) behind `ConfirmDialog`s; both hidden once the inquiry is in a
- * terminal state (confirmed/declined/expired — T02's own guards are
- * idempotent regardless, this is a UI-only pre-check). `router.refresh()` on
- * success re-runs this page's own read.
+ * QUOTE / DECLINE (P10 T04, UI spec P37): `QuoteSendForm` calls
+ * `send_inquiry_quote`. There is no confirm-to-checkout control.
+ * `InquiryStatusActions` is decline only. `router.refresh()` on success
+ * re-runs this page's own read.
  *
  * WHATSAPP / CONTACT (REG-45 symmetry): omitted on the seller side too — the
  * buyer's phone is equally RLS-unreachable from a thread party (mirrors
@@ -55,13 +53,23 @@ import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/i18n/localizedName";
 import { routes } from "@/constants/routes";
 import { Alert, StatusBadge, type ThreadMessage } from "@/components/shared";
+import { catalogPriceLabels } from "@/i18n/catalogLabels";
 import { MarkThreadRead } from "./_components/MarkThreadRead";
 import { SellerThreadComposer } from "./_components/SellerThreadComposer";
 import { InquiryStatusActions } from "./_components/InquiryStatusActions";
+import { QuoteSendForm } from "./_components/QuoteSendForm";
 
 interface RouteParams {
   locale: string;
   id: string;
+}
+
+function formatMoney(amount: number, locale: AppLocale, currency: string): string {
+  const formatted = new Intl.NumberFormat(locale === "en" ? "en-EG" : "ar-EG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${formatted} ${currency}`;
 }
 
 function formatTime(iso: string, locale: AppLocale): string {
@@ -94,6 +102,8 @@ export default async function SellerInboxThreadPage({ params }: { params: Promis
   const t = await getTranslations({ locale, namespace: "seller.inbox" });
   const tInbox = await getTranslations({ locale, namespace: "inbox" });
   const tDelivery = await getTranslations({ locale, namespace: "store.about.delivery.modes" });
+  const catalogT = await getTranslations({ locale, namespace: "catalog" });
+  const currency = catalogPriceLabels(catalogT).currency;
 
   const statusLabels: Record<string, string> = {
     open: tInbox("status.open"),
@@ -108,6 +118,12 @@ export default async function SellerInboxThreadPage({ params }: { params: Promis
     : tInbox("list.listingFallback");
 
   const isReadOnly = thread.status === "declined" || thread.status === "expired";
+  const listingPriceText =
+    thread.listingPrice === null
+      ? null
+      : t("thread.quote.listingPrice", {
+          price: formatMoney(thread.listingPrice, locale, currency),
+        });
 
   const messages: ThreadMessage[] = thread.messages.map((m) => ({
     id: m.id,
@@ -190,6 +206,10 @@ export default async function SellerInboxThreadPage({ params }: { params: Promis
           title={tInbox("thread.closedBanner.expiredTitle")}
           message={tInbox("thread.closedBanner.expiredMessage")}
         />
+      )}
+
+      {!isReadOnly && (
+        <QuoteSendForm inquiryId={thread.id} listingPriceText={listingPriceText} />
       )}
 
       <InquiryStatusActions inquiryId={thread.id} status={thread.status} />

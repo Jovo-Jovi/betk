@@ -122,6 +122,10 @@ export function InquiryComposer({ listingId, open, onOpenChange }: InquiryCompos
         setError(t("errorUnavailable"));
         return;
       }
+      if (res.reason === "listing_ineligible") {
+        setError(t("errorIneligible"));
+        return;
+      }
       setError(t("errorGeneric"));
     });
   }

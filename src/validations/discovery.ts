@@ -54,18 +54,43 @@ export const toggleFollowInputSchema = z.object({
 });
 export type ToggleFollowInput = z.infer<typeof toggleFollowInputSchema>;
 
-/** Guest add-to-cart. The listing id is the only client field. */
+/** Fixed-price add. Quantity defaults to 1. The function refuses a second line. */
 export const addToCartInputSchema = z.object({
   listingId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(32_767).default(1),
 });
 export type AddToCartInput = z.infer<typeof addToCartInputSchema>;
 
-/**
- * This phase does not insert a cart row for an authenticated buyer (Phase 10).
- * `unauthenticated` is the guest refusal after the anon insert attempt.
- */
-export type AddToCartResult =
-  | { ok: false; reason: "unauthenticated" | "invalid" | "unavailable" | "error" };
+export type CartActionFailure = {
+  ok: false;
+  reason: "unauthenticated" | "blocked" | "invalid" | "not_found" | "refused" | "error";
+  messageKey: string;
+};
+
+export type AddToCartResult = { ok: true; cartItemId: string } | CartActionFailure;
+
+/** Quantity change. Below 1 is invalid here; the function also refuses it. */
+export const setCartItemQuantitySchema = z.object({
+  cartItemId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(32_767),
+});
+export type SetCartItemQuantityInput = z.input<typeof setCartItemQuantitySchema>;
+export type SetCartItemQuantityResult = { ok: true } | CartActionFailure;
+
+/** Remove, or release a held expired quote. The id is the cart line. */
+export const cartItemIdInputSchema = z.object({
+  cartItemId: z.string().uuid(),
+});
+export type CartItemIdInput = z.infer<typeof cartItemIdInputSchema>;
+
+/** No-arg cart count. Parsed before the read so the action stays Zod-gated. */
+export const buyerCartCountInputSchema = z.object({}).strict();
+
+export type RemoveCartItemResult = { ok: true } | CartActionFailure;
+
+export type ReleaseHeldQuoteLineResult =
+  | { ok: true; inquiryId: string }
+  | CartActionFailure;
 
 /**
  * Shared discriminated result for both discovery toggle actions

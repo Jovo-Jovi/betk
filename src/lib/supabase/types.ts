@@ -2459,6 +2459,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_inquiry_quote: { Args: { p_inquiry_id: string }; Returns: string }
+      add_fixed_cart_item: {
+        Args: { p_listing_id: string; p_quantity: number }
+        Returns: string
+      }
       checkout_agreement_version: { Args: { p_key: string }; Returns: string }
       checkout_from_cart: {
         Args: { p_delivery_address_id: string }
@@ -2474,6 +2479,18 @@ export type Database = {
       }
       resubmit_seller_application: {
         Args: { p_doc_back_path: string; p_doc_front_path: string }
+        Returns: undefined
+      }
+      send_inquiry_quote: {
+        Args: {
+          p_inquiry_id: string
+          p_prep_days: number
+          p_quoted_price: number
+        }
+        Returns: undefined
+      }
+      set_cart_item_quantity: {
+        Args: { p_cart_item_id: string; p_quantity: number }
         Returns: undefined
       }
       submit_seller_application: {
