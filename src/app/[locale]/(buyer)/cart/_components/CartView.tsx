@@ -17,15 +17,11 @@ import { routes } from "@/constants/routes";
 import { setCartItemQuantity } from "@/features/discovery/actions/setCartItemQuantity";
 import { removeCartItem } from "@/features/cart/actions/removeCartItem";
 import { releaseHeldQuoteLine } from "@/features/cart/actions/releaseHeldQuoteLine";
-import { CART_UPDATED_EVENT } from "@/features/cart/cartEvents";
+import { notifyCartUpdated } from "@/features/cart/cartEvents";
 import { goodsSubtotal } from "@/features/cart/cartRules";
 import type { CartPageLine, DroppedQuotePrompt } from "@/features/cart/types";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-EG").format(n);
-
-function notifyCartUpdated() {
-  window.dispatchEvent(new Event(CART_UPDATED_EVENT));
-}
 
 export function CartPageError() {
   const t = useTranslations("cart");

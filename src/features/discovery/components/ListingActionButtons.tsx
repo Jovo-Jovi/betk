@@ -53,6 +53,7 @@ import { Button } from "@/components/ui/button";
 import { ShareButton, WishlistButton } from "@/components/shared";
 import { toggleWishlist } from "@/features/discovery/actions/toggleWishlist";
 import { addToCart } from "@/features/discovery/actions/addToCart";
+import { notifyCartUpdated } from "@/features/cart/cartEvents";
 import type { ListingPurchaseControl } from "@/features/discovery/listingPurchaseControl";
 import { useViewerListingAccess } from "@/features/discovery/hooks/useViewerListingAccess";
 import { InquiryComposer } from "@/features/messaging/components/InquiryComposer";
@@ -138,6 +139,7 @@ export function ListingActionButtons({
       if (result.ok) {
         setCartTone("ok");
         setCartMessage(tErrors("cartAdded"));
+        notifyCartUpdated();
         return;
       }
       if (result.reason === "unauthenticated") {
