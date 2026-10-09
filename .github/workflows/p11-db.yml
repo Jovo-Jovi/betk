@@ -1,0 +1,280 @@
+# T04. P11M1 on a local Supabase stack. Not a required check.
+# Not the Integration (local stack) job (T02). This file does not change
+# branch protection and does not edit ci.yml or p10-db.yml.
+# No secrets. Staging is not written. The assert file issues no DDL,
+# disables no protection, and rolls back, so order_status_history is not
+# committed.
+#
+# Base is this branch's supabase/migrations: 42 files, last
+# 20261006100204_v2_10_cart_quote.sql. No older SHA is pinned.
+#
+# Held-out M5 handling is copied from .github/workflows/p10-db.yml
+# (the hold of 20261002081523_v2_08_n27_masters.sql through
+# 20261004172620_v2_09_approval_state_actor.sql, the runner-only
+# replacement of M5's STAGING-BOUND block from
+# docs/03-database/rehearsal/run/06_M5.sql, the rehearsal sentinel, and
+# the apply order seed then M5-ci then M6, M7, M8, P09M1, P09M2).
+# M5's staging order ids cannot apply on a fresh database. The later
+# files name objects M5 through M8 create, so they stay out of
+# supabase start. 20261006100204 follows those objects, so it is held
+# with them and applied after, the same reason
+# .github/workflows/integration-local.yml gives for files after P09M2.
+# Nothing in that hold is committed.
+#
+# P11M1 is applied only after its LF md5 is
+# 5512f2a66381d3d82fbaaa1099f1d2f0 and its LF length is 12831 bytes.
+# A mismatch exits before that apply. That apply is the only DDL this
+# job adds past the branch migrations and the copied M5 path.
+#
+# Job-local config copy only, copied from p10-db.yml: [db.seed]
+# enabled = false because seed.sql is absent; [auth.hook.send_sms] and
+# [auth.external.google] enabled = false because those blocks read
+# secrets and this job has none.
+
+name: P11 DB
+
+on:
+  push:
+    branches:
+      - feature/phase-11-checkout
+    paths:
+      - "docs/03-database/rehearsal/staging-text/P11M1.sql"
+      - "docs/03-database/rehearsal/p11/asserts.sql"
+      - ".github/workflows/p11-db.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p11:
+    name: P11 local proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Count this branch's migrations
+        run: |
+          set -euo pipefail
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          echo "migration_files=$n"
+          test "$n" -eq 42
+          last=$(find supabase/migrations -name '*.sql' -printf '%f\n' | sort | tail -n 1)
+          echo "last_migration=$last"
+          test "$last" = "20261006100204_v2_10_cart_quote.sql"
+
+      - name: Hold M5 through the Phase 09 migrations until the rehearsal seed
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/held/later"
+          mv supabase/migrations/20261002081523_v2_08_n27_masters.sql "$RUNNER_TEMP/held/M5.sql"
+          mv supabase/migrations/20261002081631_v2_08_rename_seller_orders.sql "$RUNNER_TEMP/held/M6.sql"
+          mv supabase/migrations/20261003075902_v2_08_grants_and_policies.sql "$RUNNER_TEMP/held/M7.sql"
+          mv supabase/migrations/20261003082041_v2_08_functions.sql "$RUNNER_TEMP/held/M8.sql"
+          mv supabase/migrations/20261003214258_v2_09_publish_and_submit.sql "$RUNNER_TEMP/held/P09M1.sql"
+          mv supabase/migrations/20261004172620_v2_09_approval_state_actor.sql "$RUNNER_TEMP/held/P09M2.sql"
+          for file in supabase/migrations/*.sql; do
+            base="$(basename "$file")"
+            ver="${base%%_*}"
+            if [[ "$ver" > "20261004172620" ]]; then
+              mv "$file" "$RUNNER_TEMP/held/later/$base"
+            fi
+          done
+          python3 << 'PY'
+          import os
+          from pathlib import Path
+          held = Path(os.environ["RUNNER_TEMP"]) / "held"
+          pinned = (held / "M5.sql").read_text(encoding="utf-8")
+          rehearsal = Path("docs/03-database/rehearsal/run/06_M5.sql").read_text(encoding="utf-8")
+          start = "-- >>> STAGING-BOUND LITERALS"
+          end_marker = "-- <<< STAGING-BOUND LITERALS"
+
+          def span(text):
+              a = text.index(start)
+              b = text.index(end_marker) + len(end_marker)
+              return a, b
+
+          pa, pb = span(pinned)
+          ra, rb = span(rehearsal)
+          (held / "M5-ci.sql").write_text(
+              pinned[:pa] + rehearsal[ra:rb] + pinned[pb:],
+              encoding="utf-8",
+          )
+          PY
+          n=$(find supabase/migrations -name '*.sql' | wc -l)
+          later=$(find "$RUNNER_TEMP/held/later" -name '*.sql' | wc -l)
+          echo "migrations_at_start=$n"
+          echo "later_migrations=$later"
+          test "$n" -eq 35
+          test "$later" -eq 1
+          test -f "$RUNNER_TEMP/held/later/20261006100204_v2_10_cart_quote.sql"
+
+      - name: Install Supabase CLI 2.106.0
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.106.0
+
+      - name: Disable seed in a job-local config copy
+        run: |
+          set -euo pipefail
+          python3 << 'PY'
+          from pathlib import Path
+          path = Path("supabase/config.toml")
+          text = path.read_text(encoding="utf-8")
+          replacements = {
+              (
+                  "[db.seed]\n"
+                  "# If enabled, seeds the database after migrations during a db reset.\n"
+                  "enabled = true\n"
+              ): (
+                  "[db.seed]\n"
+                  "# Job-local copy only. seed.sql is absent. Never committed.\n"
+                  "enabled = false\n"
+              ),
+              "[auth.hook.send_sms]\nenabled = true\n": "[auth.hook.send_sms]\nenabled = false\n",
+              "[auth.external.google]\nenabled = true\n": "[auth.external.google]\nenabled = false\n",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"config block not found: {old.splitlines()[0]}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Start local Supabase
+        run: |
+          set -euo pipefail
+          supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Apply the branch base, then P11M1, then the asserts
+        run: |
+          set -euo pipefail
+          db=$(docker ps --format '{{.Names}}' | grep '^supabase_db_')
+          test "$(printf '%s\n' "$db" | wc -l)" -eq 1
+          echo "DB_CONTAINER=$db" >> "$GITHUB_ENV"
+          apply() {
+            name="$1"
+            file="$2"
+            echo "===== ${name} $(basename "$file") ====="
+            docker exec -i "$db" psql \
+              -U postgres \
+              -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -P pager=off \
+              -c "SET TIME ZONE 'UTC'" \
+              -f - < "$file"
+          }
+          echo "===== sentinel ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -c "CREATE SCHEMA IF NOT EXISTS rehearsal; CREATE TABLE IF NOT EXISTS rehearsal.sentinel (note text PRIMARY KEY); INSERT INTO rehearsal.sentinel (note) VALUES ('N27 rehearsal branch only') ON CONFLICT DO NOTHING;"
+          apply seed docs/03-database/rehearsal/run/04_seed_shape.sql
+          apply M5 "$RUNNER_TEMP/held/M5-ci.sql"
+          apply M6 "$RUNNER_TEMP/held/M6.sql"
+          apply M7 "$RUNNER_TEMP/held/M7.sql"
+          apply M8 "$RUNNER_TEMP/held/M8.sql"
+          apply P09M1 "$RUNNER_TEMP/held/P09M1.sql"
+          apply P09M2 "$RUNNER_TEMP/held/P09M2.sql"
+          while IFS= read -r file; do
+            apply later "$file"
+          done < <(find "$RUNNER_TEMP/held/later" -name '*.sql' | sort)
+          echo "===== P11M1 LF hash ====="
+          python3 << 'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          raw = Path("docs/03-database/rehearsal/staging-text/P11M1.sql").read_bytes()
+          lf = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+          digest = hashlib.md5(lf).hexdigest()
+          print(f"p11m1_lf_md5={digest} bytes={len(lf)} cr={raw.count(bytes([13]))}")
+          if digest != "5512f2a66381d3d82fbaaa1099f1d2f0" or len(lf) != 12831:
+              raise SystemExit("P11M1 LF hash mismatch; not applying")
+          out = Path(os.environ["RUNNER_TEMP"]) / "P11M1.lf.sql"
+          out.write_bytes(lf)
+          PY
+          echo "===== P11M1 ====="
+          {
+            printf 'BEGIN;\n'
+            cat "$RUNNER_TEMP/P11M1.lf.sql"
+            printf '\nCOMMIT;\n'
+          } | docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -c "SET TIME ZONE 'UTC'" \
+            -f -
+          echo "===== asserts ====="
+          docker exec -i "$db" psql \
+            -U postgres \
+            -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -P pager=off \
+            -P format=csv \
+            -c "SET TIME ZONE 'UTC'" \
+            -f - < docs/03-database/rehearsal/p11/asserts.sql | tee "$RUNNER_TEMP/p11.csv"
+
+      - name: Check the assert table
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/p11.csv" << 'PY'
+          import csv
+          import sys
+          from pathlib import Path
+
+          raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+          header = "name,expected,actual,pass"
+          lines = raw.splitlines()
+          try:
+              start = lines.index(header)
+          except ValueError:
+              sys.exit("asserts produced no result header")
+          rows = []
+          for parsed in csv.reader(lines[start + 1 :]):
+              if len(parsed) != 4:
+                  break
+              rows.append(parsed)
+          print(f"parsed_rows={len(rows)}")
+          first_fail = None
+          for index, parsed in enumerate(rows, start=1):
+              name, expected, actual, passed = parsed
+              row_fail = passed != "t"
+              if index == len(rows) and (
+                  name != "all_pass" or actual != "true|15" or passed != "t"
+              ):
+                  row_fail = True
+              if row_fail and first_fail is None:
+                  first_fail = (index, name, expected, actual, passed)
+          if first_fail is not None:
+              index, name, expected, actual, passed = first_fail
+              print(
+                  f"first_fail row={index} name={name} expected={expected} "
+                  f"actual={actual} pass={passed}"
+              )
+          last = rows[-1] if rows else ("", "", "", "")
+          if (
+              len(rows) != 16
+              or any(parsed[3] != "t" for parsed in rows)
+              or last[0] != "all_pass"
+              or last[2] != "true|15"
+              or last[3] != "t"
+          ):
+              print(
+                  f"FAIL expected 16 rows, every pass=t, "
+                  f"last all_pass actual=true|15 pass=t; "
+                  f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
+              )
+              sys.exit(1)
+          print("PASS: 16 rows, every pass = t, last row all_pass actual=true|15 pass=t")
+          PY
+
+      - name: Stop local Supabase
+        if: always()
+        run: |
+          supabase stop --no-backup || true
