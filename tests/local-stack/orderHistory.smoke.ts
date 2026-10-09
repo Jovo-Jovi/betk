@@ -2,8 +2,10 @@
  * P11 T02 — local-stack smoke (D-TEST, REG-119).
  *
  * Commits one order_status_history row on the throwaway stack and checks
- * a second request still sees it. no_delete_order_history is not disabled
- * and the delete does not remove the row.
+ * a second request still sees it. no_delete_order_history stays enabled.
+ * This test does not DELETE: PostgREST sends DELETE RETURNING, which
+ * Postgres rejects on that INSTEAD NOTHING rule
+ * (supabase/migrations/20260622082857_messaging_orders.sql).
  *
  * This file is not under tests/integration. Integration (staging) runs
  * `vitest run tests/integration` (.github/workflows/ci.yml) and does not
@@ -43,7 +45,7 @@ function assertLocal(): { url: string; serviceKey: string } {
 }
 
 describe("P11 T02 local stack order history", () => {
-  it("commits one order_status_history row and the delete rule leaves it", async () => {
+  it("commits one order_status_history row", async () => {
     const { url, serviceKey } = assertLocal();
     const orderId = REHEARSAL_SELLER_ORDER_IDS[0];
     if (!orderId) throw new Error("rehearsal seller order id is missing");
@@ -76,27 +78,6 @@ describe("P11 T02 local stack order history", () => {
     console.log(
       `order_status_history committed id=${historyId} order_id=${orderId} notes=${CI_TEST_VALUE}`,
     );
-
-    // no_delete_order_history is ON DELETE DO INSTEAD NOTHING
-    // (supabase/migrations/20260622082857_messaging_orders.sql).
-    // The JS client's delete() sends DELETE RETURNING, which Postgres
-    // rejects on that rule. return=minimal is a DELETE with no RETURNING.
-    const removed = await fetch(
-      `${url}/rest/v1/order_status_history?id=eq.${historyId}`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-          "Accept-Profile": "betk",
-          "Content-Profile": "betk",
-          Prefer: "return=minimal",
-        },
-      },
-    );
-    if (!removed.ok) {
-      throw new Error(`delete failed: ${removed.status} ${await removed.text()}`);
-    }
 
     const still = await db
       .from("order_status_history")
