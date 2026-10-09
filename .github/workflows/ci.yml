@@ -31,7 +31,7 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared setup — run once, cache node_modules for all downstream jobs.
@@ -417,9 +417,13 @@ jobs:
 # (a) the harness uses a per-run unique suffix on all unique columns + a prefix
 #     sweep that removes crashed-run leftovers before seeding
 #     (tests/integration/rls.smoke.test.ts); (b) the `concurrency` group above
-#     (ci-${{ github.ref }}) cancels an in-progress run for the SAME ref, so a
-#     PR never races itself. Cross-PR concurrency remains possible and is covered
-#     by (a). Do NOT drop the unique-suffix/sweep design without re-evaluating.
+#     (ci-${{ github.ref }}) keeps one run per ref. cancel-in-progress is
+#     github.event_name != 'pull_request'. A new push to a PR waits for the
+#     running Integration (staging) suite instead of killing it mid-test and
+#     skipping its afterAll. A push to develop or main still cancels the
+#     in-progress run for that ref. Cross-PR concurrency remains possible and
+#     is covered by (a). Do NOT drop the unique-suffix/sweep design without
+#     re-evaluating.
 #
 # Requires secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 #                   SUPABASE_SERVICE_KEY (+ Zod-loader placeholders for env.ts)
