@@ -45,13 +45,6 @@ BEGIN
     RAISE EXCEPTION 'BETK_UNAUTHENTICATED';
   END IF;
 
-  PERFORM 1
-  FROM betk.cart_items
-  WHERE buyer_id = v_uid;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'BETK_CHECKOUT_EMPTY_CART';
-  END IF;
-
   SELECT a.governorate
     INTO v_gov
   FROM betk.addresses AS a
@@ -61,7 +54,12 @@ BEGIN
     RAISE EXCEPTION 'BETK_ADDRESS_NOT_FOUND';
   END IF;
 
-  PERFORM betk.checkout_refuse_inactive_store();
+  PERFORM 1
+  FROM betk.cart_items
+  WHERE buyer_id = v_uid;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BETK_CHECKOUT_EMPTY_CART';
+  END IF;
 
   IF EXISTS (
     SELECT 1
@@ -82,6 +80,8 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'BETK_CHECKOUT_LINE_UNRESOLVED';
   END IF;
+
+  PERFORM betk.checkout_refuse_inactive_store();
 
   FOR r IN
     SELECT

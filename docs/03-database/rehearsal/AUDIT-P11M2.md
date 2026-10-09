@@ -1,12 +1,12 @@
 # AUDIT - authored P11M2 (T07)
 
-Audited text: `docs/03-database/rehearsal/staging-text/P11M2.sql`. T07 authored it. It is not applied. No `apply_migration`. No staging write. The reads were `pg_get_functiondef`, `pg_proc`, `pg_policy`, `information_schema.columns`, and `list_migrations`.
+Audited text: `docs/03-database/rehearsal/staging-text/P11M2.sql`. T07 authored it. T07-FIX (2026-10-09) moved the existing refusal blocks into checkout's order and this audit was re-run on that text. It is not applied. No `apply_migration`. No staging write. T07-FIX re-read `pg_get_functiondef` of `betk.checkout_from_cart(uuid)` and of `betk.checkout_refuse_inactive_store()`, and `list_migrations`.
 
-Sources: `PHASE_11_CHECKOUT.md` section 5 (R-DELIVERY, R-K03), the flagged expansion (planning chat, 2026-10-09), and those live reads on 2026-10-09.
+Sources: `PHASE_11_CHECKOUT.md` section 5 (R-DELIVERY, R-K03), the flagged expansion (planning chat, 2026-10-09), the T07-FIX ruling (planning chat, 2026-10-09) that the expansion's intent is checkout's refusal order, and those live reads on 2026-10-09.
 
 Live `betk.checkout_from_cart(uuid)`: `pg_get_functiondef` md5 `fb7b8b6965a3988be4a57ef8112f2130`, length 10594, `prosecdef` false, `provolatile` `v`, `proconfig` `search_path=betk, public`, owner `postgres`, ACL `{postgres=X/postgres,authenticated=X/postgres}`. `pg_get_functiondef` omits `SECURITY INVOKER` because that is the default. Line numbers below are that definition.
 
-`list_migrations`: 43, last `20261009164602` / `v2_11_checkout`. Local `supabase/migrations` is 43 files, same last version. P11M2 is not a 44th row. P11M2 LF md5 `30aa5d516d51d6a23370ff464ea731cd`, 4138 bytes, no CR, ends LF, ASCII-only, no BOM.
+`list_migrations`: 43, last `20261009164602` / `v2_11_checkout`. Local `supabase/migrations` is 43 files, same last version. P11M2 is not a 44th row. P11M2 LF md5 `e39310b4714676b747312935d76b03a1`, 4138 bytes, no CR, ends LF, ASCII-only, no BOM.
 
 Verdicts: **MATCH** (the expression or the code string equals the cited live text, apart from a variable name only where a pair says so), **BROADER** (allows more), **NARROWER** (allows less than the live privilege), **AUTHORED** (not a copy of a fenced block; basis stated), **MISMATCH** (contradicts the expansion or the cited checkout text). A FINDING is a BROADER security row with no closer. A GRANT is never cited as the closer of a BROADER table privilege.
 
@@ -20,7 +20,7 @@ The function name is `betk.checkout_delivery_preview(uuid)`. **AUTHORED.** No li
 |---|---|---|
 | 1 | SECURITY INVOKER, STABLE, `search_path` as in P11M1, EXECUTE for `authenticated` only | AUTHORED |
 | 2 | Address id in, one `numeric(10,2)` combined total out, no per-seller fee | AUTHORED |
-| 3 | Refusal codes are checkout's, in the expansion's sequence | AUTHORED |
+| 3 | Refusal codes are checkout's, and each preview position equals the checkout position | MATCH |
 | 4 | Weight, origin, destination, band, and fee sum | MATCH |
 | 5 | No change to `checkout_from_cart` or any other existing object | MATCH |
 
@@ -33,7 +33,7 @@ The function name is `betk.checkout_delivery_preview(uuid)`. **AUTHORED.** No li
 | `search_path` | file line 29: `SET search_path TO 'betk', 'public'` | P11M1 `checkout_from_cart` header, and live `proconfig` `search_path=betk, public` | MATCH | Same SET text P11M1 stored |
 | EXECUTE | file lines 139-140 | Helper statements in `20261009164602_v2_11_checkout.sql` lines 50-51. Live helper ACL `{postgres=X/postgres,authenticated=X/postgres}` | AUTHORED | `REVOKE EXECUTE ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authenticated`. Not applied, so this ACL is the helper's measured result of those two statements, not a new measurement. anon and PUBLIC are revoked. No table GRANT |
 
-The cart read (file lines 48-50) is checkout's `PERFORM` (live lines 85-87) without `FOR UPDATE` (live line 88). A STABLE body cannot take that lock. The exception string is still live line 90.
+The cart read (file lines 57-59) is checkout's `PERFORM` (live lines 85-87) without `FOR UPDATE` (live line 88). A STABLE body cannot take that lock. The exception string is still live line 90.
 
 ## 2. Signature (R-K03)
 
@@ -45,46 +45,27 @@ There is no second OUT parameter, no `RETURNS TABLE`, and no `delivery_fee` colu
 
 ## 3. Refusals
 
-Each code string below is the live `RAISE`. The sequence is the expansion's list, not the live sequence.
+Each code string below is the live `RAISE`. The preview position equals the checkout position. Checkout lines are `pg_get_functiondef` of `betk.checkout_from_cart(uuid)`, re-read 2026-10-09, md5 `fb7b8b6965a3988be4a57ef8112f2130`.
 
-Live sequence of these codes, from `pg_get_functiondef`:
+Checkout raises that this function does not raise, and that stay out of the preview: payment window, then REG-88 (`BETK_CHECKOUT_VERSION_UNCONFIGURED` at live line 58, `BETK_CHECKOUT_ACCEPTANCE_REQUIRED` at live line 73), then `BETK_CHECKOUT_QUOTE_EXPIRED` (live line 131), `BETK_CHECKOUT_QUOTE_OUT_OF_BAND` (live line 146), and `BETK_CHECKOUT_OUT_OF_STOCK` (live line 157).
 
-| Order | Live line | Code |
-|---|---|---|
-| 1 | 45 | `BETK_UNAUTHENTICATED` |
-| (skipped) | 48-73 | Payment window, then REG-88 (`BETK_CHECKOUT_VERSION_UNCONFIGURED`, `BETK_CHECKOUT_ACCEPTANCE_REQUIRED`). Not in the preview |
-| 2 | 82 | `BETK_ADDRESS_NOT_FOUND` |
-| 3 | 90 | `BETK_CHECKOUT_EMPTY_CART` (after `FOR UPDATE` on line 88) |
-| 4 | 110 | `BETK_CHECKOUT_LINE_UNRESOLVED` |
-| 5 | 113 | `PERFORM betk.checkout_refuse_inactive_store()` |
-| (skipped) | 131, 146, 157 | `BETK_CHECKOUT_QUOTE_EXPIRED`, `BETK_CHECKOUT_QUOTE_OUT_OF_BAND`, `BETK_CHECKOUT_OUT_OF_STOCK`. Not in the preview |
-| 6 | 187 | `BETK_CHECKOUT_EMPTY_CART` again, when the store grouping is empty |
-| 7 | 203 | `BETK_CHECKOUT_RATE_MISSING` |
+| Position | Preview line | Checkout line | Code | Positions equal | Verdict |
+|---|---|---|---|---|---|
+| 1 | 45 | 45 | `BETK_UNAUTHENTICATED` | 1 = 1 | MATCH |
+| 2 | 54 | 82 | `BETK_ADDRESS_NOT_FOUND` | 2 = 2 | MATCH |
+| 3 | 61 | 90 | `BETK_CHECKOUT_EMPTY_CART` | 3 = 3 | MATCH |
+| 4 | 81 | 110 | `BETK_CHECKOUT_LINE_UNRESOLVED` | 4 = 4 | MATCH |
+| 5 | 84 | 113 | call `checkout_refuse_inactive_store` | 5 = 5 | MATCH |
+| 6 | 109 | 187 | `BETK_CHECKOUT_EMPTY_CART` | 6 = 6 | MATCH |
+| 7 | 125 | 203 | `BETK_CHECKOUT_RATE_MISSING` | 7 = 7 | MATCH |
 
-The helper's own `pg_get_functiondef` (md5 `5e101a96723d1a7322875bc8f8e7e304`, length 479, `prosecdef` true) raises `BETK_CHECKOUT_STORE_INACTIVE` on line 16. Checkout does not inline that string. The preview does not inline it either. File line 64 is the same `PERFORM` as live line 113.
+Position 3 is checkout's cart `PERFORM` (live lines 85-87) after `FOR UPDATE` (live line 88). The preview `PERFORM` is file lines 57-59, without that lock. The exception string is live line 90. Position 6 is the empty store grouping. The exception string is live line 187.
 
-Preview sequence:
+The helper's own `pg_get_functiondef` (md5 `5e101a96723d1a7322875bc8f8e7e304`, length 479, `prosecdef` true), re-read 2026-10-09, raises `BETK_CHECKOUT_STORE_INACTIVE` on line 16. Checkout does not inline that string. The preview does not inline it either. File line 84 is the same `PERFORM` as live line 113.
 
-| Order | File line | Code | Live line of that string | Verdict |
-|---|---|---|---|---|
-| 1 | 45 | `BETK_UNAUTHENTICATED` | 45 | MATCH |
-| 2 | 52 | `BETK_CHECKOUT_EMPTY_CART` | 90 | MATCH |
-| 3 | 61 | `BETK_ADDRESS_NOT_FOUND` | 82 | MATCH |
-| 4 | 64 | call `checkout_refuse_inactive_store` | 113 (raise is helper line 16) | MATCH |
-| 5 | 83 | `BETK_CHECKOUT_LINE_UNRESOLVED` | 110 | MATCH |
-| 6 | 109 | `BETK_CHECKOUT_EMPTY_CART` | 187 | MATCH |
-| 7 | 125 | `BETK_CHECKOUT_RATE_MISSING` | 203 | MATCH |
+The address predicate is live lines 79-80, copied at file lines 51-52: `a.id = p_delivery_address_id AND a.buyer_id = v_uid`. `addr_self` USING is `(buyer_id = auth.uid()) OR betk.is_admin()`. The function is INVOKER, so a non-admin caller does not see another buyer's address. The `buyer_id = v_uid` predicate is still there, so an admin who passes another buyer's address gets the same `BETK_ADDRESS_NOT_FOUND` checkout raises. The preview selects only `a.governorate` (file lines 48-49). Checkout also selects city, street, and notes (live lines 76-77) for the master snapshot. Those three are not the rate.
 
-The code strings and the `PERFORM` are MATCH. The sequence is **AUTHORED**: the expansion puts the empty-cart check before the address check, and the helper call before the unresolved-line check. Live checkout does the opposite for those two pairs.
-
-When both faults are present, the first raise differs:
-
-- Empty cart and a missing address: the preview raises `BETK_CHECKOUT_EMPTY_CART`. Checkout raises `BETK_ADDRESS_NOT_FOUND` (live line 82 is before line 90).
-- An unresolved line on an inactive store: the preview raises `BETK_CHECKOUT_STORE_INACTIVE`. Checkout raises `BETK_CHECKOUT_LINE_UNRESOLVED` (live line 110 is before line 113).
-
-The address predicate is live lines 79-80, copied at file lines 58-59: `a.id = p_delivery_address_id AND a.buyer_id = v_uid`. `addr_self` USING is `(buyer_id = auth.uid()) OR betk.is_admin()`. The function is INVOKER, so a non-admin caller does not see another buyer's address. The `buyer_id = v_uid` predicate is still there, so an admin who passes another buyer's address gets the same `BETK_ADDRESS_NOT_FOUND` checkout raises. The preview selects only `a.governorate` (file lines 55-56). Checkout also selects city, street, and notes (live lines 76-77) for the master snapshot. Those three are not the rate.
-
-The unresolved predicate (file lines 66-81) is live lines 93-108, including `l.weight_g IS NOT NULL`, `l.deleted_at IS NULL`, and `l.status IN ('active', 'sold_out')`.
+The unresolved predicate (file lines 64-79) is live lines 93-108, including `l.weight_g IS NOT NULL`, `l.deleted_at IS NULL`, and `l.status IN ('active', 'sold_out')`.
 
 No `checkout_payment_window_minutes`, `checkout_quote_multiplier`, or `checkout_agreement_version`. No `stock_qty`. No `quote_expires_at`. The `LEFT JOIN betk.inquiries` at file line 97 is the weight query's join (live line 173). It does not test the quote.
 
@@ -172,7 +153,7 @@ c MATCH, one row each:
 1. SECURITY INVOKER
 2. `search_path`
 3. `BETK_UNAUTHENTICATED`
-4. `BETK_CHECKOUT_EMPTY_CART` (file lines 52 and 109 are one code)
+4. `BETK_CHECKOUT_EMPTY_CART` (file lines 61 and 109 are one code)
 5. `BETK_ADDRESS_NOT_FOUND`
 6. `PERFORM betk.checkout_refuse_inactive_store()`
 7. `BETK_CHECKOUT_LINE_UNRESOLVED`
@@ -181,14 +162,15 @@ c MATCH, one row each:
 10. Origin and destination
 11. Band predicate
 12. Fee sum
+13. Refusal positions (each preview position equals the checkout position)
 
-c AUTHORED: STABLE, the signature (name and `numeric(10,2)`), and the refusal sequence. a AUTHORED: the `REVOKE` and the `GRANT`. b MATCH: no policy statement. d MATCH: section 5, no existing object is named by a `CREATE`, `ALTER`, or `DROP`.
+c AUTHORED: STABLE, and the signature (name and `numeric(10,2)`). a AUTHORED: the `REVOKE` and the `GRANT`. b MATCH: no policy statement. d MATCH: section 5, no existing object is named by a `CREATE`, `ALTER`, or `DROP`.
 
 | Part | MATCH | BROADER | NARROWER | AUTHORED | MISMATCH | FINDING |
 |---|---:|---:|---:|---:|---:|---:|
 | a Grants | 0 | 0 | 0 | 2 | 0 | 0 |
 | b Policies | 1 | 0 | 0 | 0 | 0 | 0 |
-| c Functions | 12 | 0 | 0 | 3 | 0 | 0 |
+| c Functions | 13 | 0 | 0 | 2 | 0 | 0 |
 | d Untouched objects | 1 | 0 | 0 | 0 | 0 | 0 |
 
 **Zero MISMATCH. Zero BROADER. Zero FINDING.**
