@@ -25,7 +25,7 @@
 # P09M2. Nothing in that hold is committed.
 #
 # P11M3 is applied only after its LF md5 is
-# b8b18cda62ab6ead3fb45d9d2143516e and its LF length is 5455 bytes.
+# f9be8d3fd38886c5172c3d99fb069d2d and its LF length is 7712 bytes.
 # A mismatch exits before that apply. That apply is the only DDL this
 # job adds past the branch migrations and the copied M5 path.
 #
@@ -198,7 +198,7 @@ jobs:
           lf = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
           digest = hashlib.md5(lf).hexdigest()
           print(f"p11m3_lf_md5={digest} bytes={len(lf)} cr={raw.count(bytes([13]))}")
-          if digest != "b8b18cda62ab6ead3fb45d9d2143516e" or len(lf) != 5455:
+          if digest != "f9be8d3fd38886c5172c3d99fb069d2d" or len(lf) != 7712:
               raise SystemExit("P11M3 LF hash mismatch; not applying")
           out = Path(os.environ["RUNNER_TEMP"]) / "P11M3.lf.sql"
           out.write_bytes(lf)
@@ -251,7 +251,7 @@ jobs:
               name, expected, actual, passed = parsed
               row_fail = passed != "t"
               if index == len(rows) and (
-                  name != "all_pass" or actual != "true|17" or passed != "t"
+                  name != "all_pass" or actual != "true|19" or passed != "t"
               ):
                   row_fail = True
               if row_fail and first_fail is None:
@@ -264,19 +264,19 @@ jobs:
               )
           last = rows[-1] if rows else ("", "", "", "")
           if (
-              len(rows) != 18
+              len(rows) != 20
               or any(parsed[3] != "t" for parsed in rows)
               or last[0] != "all_pass"
-              or last[2] != "true|17"
+              or last[2] != "true|19"
               or last[3] != "t"
           ):
               print(
-                  f"FAIL expected 18 rows, every pass=t, "
-                  f"last all_pass actual=true|17 pass=t; "
+                  f"FAIL expected 20 rows, every pass=t, "
+                  f"last all_pass actual=true|19 pass=t; "
                   f"got {len(rows)} last={last[0]!r},{last[2]!r},{last[3]!r}"
               )
               sys.exit(1)
-          print("PASS: 18 rows, every pass = t, last row all_pass actual=true|17 pass=t")
+          print("PASS: 20 rows, every pass = t, last row all_pass actual=true|19 pass=t")
           PY
 
       - name: Stop local Supabase

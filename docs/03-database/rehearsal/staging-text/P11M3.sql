@@ -1,7 +1,7 @@
 -- P11M3. Payment-window sweeper. Not applied.
--- One new function and one pg_cron job. This file does not replace
--- checkout_from_cart, checkout_delivery_preview, enforce_order_transition,
--- or restore_stock_on_cancel. No new table, column, or enum member.
+-- One new function, one replaced function, and one pg_cron job.
+-- Does not replace checkout_from_cart, checkout_delivery_preview,
+-- or enforce_order_transition. No new table, column, or enum member.
 -- No settings write.
 --
 -- Live reads, 2026-10-10, read-only:
@@ -142,3 +142,74 @@ SELECT cron.schedule(
   '* * * * *',
   $$SELECT betk.sweep_expired_payment_windows()$$
 );
+
+-- R-RESTORE-MERGE (planning chat, 2026-10-10).
+-- Live pg_get_functiondef md5 037aacbdb3820d1f98dd259993f16593.
+-- This statement is that definition. Each cart INSERT gains
+-- ON CONFLICT DO NOTHING and no conflict target, so both
+-- partial unique indexes are covered. The buyer's existing
+-- line is kept. The stock UPDATE is unchanged. Signature,
+-- LANGUAGE plpgsql, SECURITY DEFINER, and search_path are
+-- unchanged. CREATE OR REPLACE keeps the trigger binding
+-- and the existing grants. This file does not GRANT or
+-- REVOKE this function.
+
+CREATE OR REPLACE FUNCTION betk.restore_stock_on_cancel()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'betk', 'public'
+AS $function$
+BEGIN
+  IF NEW.status <> 'cancelled'::betk.order_status
+     OR OLD.status IS NOT DISTINCT FROM NEW.status
+     OR OLD.status NOT IN (
+       'pending'::betk.order_status,
+       'confirmed'::betk.order_status,
+       'preparing'::betk.order_status,
+       'ready'::betk.order_status
+     ) THEN
+    RETURN NEW;
+  END IF;
+
+  UPDATE betk.listings AS l
+  SET stock_qty = l.stock_qty + agg.qty,
+      status = CASE
+        WHEN l.status = 'sold_out'::betk.listing_status
+             AND l.stock_qty + agg.qty > 0
+        THEN 'active'::betk.listing_status
+        ELSE l.status
+      END,
+      updated_at = now()
+  FROM (
+    SELECT i.listing_id, sum(i.quantity)::integer AS qty
+    FROM betk.order_items AS i
+    WHERE i.order_id = NEW.id
+    GROUP BY i.listing_id
+  ) AS agg
+  WHERE l.id = agg.listing_id
+    AND l.stock_qty IS NOT NULL;
+
+  INSERT INTO betk.cart_items (
+    buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
+  )
+  SELECT NEW.buyer_id, i.listing_id, i.quantity, i.unit_price, false, NULL
+  FROM betk.order_items AS i
+  WHERE i.order_id = NEW.id
+    AND i.inquiry_id IS NULL
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO betk.cart_items (
+    buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
+  )
+  SELECT NEW.buyer_id, i.listing_id, i.quantity, i.unit_price, true, i.inquiry_id
+  FROM betk.order_items AS i
+  JOIN betk.inquiries AS q ON q.id = i.inquiry_id
+  WHERE i.order_id = NEW.id
+    AND i.inquiry_id IS NOT NULL
+    AND q.quote_expires_at > now()
+  ON CONFLICT DO NOTHING;
+
+  RETURN NEW;
+END;
+$function$;

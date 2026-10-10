@@ -1,6 +1,6 @@
 -- T11 CI proof of P11M3 on the local stack only.
 -- One result set: name, expected, actual, pass.
--- CASE_COUNT is 17 recorded cases. all_pass checks that count.
+-- CASE_COUNT is 19 recorded cases. all_pass checks that count.
 --
 -- This file issues no DDL and disables no protection. No CREATE, ALTER,
 -- DROP, GRANT, REVOKE, DISABLE TRIGGER, DISABLE RULE, or
@@ -25,8 +25,11 @@
 -- the flagged rows, P11M3.sql, and restore_stock_on_cancel in
 -- 20261003082041_v2_08_functions.sql. A checkout fixture keeps its
 -- creation history row (notes order created) and gains one sweep row.
--- sweep_warning_isolates forces one restore to fail with the existing
--- cart unique index. No DDL.
+-- sweep_warning_isolates forces one restore to fail without DDL.
+-- The duplicate cart line no longer raises. The failure is integer
+-- overflow on the tracked stock add (22003), caught by the per-master
+-- EXCEPTION block. sweep_restore_conflict_fixed and
+-- sweep_restore_conflict_custom hold an existing line first.
 --
 -- Rows:
 -- sweep_anon_denied 42501|f
@@ -44,6 +47,8 @@
 -- sweep_three_stores 3|3|1
 -- sweep_mixed_children confirmed|0
 -- sweep_warning_isolates pending|cancelled
+-- sweep_restore_conflict_fixed cancelled|5|1|3|55|1|1
+-- sweep_restore_conflict_custom cancelled|5|1|2|65|1|1
 -- sweep_second_run unchanged
 -- sweep_limit 100|1
 
@@ -59,6 +64,8 @@ DECLARE
   v_buyer_iso uuid := 'f1000000-0000-4000-8000-000000000003';
   v_buyer_mixed uuid := 'f1000000-0000-4000-8000-000000000004';
   v_buyer_limit uuid := 'f1000000-0000-4000-8000-000000000005';
+  v_buyer_fix uuid := 'f1000000-0000-4000-8000-000000000006';
+  v_buyer_cust uuid := 'f1000000-0000-4000-8000-000000000007';
   v_seller_a uuid := 'f1000000-0000-4000-8000-000000000011';
   v_seller_b uuid := 'f1000000-0000-4000-8000-000000000012';
   v_seller_c uuid := 'f1000000-0000-4000-8000-000000000013';
@@ -73,11 +80,16 @@ DECLARE
   v_list_null uuid := 'f3000000-0000-4000-8000-000000000006';
   v_list_fail uuid := 'f3000000-0000-4000-8000-000000000007';
   v_list_ok uuid := 'f3000000-0000-4000-8000-000000000008';
+  v_list_fixc uuid := 'f3000000-0000-4000-8000-000000000009';
+  v_list_cust uuid := 'f3000000-0000-4000-8000-00000000000a';
   v_iq_live uuid := 'f4000000-0000-4000-8000-000000000001';
   v_iq_drop uuid := 'f4000000-0000-4000-8000-000000000002';
+  v_iq_cust uuid := 'f4000000-0000-4000-8000-000000000003';
   v_addr_main uuid := 'f5000000-0000-4000-8000-000000000001';
   v_addr_hold uuid := 'f5000000-0000-4000-8000-000000000002';
   v_addr_iso uuid := 'f5000000-0000-4000-8000-000000000003';
+  v_addr_fix uuid := 'f5000000-0000-4000-8000-000000000004';
+  v_addr_cust uuid := 'f5000000-0000-4000-8000-000000000005';
   v_rate uuid := 'f7000000-0000-4000-8000-000000000001';
   v_master_mixed uuid := 'f6000000-0000-4000-8000-000000000001';
   v_child_pending uuid := 'f6000000-0000-4000-8000-000000000011';
@@ -90,6 +102,9 @@ DECLARE
   v_master_null uuid;
   v_master_fail uuid;
   v_master_ok uuid;
+  v_master_fix uuid;
+  v_master_cust uuid;
+  v_cust_setup text;
   v_rows jsonb := '[]'::jsonb;
   v_all boolean;
   v_n integer;
@@ -179,6 +194,8 @@ BEGIN
     (v_buyer_iso, 'buyer', 'active', '01094330003'),
     (v_buyer_mixed, 'buyer', 'active', '01094330004'),
     (v_buyer_limit, 'buyer', 'active', '01094330005'),
+    (v_buyer_fix, 'buyer', 'active', '01094330006'),
+    (v_buyer_cust, 'buyer', 'active', '01094330007'),
     (v_seller_a, 'seller', 'active', '01094330011'),
     (v_seller_b, 'seller', 'active', '01094330012'),
     (v_seller_c, 'seller', 'active', '01094330013');
@@ -227,7 +244,11 @@ BEGIN
     (v_list_fail, v_store_a, v_arts, 'CI fail', 'product', 'fixed', 40, 5,
      false, 'active', 200, 10, 10, 10, 1),
     (v_list_ok, v_store_a, v_arts, 'CI ok', 'product', 'fixed', 40, 5,
-     false, 'active', 200, 10, 10, 10, 1);
+     false, 'active', 200, 10, 10, 10, 1),
+    (v_list_fixc, v_store_a, v_arts, 'CI fixc', 'product', 'fixed', 40, 5,
+     false, 'active', 200, 10, 10, 10, 1),
+    (v_list_cust, v_store_a, v_arts, 'CI cust', 'product', 'fixed', 50, 5,
+     true, 'active', 200, 10, 10, 10, 1);
 
   UPDATE betk.listings SET price = 75 WHERE id = v_list_fixed;
   GET DIAGNOSTICS v_n = ROW_COUNT;
@@ -242,12 +263,16 @@ BEGIN
     (v_iq_live, v_buyer_main, v_store_b, v_list_live, 1, 'ci',
      80, 1, now(), now() + interval '48 hours'),
     (v_iq_drop, v_buyer_main, v_store_c, v_list_drop, 1, 'ci',
+     80, 1, now(), now() + interval '48 hours'),
+    (v_iq_cust, v_buyer_cust, v_store_a, v_list_cust, 1, 'ci',
      80, 1, now(), now() + interval '48 hours');
 
   INSERT INTO betk.addresses (id, buyer_id, governorate, city, street_address) VALUES
     (v_addr_main, v_buyer_main, 'Cairo', 'Cairo', '1'),
     (v_addr_hold, v_buyer_hold, 'Cairo', 'Cairo', '1'),
-    (v_addr_iso, v_buyer_iso, 'Cairo', 'Cairo', '1');
+    (v_addr_iso, v_buyer_iso, 'Cairo', 'Cairo', '1'),
+    (v_addr_fix, v_buyer_fix, 'Cairo', 'Cairo', '1'),
+    (v_addr_cust, v_buyer_cust, 'Cairo', 'Cairo', '1');
 
   INSERT INTO betk.agreement_acceptances (user_id, document, version_label) VALUES
     (v_buyer_main, 'buyer_terms', v_label),
@@ -255,7 +280,11 @@ BEGIN
     (v_buyer_hold, 'buyer_terms', v_label),
     (v_buyer_hold, 'return_policy', v_label),
     (v_buyer_iso, 'buyer_terms', v_label),
-    (v_buyer_iso, 'return_policy', v_label);
+    (v_buyer_iso, 'return_policy', v_label),
+    (v_buyer_fix, 'buyer_terms', v_label),
+    (v_buyer_fix, 'return_policy', v_label),
+    (v_buyer_cust, 'buyer_terms', v_label),
+    (v_buyer_cust, 'return_policy', v_label);
 
   INSERT INTO betk.courier_rates (
     id, origin_governorate, destination_governorate, weight_min_g, weight_max_g, fee_egp
@@ -536,6 +565,58 @@ BEGIN
     RAISE EXCEPTION 'BETK_P11_CHECKOUT iso';
   END IF;
 
+  INSERT INTO betk.cart_items (
+    buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
+  ) VALUES (
+    v_buyer_fix, v_list_fixc, 1, 40, false, NULL
+  );
+  PERFORM set_config('request.jwt.claim.sub', v_buyer_fix::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    json_build_object('sub', v_buyer_fix, 'role', 'authenticated')::text,
+    true
+  );
+  EXECUTE 'SET ROLE authenticated';
+  BEGIN
+    v_master := NULL;
+    EXECUTE 'SELECT betk.checkout_from_cart($1)' INTO v_master USING v_addr_fix;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'BETK_P11_CHECKOUT fix %', SQLERRM;
+  END;
+  EXECUTE 'RESET ROLE';
+  PERFORM set_config('search_path', 'betk, public', true);
+  v_master_fix := v_master;
+
+  INSERT INTO betk.cart_items (
+    buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
+  ) VALUES (
+    v_buyer_cust, v_list_cust, 1, 70, true, v_iq_cust
+  );
+  PERFORM set_config('request.jwt.claim.sub', v_buyer_cust::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    json_build_object('sub', v_buyer_cust, 'role', 'authenticated')::text,
+    true
+  );
+  EXECUTE 'SET ROLE authenticated';
+  BEGIN
+    v_master := NULL;
+    EXECUTE 'SELECT betk.checkout_from_cart($1)' INTO v_master USING v_addr_cust;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'BETK_P11_CHECKOUT cust %', SQLERRM;
+  END;
+  EXECUTE 'RESET ROLE';
+  PERFORM set_config('search_path', 'betk, public', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  v_master_cust := v_master;
+  IF v_master_fix IS NULL OR v_master_cust IS NULL THEN
+    RAISE EXCEPTION 'BETK_P11_CHECKOUT conflict';
+  END IF;
+
   IF (
     SELECT count(*)
     FROM betk.seller_orders AS s
@@ -626,6 +707,12 @@ BEGIN
   UPDATE betk.master_orders
   SET payment_deadline = now() - interval '8 hours'
   WHERE id = v_master_main;
+  UPDATE betk.master_orders
+  SET payment_deadline = now() - interval '6 hours'
+  WHERE id = v_master_fix;
+  UPDATE betk.master_orders
+  SET payment_deadline = now() - interval '5 hours'
+  WHERE id = v_master_cust;
   UPDATE betk.inquiries
   SET quote_expires_at = now() - interval '1 hour'
   WHERE id = v_iq_drop;
@@ -634,12 +721,31 @@ BEGIN
     RAISE EXCEPTION 'BETK_P11_FIXTURE_DROP_QUOTE';
   END IF;
 
-  -- Fixed-line restore will hit uq_cart_items_listing. No DDL.
+  -- Tracked stock add overflows integer. No DDL. SQLSTATE 22003.
+  UPDATE betk.listings
+  SET stock_qty = 2147483647
+  WHERE id = v_list_fail;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'BETK_P11_FIXTURE_OVERFLOW';
+  END IF;
+
   INSERT INTO betk.cart_items (
     buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
   ) VALUES (
-    v_buyer_iso, v_list_fail, 1, 40, false, NULL
+    v_buyer_fix, v_list_fixc, 3, 55, false, NULL
   );
+
+  v_cust_setup := 'ok';
+  BEGIN
+    INSERT INTO betk.cart_items (
+      buyer_id, listing_id, quantity, unit_price, is_custom, inquiry_id
+    ) VALUES (
+      v_buyer_cust, v_list_cust, 2, 65, true, v_iq_cust
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_cust_setup := SQLSTATE || ' ' || replace(SQLERRM, chr(10), ' ');
+  END;
 
   INSERT INTO betk.master_orders (
     id, buyer_id, betk_ref, combined_delivery_total, proof_path, payment_deadline
@@ -1007,7 +1113,7 @@ BEGIN
     'pass', v_actual = 'confirmed|0'
   ));
 
-  -- 15. The colliding master stays pending. The later master is swept.
+  -- 15. The overflow master stays pending. The later master is swept.
   IF EXISTS (
        SELECT 1
        FROM betk.seller_orders AS s
@@ -1015,7 +1121,7 @@ BEGIN
        WHERE s.master_order_id = v_master_fail
          AND s.status = 'pending'::betk.order_status
          AND s.cancelled_by IS NULL
-         AND l.stock_qty = 4
+         AND l.stock_qty = 2147483647
      )
      AND (
        SELECT count(*)
@@ -1023,7 +1129,7 @@ BEGIN
        WHERE c.buyer_id = v_buyer_iso
          AND c.listing_id = v_list_fail
          AND c.inquiry_id IS NULL
-     ) = 1
+     ) = 0
      AND NOT EXISTS (
        SELECT 1
        FROM betk.order_status_history AS h
@@ -1064,7 +1170,155 @@ BEGIN
     'pass', v_actual = 'pending|cancelled'
   ));
 
-  -- 16. A second call changes nothing and adds no notification or history.
+  -- 16. Existing fixed line is kept. Stock is restored. One history, one notice.
+  IF (
+       SELECT count(*)
+       FROM betk.seller_orders AS s
+       WHERE s.master_order_id = v_master_fix
+         AND s.status = 'cancelled'::betk.order_status
+         AND s.cancelled_by = 'system'::betk.cancelled_by_type
+     ) = 1
+     AND (
+       SELECT count(*)
+       FROM betk.seller_orders AS s
+       WHERE s.master_order_id = v_master_fix
+     ) = 1
+     AND EXISTS (
+       SELECT 1
+       FROM betk.listings AS l
+       WHERE l.id = v_list_fixc
+         AND l.stock_qty = 5
+         AND l.status = 'active'::betk.listing_status
+     )
+     AND (
+       SELECT count(*)
+       FROM betk.cart_items AS c
+       WHERE c.buyer_id = v_buyer_fix
+         AND c.listing_id = v_list_fixc
+     ) = 1
+     AND EXISTS (
+       SELECT 1
+       FROM betk.cart_items AS c
+       WHERE c.buyer_id = v_buyer_fix
+         AND c.listing_id = v_list_fixc
+         AND c.quantity = 3
+         AND c.unit_price = 55
+         AND c.is_custom = false
+         AND c.inquiry_id IS NULL
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM betk.order_items AS i
+       JOIN betk.seller_orders AS s ON s.id = i.order_id
+       WHERE s.master_order_id = v_master_fix
+         AND i.listing_id = v_list_fixc
+         AND i.quantity = 1
+         AND i.inquiry_id IS NULL
+     )
+     AND (
+       SELECT count(*)
+       FROM betk.order_status_history AS h
+       JOIN betk.seller_orders AS s ON s.id = h.order_id
+       WHERE s.master_order_id = v_master_fix
+         AND h.notes = 'payment_window_expired'
+     ) = 1
+     AND (
+       SELECT count(*)
+       FROM betk.notifications AS n
+       WHERE n.user_id = v_buyer_fix
+         AND n.type = 'payment_window_expired'
+         AND n.data->>'master_order_id' = v_master_fix::text
+     ) = 1 THEN
+    v_actual := 'cancelled|5|1|3|55|1|1';
+  ELSE
+    v_actual := 'miss';
+  END IF;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'sweep_restore_conflict_fixed',
+    'expected', 'cancelled|5|1|3|55|1|1',
+    'actual', v_actual,
+    'pass', v_actual = 'cancelled|5|1|3|55|1|1'
+  ));
+
+  -- 17. Existing inquiry line is kept, if that line can be inserted here.
+  IF v_cust_setup <> 'ok' THEN
+    v_actual := 'not constructible: ' || v_cust_setup;
+  ELSIF (
+       SELECT count(*)
+       FROM betk.seller_orders AS s
+       WHERE s.master_order_id = v_master_cust
+         AND s.status = 'cancelled'::betk.order_status
+         AND s.cancelled_by = 'system'::betk.cancelled_by_type
+     ) = 1
+     AND (
+       SELECT count(*)
+       FROM betk.seller_orders AS s
+       WHERE s.master_order_id = v_master_cust
+     ) = 1
+     AND EXISTS (
+       SELECT 1
+       FROM betk.listings AS l
+       WHERE l.id = v_list_cust
+         AND l.stock_qty = 5
+         AND l.status = 'active'::betk.listing_status
+     )
+     AND (
+       SELECT count(*)
+       FROM betk.cart_items AS c
+       WHERE c.buyer_id = v_buyer_cust
+         AND c.inquiry_id = v_iq_cust
+     ) = 1
+     AND EXISTS (
+       SELECT 1
+       FROM betk.cart_items AS c
+       WHERE c.buyer_id = v_buyer_cust
+         AND c.inquiry_id = v_iq_cust
+         AND c.listing_id = v_list_cust
+         AND c.quantity = 2
+         AND c.unit_price = 65
+         AND c.is_custom = true
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM betk.order_items AS i
+       JOIN betk.seller_orders AS s ON s.id = i.order_id
+       WHERE s.master_order_id = v_master_cust
+         AND i.inquiry_id = v_iq_cust
+         AND i.quantity = 1
+     )
+     AND (
+       SELECT count(*)
+       FROM betk.order_status_history AS h
+       JOIN betk.seller_orders AS s ON s.id = h.order_id
+       WHERE s.master_order_id = v_master_cust
+         AND h.notes = 'payment_window_expired'
+     ) = 1
+     AND (
+       SELECT count(*)
+       FROM betk.notifications AS n
+       WHERE n.user_id = v_buyer_cust
+         AND n.type = 'payment_window_expired'
+         AND n.data->>'master_order_id' = v_master_cust::text
+     ) = 1
+     AND EXISTS (
+       SELECT 1
+       FROM betk.inquiries AS q
+       WHERE q.id = v_iq_cust
+         AND q.quote_expires_at > now()
+     ) THEN
+    v_actual := 'cancelled|5|1|2|65|1|1';
+  ELSE
+    v_actual := 'miss';
+  END IF;
+  v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+    'name', 'sweep_restore_conflict_custom',
+    'expected', 'cancelled|5|1|2|65|1|1',
+    'actual', v_actual,
+    'pass', v_actual = 'cancelled|5|1|2|65|1|1'
+      OR left(v_actual, 19) = 'not constructible: '
+  ));
+
+  -- 18. A second call changes nothing and adds no notification or history.
   SELECT
     (SELECT l.stock_qty FROM betk.listings AS l WHERE l.id = v_list_fixed)::text
     || '|' ||
@@ -1309,9 +1563,9 @@ BEGIN
   v_actual := v_all::text || '|' || v_n::text;
   v_rows := v_rows || jsonb_build_array(jsonb_build_object(
     'name', 'all_pass',
-    'expected', 'true|17',
+    'expected', 'true|19',
     'actual', v_actual,
-    'pass', v_actual = 'true|17'
+    'pass', v_actual = 'true|19'
   ));
 
   PERFORM set_config('p11.sweep_results', v_rows::text, true);
