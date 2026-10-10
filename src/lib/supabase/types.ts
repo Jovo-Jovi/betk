@@ -2465,6 +2465,10 @@ export type Database = {
         Returns: string
       }
       checkout_agreement_version: { Args: { p_key: string }; Returns: string }
+      checkout_delivery_preview: {
+        Args: { p_delivery_address_id: string }
+        Returns: number
+      }
       checkout_from_cart: {
         Args: { p_delivery_address_id: string }
         Returns: string
