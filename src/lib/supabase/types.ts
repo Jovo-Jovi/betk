@@ -2465,12 +2465,17 @@ export type Database = {
         Returns: string
       }
       checkout_agreement_version: { Args: { p_key: string }; Returns: string }
+      checkout_delivery_preview: {
+        Args: { p_delivery_address_id: string }
+        Returns: number
+      }
       checkout_from_cart: {
         Args: { p_delivery_address_id: string }
         Returns: string
       }
       checkout_payment_window_minutes: { Args: never; Returns: number }
       checkout_quote_multiplier: { Args: never; Returns: number }
+      checkout_refuse_inactive_store: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       my_store_id: { Args: never; Returns: string }
       release_seller_orders: {

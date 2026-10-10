@@ -522,7 +522,7 @@ describe("entry points", () => {
 
 describe("contracts", () => {
   it("locks the page, the pin, P13, and the sanctioned files", () => {
-    expect(read("scripts/check-page-count.mjs")).toContain("export const PINNED_PAGE_COUNT = 32");
+    expect(read("scripts/check-page-count.mjs")).toContain("export const PINNED_PAGE_COUNT = 33");
     expect(read("scripts/check-page-count.mjs")).toContain("export const OD21_PAGE_FREEZE = 79");
     expect(existsSync(resolve(root, "src/app/[locale]/(buyer)/cart/page.tsx"))).toBe(true);
 

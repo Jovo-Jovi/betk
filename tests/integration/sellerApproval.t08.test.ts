@@ -318,7 +318,8 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
 
     const ephemeralStores = (stores.data ?? []).filter((row) => ephemeralIds.includes(row.seller_id)).map((row) => row.id);
     for (const id of ephemeralIds) {
-      await service.schema("betk").from("agreement_acceptances").delete().eq("user_id", id);
+      const acceptanceDelete = await service.schema("betk").from("agreement_acceptances").delete().eq("user_id", id);
+      if (acceptanceDelete.error) throw new Error(acceptanceDelete.error.message);
       await service.schema("betk").from("seller_documents").delete().eq("seller_id", id);
       if (ephemeralStores.length > 0) {
         await service.schema("betk").from("store_categories").delete().in("store_id", ephemeralStores);
@@ -326,7 +327,13 @@ describeOrSkip("P09 T08 — seller approval (staging)", () => {
       }
       await service.schema("betk").from("stores").delete().eq("seller_id", id);
       await service.schema("betk").from("seller_profiles").delete().eq("id", id);
-      await service.schema("betk").from("users").delete().eq("id", id);
+      const usersDelete = await service.schema("betk").from("users").delete().eq("id", id);
+      if (usersDelete.error) throw new Error(usersDelete.error.message);
+      const acceptanceLeft = await service.schema("betk").from("agreement_acceptances").select("id").eq("user_id", id);
+      if (acceptanceLeft.error) throw new Error(acceptanceLeft.error.message);
+      if ((acceptanceLeft.data ?? []).length > 0) {
+        throw new Error(`acceptance row still present for ${id}`);
+      }
       const authDelete = await service.auth.admin.deleteUser(id);
       if (authDelete.error) throw new Error(authDelete.error.message);
     }

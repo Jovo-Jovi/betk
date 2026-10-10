@@ -11,6 +11,15 @@ export type { ProfileData } from "./queries/getProfile";
 export { updateProfile } from "./actions/updateProfile";
 export type { UpdateProfileResult } from "./actions/updateProfile";
 
+// P10 address book (Phase 11 T01). Client components import the action files
+// directly; this barrel also re-exports the server query.
+export { getOwnAddresses } from "./queries/getOwnAddresses";
+export type { AddressListItem } from "./queries/getOwnAddresses";
+export { createAddress } from "./actions/createAddress";
+export { updateAddress } from "./actions/updateAddress";
+export { deleteAddress } from "./actions/deleteAddress";
+export { setDefaultAddress } from "./actions/setDefaultAddress";
+
 // T06: account deactivation (OD-2).
 export { deactivateAccount } from "./actions/deactivateAccount";
 export type { DeactivateAccountResult } from "./actions/deactivateAccount";

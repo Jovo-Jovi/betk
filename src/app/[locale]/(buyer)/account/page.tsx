@@ -23,6 +23,7 @@ import { Alert } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { routes } from "@/constants/routes";
 import { Link } from "@/i18n/navigation";
 import { ProfileEditForm } from "./_components/ProfileEditForm";
 import { DeactivateAccountForm } from "./_components/DeactivateAccountForm";
@@ -69,6 +70,9 @@ export default async function AccountPage() {
       )}
 
       <h1 className="font-display text-lg font-bold text-foreground">{t("pageTitle")}</h1>
+      <Button variant="link" asChild className="h-auto w-fit px-0">
+        <Link href={routes.buyer.addresses}>{t("addressesLink")}</Link>
+      </Button>
 
       <section data-slot="identity-info" aria-label={t("identityInfoLabel")}>
         <Card>

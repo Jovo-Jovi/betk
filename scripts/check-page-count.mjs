@@ -13,7 +13,7 @@
  * 30. Phase 09 T08 adds P49 and raises the pin to 31 in the same commit as
  * the UI_SPEC reconciliation. Phase 10 T05 adds P66 and raises the pin to 32
  * in that commit. This guard locks that built count. It fails when the
- * physical count is not 32, and it fails when the count exceeds the 79
+ * physical count is not 33, and it fails when the count exceeds the 79
  * freeze. It does not demand a file for every unbuilt spec page.
  *
  * Run: node scripts/check-page-count.mjs
@@ -32,9 +32,10 @@ export const OD21_PAGE_FREEZE = 79;
 /**
  * Physical page.tsx files under src/app. 26 at B4-FIX2. Phase 09 T05
  * raises the pin to 30 for P67–P70. Phase 09 T08 raises it to 31 for P49.
- * Phase 10 T05 raises it to 32 for P66 /cart. OD-21 stays 79.
+ * Phase 10 T05 raises it to 32 for P66 /cart. Phase 11 T01 raises it
+ * to 33 for P10 /account/addresses. OD-21 stays 79.
  */
-export const PINNED_PAGE_COUNT = 32;
+export const PINNED_PAGE_COUNT = 33;
 
 /**
  * @param {string} appDir

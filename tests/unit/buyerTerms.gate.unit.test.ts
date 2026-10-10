@@ -94,11 +94,11 @@ describe("legal pages (unit)", () => {
   });
 });
 
-describe("Guard F pin after P66", () => {
-  it("is 32 and matches the tree", () => {
-    expect(PINNED_PAGE_COUNT).toBe(32);
+describe("Guard F pin after P10", () => {
+  it("is 33 and matches the tree", () => {
+    expect(PINNED_PAGE_COUNT).toBe(33);
     const result = checkPageCount(join(repoRoot, "src", "app"));
-    expect(result.count).toBe(32);
+    expect(result.count).toBe(33);
     expect(result.problems).toEqual([]);
     expect(result.files).toEqual(
       expect.arrayContaining([
@@ -108,6 +108,7 @@ describe("Guard F pin after P66", () => {
         "[locale]/(public)/legal/privacy/page.tsx",
         "[locale]/(admin)/admin/sellers/approvals/page.tsx",
         "[locale]/(buyer)/cart/page.tsx",
+        "[locale]/(buyer)/account/addresses/page.tsx",
       ]),
     );
   });

@@ -85,6 +85,14 @@ P11-T00-FIX re-read (2026-10-09), before the mint: header REG-01..REG-118, next 
 
 **REG-119 (F-HISTORY).** `checkout_from_cart` itself inserts `order_status_history` on every successful checkout (`supabase/migrations/20261003082041_v2_08_functions.sql`, the INSERT at lines 1071–1075). Not only the sweeper: any staging test that commits a checkout leaves append-only residue. Resolved by D-TEST. The staging suite does not commit that row. The local full-stack job does.
 
+P11-T10-FIX re-read (2026-10-10), before the mint: header REG-01..REG-120, next free **REG-121**, REG-120 row present and closed, no REG-121 row. Took **REG-121**. Owner: Phase 12 T00. Next free **REG-122** / **OD-22** / **ADR-026**.
+
+**REG-121.** No live status transition writes `order_status_history` (only `checkout_from_cart` inserts it). Later cancellation and transition paths (buyer cancel, admin cancel, deposit verification, shipping states) need a decided way to record history, because R-DROPPED and the order timeline read it. Owner: Phase 12 T00. Decide per-function inserts vs a trigger. A trigger would also write history for every staging test that changes a status, so D-TEST applies. The sweeper's own rows are R-SWEEP-HISTORY.
+
+P11-T10-FIX2 re-read (2026-10-10), before the mint: header REG-01..REG-121, next free **REG-122**, REG-121 row present and open, no REG-122 row. Took **REG-122**. Owner: P11-T12. It closes when P11M3 is applied, with that applied statement as evidence. Next free **REG-123** / **OD-22** / **ADR-026**.
+
+**REG-122.** `restore_stock_on_cancel` re-inserts cart lines with plain INSERTs (`20261003082041_v2_08_functions.sql`, the two `INSERT INTO betk.cart_items` in that function). If the buyer already holds a line for the same listing or the same inquiry, the insert raises 23505 on `uq_cart_items_listing` or `uq_cart_items_inquiry`. The cancel rolls back, so the order stays pending, its stock stays held, and the sweeper warns every minute. R-RESTORE-MERGE adds `ON CONFLICT DO NOTHING` to each insert, with no conflict target. The buyer's existing line is kept. Stock is still restored. Owner: P11-T12. Closes when P11M3 is applied.
+
 REG-81, REG-93, REG-98, and REG-99 are updated in place. They are not new numbers. The pin text is §4. REG-81 and REG-93 close at the Phase 11 exit with evidence. The staging halves of REG-98 and REG-99 close at that exit. Their production halves stay open, with REG-96 and REG-97, until legal sign-off.
 
 **REG-113.** Checkout charges `cart_items.unit_price` for fixed lines. Today `checkout_from_cart` charges live `listings.price` for a fixed line and `inquiries.quoted_price` for a custom line (`supabase/migrations/20261003082041_v2_08_functions.sql` lines 867–871 and 1044–1045). ERD §3.3 says checkout copies `unit_price`. **Custom lines also charge the snapshot.** `accept_inquiry_quote` already stores `quoted_price` on `cart_items.unit_price` (`supabase/migrations/20261006100204_v2_10_cart_quote.sql` lines 281–284). R-FREEZE refuses `send_inquiry_quote` while any cart line references the inquiry, so that quoted price cannot move while the line is held. The snapshot and the frozen quote are the same money. P11M1 reads `cart_items.unit_price` for both kinds. The quote-expiry check and the band check stay on the inquiry row (lines 812–844). They are gates, not the charge. Owner: P11M1. Closes at the Phase 11 exit.
@@ -271,7 +279,9 @@ Model is Grok 4.7 on every row. T01 cuts `feature/phase-11-checkout` from `origi
 
 **T15.** Native checkbox plus `Link`, the same control as `RegisterForm` (`src/app/[locale]/(auth)/auth/register/_components/RegisterForm.tsx` lines 95–111) and `StepDocuments` (`src/app/[locale]/(seller-onboarding)/seller/onboarding/_components/steps/StepDocuments.tsx` lines 180–194). Checkbox is not a kit component. That is not a kit gap. Do not send it to Claude Design. Links: `routes.legal.terms` for `buyer_terms`, `routes.legal.returns` for `return_policy`. Both pages exist. One pair per blocking document (R-PANEL). `seller_agreement` and `privacy` are not rendered.
 
-**Sweeper tests and history.** A committed cancel writes `order_status_history`. `checkout_from_cart` also inserts that table on every successful checkout (F-HISTORY, REG-119). `no_delete_order_history` will not remove it (Q1, REG-117). The migration harness rolls back. A test that commits the row runs only in Integration (local stack) (D-TEST, §2). The staging suite does not commit a swept order and does not commit a checkout. Do not disable the rule. Do not widen Guard G on staging. The local job's Guard G baseline is fresh-stack aware (T02).
+**Sweeper tests and history.** A committed checkout writes `order_status_history` (F-HISTORY, REG-119: the INSERT in `20261003082041_v2_08_functions.sql` lines 1071-1075, and the same insert in `20261009164602_v2_11_checkout.sql`). Live `prosrc` on 2026-10-10: the only `betk` function that inserts `order_status_history` is `checkout_from_cart`. P11-T10-FIX: `sweep_expired_payment_windows` inserts one row per cancelled child (R-SWEEP-HISTORY). `no_delete_order_history` will not remove a committed row (Q1, REG-117). The migration harness rolls back. A test that commits the row runs only in Integration (local stack) (D-TEST, §2). The staging suite does not commit a swept order and does not commit a checkout. Do not disable the rule. Do not widen Guard G on staging. The local job's Guard G baseline is fresh-stack aware (T02). Other status transitions still write no history row (REG-121, Phase 12 T00).
+
+**Phase 12 proof lock (from T10).** `betk.sweep_expired_payment_windows` takes `FOR UPDATE SKIP LOCKED` on the candidate `master_orders` row, then re-checks `proof_path IS NULL` and `payment_deadline < now()` before it cancels. Phase 12's proof write must take that same master row lock (`FOR UPDATE` on `betk.master_orders`) before it writes `proof_path`, so an upload and a sweep cannot interleave. The sweeper skips a row another transaction already holds. After that transaction commits a proof, a later run sees `proof_path` and leaves the master untouched. The current proof guard is `enforce_master_proof_update` (`supabase/migrations/20261003082041_v2_08_functions.sql` lines 656-706, trigger `trg_enforce_master_proof_update`). P11M3 does not change that function.
 
 ### FLAGs
 
@@ -488,6 +498,10 @@ Branch: feature/phase-11-checkout.
 
 CI proof of P11M2 on a local stack. This harness rolls back. It is not the Integration (local stack) job (T02). Do not apply to staging. CSV header name,expected,actual,pass. No DDL. Roll back. Cases: two bands produce one sum equal to the two fees; the result has no per-seller fee; a missing band raises BETK_CHECKOUT_RATE_MISSING; changing the destination governorate changes the sum. Insert and delete the bands inside the transaction. courier_rates on staging stays 0.
 
+NOTE (planning chat, 2026-10-09). The proof must assert that, for the same cart and address inside the rolled-back transaction, checkout_delivery_preview equals the combined_delivery_total that checkout_from_cart writes. Cases: a 1-store cart, a 3-store cart, a weight exactly on a band edge, and an open upper band. Plus every refusal code in the T07 expansion: BETK_UNAUTHENTICATED, BETK_CHECKOUT_EMPTY_CART, BETK_ADDRESS_NOT_FOUND (missing or not the caller's), BETK_CHECKOUT_STORE_INACTIVE, BETK_CHECKOUT_LINE_UNRESOLVED, and BETK_CHECKOUT_RATE_MISSING. The band edges are checkout's: weight_min_g is inclusive, weight_max_g is exclusive, and a null weight_max_g is the open upper band.
+
+Bind docs/03-database/rehearsal/staging-text/P11M2.sql. The harness applies that file only when its LF md5 is e39310b4714676b747312935d76b03a1 and its LF length is 4138 bytes. A mismatch exits before that apply.
+
 Done-when: the CI run is green. Staging ledger and courier_rates count are unchanged.
 STEP Z
 Author name: jiovanny adel
@@ -557,6 +571,25 @@ Branch: feature/phase-11-checkout.
 
 CI proof of P11M3 on a local stack. This harness rolls back. It is not the Integration (local stack) job (T02). The sweeper end to end that commits order_status_history runs in that job, not here. Do not apply to staging. CSV header name,expected,actual,pass. No DDL. Roll back. Do not disable a history rule. Cases: a past deadline and a null proof cancel the children, restore tracked stock, restore the cart per REG-82, and insert one notifications row for the buyer with channel sms and type payment_window_expired; a second run does not insert another row; a master with a proof is not cancelled; escalation columns are unchanged. The schedule in the file is every minute.
 
+NOTE (planning chat, 2026-10-10). Bind docs/03-database/rehearsal/staging-text/P11M3.sql. The harness applies that file only when its LF md5 is b8b18cda62ab6ead3fb45d9d2143516e and its LF length is 5455 bytes. A mismatch exits before that apply. The function is betk.sweep_expired_payment_windows(). The job name is sweep-expired-payment-windows.
+
+The proof asserts:
+- an expired master is swept: its pending children are cancelled with cancelled_by system, stock is restored, the fixed line returns at its snapshot, a custom line returns only while its quote is unexpired, and there is exactly one notification;
+- a master with a proof is not swept;
+- a master before its deadline is not swept;
+- a master with a null deadline is not swept;
+- a second run changes nothing and adds no notification;
+- authenticated and anon cannot execute the sweeper (42501);
+- the cron job exists once with '* * * * *'.
+
+NOTE (planning chat, 2026-10-10, P11-T10-FIX). R-SWEEP-HISTORY and R-SWEEP-ISOLATE. Add these checks:
+- each swept child has exactly one history row with the R-SWEEP-HISTORY values (from_status pending, to_status cancelled, changed_by NULL, changed_by_type system, notes payment_window_expired);
+- a second run adds no history row;
+- a swept custom line still produces the dropped prompt's data (cancelled history row inside the window, inquiry quote expired);
+- the function body contains the per-master EXCEPTION block.
+
+A fixture built through checkout still has that creation row as well. This harness rolls the transaction back. Live prosrc on 2026-10-10: the only applied function whose body inserts order_status_history is checkout_from_cart. The sweeper's rows are this file, which is not applied yet.
+
 Done-when: the CI run is green and the harness rolled back. Staging cron.job has no new name.
 STEP Z
 Author name: jiovanny adel
@@ -578,7 +611,7 @@ MODEL: Grok 4.7 · THINKING: High
 Read docs/10-ai-development/SESSION_CONTEXT.md + docs/PRECEDENTS.md, then execute Phase 11 T12 from docs/10-ai-development/phase-packs/PHASE_11_CHECKOUT.md.
 Branch: feature/phase-11-checkout.
 
-Apply the bound P11M3.sql. STOP unless the planning chat has reviewed T10 and T11 and the human has typed GO. F-SWEEP-STAGING: before apply_migration, run a read-only inventory of the masters the sweeper would select at that moment (proof_path null, payment_deadline at or before now(), a child still pending) and paste it. Staging holds 7 earlier seller and master orders. If any row qualifies, STOP for a human decision before apply_migration. md5 and byte length before the call. STOP if the stored statement differs. Ledger 1:1. Schema backfill. Advisors before and after. Types diff verbatim if the diff is non-empty. No settings write. No protection DDL. Confirm the live job schedule is every minute. The notification channel is sms and the type is payment_window_expired (R-CHANNEL). Do not add an enum member.
+Apply the bound P11M3.sql. STOP unless the planning chat has reviewed T10 and T11 and the human has typed GO. NOTE (planning chat, 2026-10-10, P11-T10-FIX2). Bind docs/03-database/rehearsal/staging-text/P11M3.sql. Apply that file only when its LF md5 is f9be8d3fd38886c5172c3d99fb069d2d and its LF length is 7712 bytes. A mismatch STOPs before apply_migration. The file also replaces restore_stock_on_cancel under R-RESTORE-MERGE (ON CONFLICT DO NOTHING on each cart INSERT, no conflict target). REG-122 closes on that applied statement. F-SWEEP-STAGING: before apply_migration, run a read-only inventory of the masters the sweeper would select at that moment (proof_path null, payment_deadline at or before now(), a child still pending) and paste it. Staging holds 7 earlier seller and master orders. If any row qualifies, STOP for a human decision before apply_migration. md5 and byte length before the call. STOP if the stored statement differs. Ledger 1:1. Schema backfill. Advisors before and after. Types diff verbatim if the diff is non-empty. No settings write. No protection DDL. Confirm the live job schedule is every minute. The notification channel is sms and the type is payment_window_expired (R-CHANNEL). Do not add an enum member.
 
 Done-when: the applied version matches the file and cron.job lists the new job at every minute, and the F-SWEEP-STAGING inventory was pasted and qualified no row, or a human decision is recorded before the apply.
 STEP Z
@@ -717,18 +750,18 @@ Each item below is evidence on the exit task. A hidden widget is not a pass. Int
 | Task | Status | Evidence pointer |
 |---|---|---|
 | T00 | Not started | |
-| T01 | Not started | |
-| T02 | Not started | |
-| T03 | Not started | |
-| T04 | Not started | |
-| T05 | Not started | |
-| T06 | Not started | |
-| T07 | Not started | |
-| T08 | Not started | |
-| T09 | Not started | |
-| T10 | Not started | |
-| T11 | Not started | |
-| T12 | Not started | |
+| T01 | Done | `feature/phase-11-checkout` from `origin/main` `c9fbd1ab00de79634077e3544df61e904bf335cc` (PR #81). Guard F pin 33; OD-21 stays 79. One upsert under `addr_self` (no unique default; `20260622082812` line 34, `20260622083052` line 19). First address uses that statement. Delete leaves no default. Unit `p11t01.addressBook.unit.test.ts` 11 passed. Integration `addressBook.p11t01.test.ts` 1 passed. `fullName` and `phone` are not written. No migration. |
+| T02 | Done | Job `Integration (local stack)` in `.github/workflows/integration-local.yml` (not a required check; ci.yml not edited). Triggers: push `feature/**`, pull_request, workflow_dispatch. Path filter is the integration-staging diff in ci.yml plus this workflow file; no match skips and the job stays green. Push run [37918001380](https://github.com/Jovo-Jovi/betk/actions/runs/37918001380) on `f65632363e2f285a989d19c70b8500d98d1af6e1` is green. `addressBook.p11t01.test.ts` passed. Smoke `tests/local-stack/orderHistory.smoke.ts` passed and committed `order_status_history` `ec2bb3cc-ce4c-4faa-a78c-822753b125da` on order `60000000-0000-4000-8000-000000000001` (notes `CI TEST VALUE`). |
+| T03 | Done | Not applied. Live `checkout_from_cart` md5 `0df219d46dc1adb5503ee1388fbe8de3` (length 9995, `prosecdef` false). P11M1 LF md5 `5512f2a66381d3d82fbaaa1099f1d2f0`, 12831 bytes. Audit zero MISMATCH. Ledger 42, last `20261006100204`. `p10-db.yml` not edited. |
+| T04 | Done | Push run [37958193713](https://github.com/Jovo-Jovi/betk/actions/runs/37958193713) on `e3f0eb02f60078c74165b543baa97309246d2cb6`. Job `P11 local proof` green (not a required check; not T02; `ci.yml` and `p10-db.yml` not edited). Base 42 files, last `20261006100204`. M5 hold copied from `p10-db.yml`. Apply printed `p11m1_lf_md5=5512f2a66381d3d82fbaaa1099f1d2f0 bytes=12831 cr=0`. Gate: 16 rows, `all_pass` `true|15`. Asserts rolled back. Staging ledger unchanged at 42, last `20261006100204`. `payment_window_minutes` length 0. |
+| T05 | Done | Applied `20261009164602` / `v2_11_checkout`. Stored statement md5 `5512f2a66381d3d82fbaaa1099f1d2f0`, 12831 bytes, one statement, ends LF. Ledger 43, 1:1. `checkout_from_cart` prosrc md5 `4f3b9b92f6bcc05c2ba7830ed02bd529` (file body same). `checkout_refuse_inactive_store` prosrc md5 `0f3e65fbd257abcf3bb4c4c5f438ddb7` (file body same). No checkout committed. `payment_window_minutes` and `agreement_return_policy_version` length 0. |
+| T06 | Done | One `execute_sql` on staging `sojmjvohiziapiwkzsjg`. Not a migration. Pre-check: `payment_window_minutes`, `agreement_return_policy_version`, and `agreement_privacy_version` exist and `value` is empty (length 0). `UPDATE` count 3. After: `payment_window_minutes` = `60` (length 2, D-93); the two policy keys = `STAGING-DRAFT-1` (length 15, D-98-99). `agreement_buyer_terms_version` and `agreement_seller_agreement_version` stay `STAGING-DRAFT-1`. `checkout_payment_window_minutes()` = 60. `checkout_agreement_version` for those two keys = `STAGING-DRAFT-1`. No trigger on `betk.admin_settings`. `buyerTerms.gate.test.ts` expects `STAGING-DRAFT-1` for return policy and privacy. |
+| T07 | Done | Not applied. `checkout_delivery_preview(uuid)` returns `numeric(10,2)`. T07-FIX moved the refusal blocks to checkout's order. LF md5 `e39310b4714676b747312935d76b03a1`, 4138 bytes. Live `checkout_from_cart` `pg_get_functiondef` md5 `fb7b8b6965a3988be4a57ef8112f2130` (length 10594). Audit zero MISMATCH. Ledger 43, last `20261009164602`. |
+| T08 | Done | Workflow `.github/workflows/p11-m2.yml`, job `P11 preview proof` (not a required check; not T02; `ci.yml`, `p10-db.yml`, and `p11-db.yml` not edited). Base 43 files, last `20261009164602`. M5 hold copied from `p10-db.yml`. P11M2 applied only after LF md5 `e39310b4714676b747312935d76b03a1`, 4138 bytes. Harness `preview-asserts.sql` rolls back. Gate: 19 rows, `all_pass` `true|18`, including `preview_two_faults`, `preview_band_below_max`, `preview_band_at_max`, `preview_writes_nothing`, and `preview_anon_denied`. Staging before this push: ledger 43, last `20261009164602`, `courier_rates` 0. Green run [37989028694](https://github.com/Jovo-Jovi/betk/actions/runs/37989028694) on `63cfdc9342a5c20350e7b62d27ff7f1d11d21a40`. `parsed_rows=19`. `p11m2_lf_md5=e39310b4714676b747312935d76b03a1 bytes=4138 cr=0`. After that run: ledger 43, last `20261009164602`, `courier_rates` 0. |
+| T09 | Done | Applied `20261010072302` / `v2_11_delivery_preview`. Stored statement md5 `e39310b4714676b747312935d76b03a1`, 4138 bytes, one statement, ends LF. Ledger 44, 1:1. `checkout_delivery_preview` prosrc md5 `a20a5ce240afde123dc27ea51a1a01e8` (file body same). `provolatile` `s`, `prosecdef` false, EXECUTE authenticated true, anon false. `checkout_from_cart` `pg_get_functiondef` md5 still `fb7b8b6965a3988be4a57ef8112f2130`. Preview was not called. `courier_rates` 0. `admin_settings` unchanged. |
+| T10 | Done | Not applied. `betk.sweep_expired_payment_windows()`, job `sweep-expired-payment-windows`, `* * * * *`. T10-FIX (2026-10-10): R-SWEEP-HISTORY and R-SWEEP-ISOLATE. P11M3 LF md5 was `b8b18cda62ab6ead3fb45d9d2143516e`, 5455 bytes (T10 text was `5cdb07019ea574834284218465530453`, 3697 bytes). Audit re-run: one row per ruling, zero MISMATCH. Took REG-121 (owner Phase 12 T00). T10-FIX2 (2026-10-10): R-RESTORE-MERGE. Live `restore_stock_on_cancel` `pg_get_functiondef` md5 `037aacbdb3820d1f98dd259993f16593`, length 1666. P11M3 LF md5 `f9be8d3fd38886c5172c3d99fb069d2d`, 7712 bytes. Audit re-run over the whole file: zero MISMATCH, zero BROADER. Took REG-122 (owner P11-T12; closes when P11M3 is applied). Ledger 44, last `20261010072302`. Phase 12 proof lock is §3. T12 note is §7. |
+| T11 | Done | Workflow `.github/workflows/p11-m3.yml`, job `P11 sweeper proof` (not a required check; not T02; `ci.yml`, `p10-db.yml`, `p11-db.yml`, and `p11-m2.yml` not edited). Base 44 files, last `20261010072302`. M5 hold copied from `p10-db.yml`. Prior green run [38039057839](https://github.com/Jovo-Jovi/betk/actions/runs/38039057839) on `5d3ca625dc48e5753eee9a6af92fd8623504967a` bound LF md5 `b8b18cda62ab6ead3fb45d9d2143516e`, 5455 bytes, 18 rows, `all_pass` `true|17`. T10-FIX2 rebinds that harness to LF md5 `f9be8d3fd38886c5172c3d99fb069d2d`, 7712 bytes. Gate: 20 rows, `all_pass` `true|19`. Existing rows stay. `sweep_warning_isolates` still expects `pending|cancelled`; the duplicate line no longer fails, so the failure is integer overflow `22003` inside the EXCEPTION block. Adds `sweep_restore_conflict_fixed` and `sweep_restore_conflict_custom`. Harness rolls back. |
+| T12 | Not started | Binds P11M3 LF md5 `f9be8d3fd38886c5172c3d99fb069d2d`, 7712 bytes. REG-122 closes when that statement is applied. |
 | T13 | Not started | |
 | T14 | Not started | |
 | T15 | Not started | |
