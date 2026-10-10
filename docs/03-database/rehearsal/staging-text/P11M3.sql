@@ -28,6 +28,21 @@
 -- pg_cron 1.6.4 schedule-by-name updates the existing job. The v1.6.4
 -- README schedules nightly-vacuum a second time and the returned job id
 -- stays 43. Re-running this file does not insert a second job.
+--
+-- R-SWEEP-HISTORY (planning chat, 2026-10-10). The cancel and its
+-- history are one statement. Each cancelled child gets one
+-- order_status_history row: from_status pending, to_status cancelled,
+-- changed_by NULL, changed_by_type system, notes payment_window_expired.
+-- Columns: 20260622082857_messaging_orders.sql lines 110-119.
+-- changed_by_type is cancelled_by_type. The value system is
+-- 20260622082729_extensions_schemas_enums.sql line 48.
+-- The notification guard and insert are unchanged.
+-- R-SWEEP-ISOLATE (planning chat, 2026-10-10). Each master is its own
+-- BEGIN block. On error, RAISE WARNING names the master id, SQLSTATE,
+-- and SQLERRM, then the next master runs. That master's partial work
+-- rolls back with its block. The run completes. Locking, selection,
+-- ordering, LIMIT 100, the re-check, the REVOKE, and cron.schedule
+-- are unchanged.
 
 CREATE OR REPLACE FUNCTION betk.sweep_expired_payment_windows()
  RETURNS void
@@ -57,41 +72,65 @@ BEGIN
     LIMIT 100
     FOR UPDATE OF m SKIP LOCKED
   LOOP
-    SELECT m.buyer_id, m.betk_ref
-      INTO v_buyer, v_ref
-    FROM betk.master_orders AS m
-    WHERE m.id = v_master_id
-      AND m.proof_path IS NULL
-      AND m.payment_deadline IS NOT NULL
-      AND m.payment_deadline < now();
-    IF NOT FOUND THEN
-      CONTINUE;
-    END IF;
+    BEGIN
+      SELECT m.buyer_id, m.betk_ref
+        INTO v_buyer, v_ref
+      FROM betk.master_orders AS m
+      WHERE m.id = v_master_id
+        AND m.proof_path IS NULL
+        AND m.payment_deadline IS NOT NULL
+        AND m.payment_deadline < now();
+      IF NOT FOUND THEN
+        CONTINUE;
+      END IF;
 
-    UPDATE betk.seller_orders AS s
-    SET status = 'cancelled'::betk.order_status
-    WHERE s.master_order_id = v_master_id
-      AND s.status = 'pending'::betk.order_status;
+      -- R-SWEEP-HISTORY. One statement. Column list is
+      -- 20260622082857_messaging_orders.sql lines 110-119.
+      -- cancelled_by_type value system is
+      -- 20260622082729_extensions_schemas_enums.sql line 48.
+      WITH cancelled AS (
+        UPDATE betk.seller_orders AS s
+        SET status = 'cancelled'::betk.order_status
+        WHERE s.master_order_id = v_master_id
+          AND s.status = 'pending'::betk.order_status
+        RETURNING s.id
+      )
+      INSERT INTO betk.order_status_history (
+        order_id, from_status, to_status, changed_by, changed_by_type, notes
+      )
+      SELECT
+        c.id,
+        'pending'::betk.order_status,
+        'cancelled'::betk.order_status,
+        NULL,
+        'system'::betk.cancelled_by_type,
+        'payment_window_expired'
+      FROM cancelled AS c;
 
-    GET DIAGNOSTICS v_cancelled = ROW_COUNT;
-    IF v_cancelled = 0 THEN
-      CONTINUE;
-    END IF;
+      GET DIAGNOSTICS v_cancelled = ROW_COUNT;
+      IF v_cancelled = 0 THEN
+        CONTINUE;
+      END IF;
 
-    INSERT INTO betk.notifications (user_id, type, channel, body, data)
-    SELECT
-      v_buyer,
-      'payment_window_expired',
-      'sms',
-      'BETK Alert: Order #' || v_ref || ' payment window expired.',
-      jsonb_build_object('master_order_id', v_master_id, 'betk_ref', v_ref)
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM betk.notifications AS n
-      WHERE n.user_id = v_buyer
-        AND n.type = 'payment_window_expired'
-        AND n.data->>'master_order_id' = v_master_id::text
-    );
+      INSERT INTO betk.notifications (user_id, type, channel, body, data)
+      SELECT
+        v_buyer,
+        'payment_window_expired',
+        'sms',
+        'BETK Alert: Order #' || v_ref || ' payment window expired.',
+        jsonb_build_object('master_order_id', v_master_id, 'betk_ref', v_ref)
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM betk.notifications AS n
+        WHERE n.user_id = v_buyer
+          AND n.type = 'payment_window_expired'
+          AND n.data->>'master_order_id' = v_master_id::text
+      );
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE WARNING 'sweep_expired_payment_windows master % SQLSTATE % SQLERRM %',
+          v_master_id, SQLSTATE, SQLERRM;
+    END;
   END LOOP;
 END;
 $function$;
